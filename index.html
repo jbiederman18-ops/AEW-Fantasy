@@ -848,17 +848,17 @@ async function _setRaw(key, value) {
 }
 
 async function saveRosters() {
-  // Save each team's roster separately — combined payload exceeds GAS URL limit
-  await Promise.all(TEAMS.map(t => sheetSet(`aew_roster_${t}`, state.rosters[t] || {})));
+  // Save sequentially — GAS throttles parallel requests from the same client
+  for (const t of TEAMS) {
+    await sheetSet(`aew_roster_${t}`, state.rosters[t] || {});
+  }
 }
 
 async function saveToSheet() {
-  await Promise.all([
-    sheetSet('aew_schedule', state.schedule),
-    sheetSet('aew_seasonname', state.seasonName),
-    saveRosters(),
-    ...TEAMS.map(t => sheetSet(`aew_scores_${t}`, state.scores[t] || {}))
-  ]);
+  // Scores are saved per-show in submitScores — only save metadata here
+  await sheetSet('aew_schedule', state.schedule);
+  await sheetSet('aew_seasonname', state.seasonName);
+  await saveRosters();
 }
 
 async function loadFromSheet() {
