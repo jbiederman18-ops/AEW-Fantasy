@@ -799,10 +799,21 @@ async function sheetGetAll() {
   const r = await fetch(`${scriptUrl}?action=getAll`);
   const j = await r.json();
   if (!j.ok) return {};
-  // Pre-parse every value so loadFromSheet can use them directly
+  const raw = j.value;
   const out = {};
-  for (const [k, v] of Object.entries(j.value)) {
-    out[k] = parseRaw(v);
+  // First pass: collect non-chunk keys
+  for (const [k, v] of Object.entries(raw)) {
+    if (!k.includes('__chunk')) out[k] = parseRaw(v);
+  }
+  // Second pass: reassemble any chunked values
+  for (const [k, v] of Object.entries(raw)) {
+    if (k.endsWith('__chunks')) {
+      const base = k.replace('__chunks', '');
+      const count = parseInt(v) || 0;
+      let assembled = '';
+      for (let i = 0; i < count; i++) assembled += (raw[`${base}__chunk${i}`] || '');
+      if (assembled) out[base] = parseRaw(assembled);
+    }
   }
   return out;
 }
@@ -810,14 +821,15 @@ async function sheetGetAll() {
 async function sheetSet(key, value) {
   const json = JSON.stringify(value);
   const encoded = encodeURIComponent(json);
-  if (encoded.length <= 1800) {
+  // Google Apps Script GET URL limit is ~8000 chars — stay well under it
+  if (encoded.length <= 6000) {
     const r = await fetch(`${scriptUrl}?action=set&key=${encodeURIComponent(key)}&value=${encoded}`);
     const j = await r.json();
     if (!j.ok) throw new Error(`Sheet set failed for key: ${key}`);
     return true;
   }
-  // chunk it
-  const CHUNK = 1400;
+  // Only chunk very large payloads (scores data)
+  const CHUNK = 3000;
   const chunks = [];
   for (let i = 0; i < json.length; i += CHUNK) chunks.push(json.slice(i, i + CHUNK));
   await _setRaw(`${key}__chunks`, String(chunks.length));
