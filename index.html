@@ -352,6 +352,82 @@
   .url-row input:focus { outline: none; border-color: var(--gold); }
   #connectionMsg { margin-top: 8px; font-size: 12px; font-family: 'Barlow Condensed', sans-serif; letter-spacing: 1px; }
 
+  /* ── DRAFT ── */
+  .draft-setup { display: flex; flex-direction: column; gap: 14px; }
+  .draft-order-list { display: flex; flex-direction: column; gap: 8px; margin: 4px 0; }
+  .draft-order-item { display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; }
+  .draft-order-num { font-family: 'Bebas Neue', sans-serif; font-size: 20px; color: var(--muted); min-width: 24px; }
+  .draft-order-name { font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 700; letter-spacing: 1px; flex: 1; }
+  .draft-order-btns { display: flex; gap: 4px; }
+  .draft-order-btn { background: none; border: 1px solid var(--border); border-radius: 6px; width: 28px; height: 28px; color: var(--muted); cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; -webkit-tap-highlight-color: transparent; }
+  .draft-order-btn:active { background: var(--border); }
+
+  .draft-live { display: flex; flex-direction: column; gap: 14px; }
+  .draft-on-clock { background: var(--card); border-radius: 14px; padding: 20px; text-align: center; position: relative; overflow: hidden; }
+  .draft-on-clock::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+  .draft-on-clock.maria::before { background: var(--team-maria); }
+  .draft-on-clock.ryan::before { background: var(--team-ryan); }
+  .draft-on-clock.josh::before { background: var(--team-josh); }
+  .draft-on-clock.erik::before { background: var(--team-erik); }
+  .draft-clock-round { font-family: 'Barlow Condensed', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+  .draft-clock-label { font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+  .draft-clock-name { font-family: 'Bebas Neue', sans-serif; font-size: 42px; letter-spacing: 3px; line-height: 1; margin-bottom: 16px; }
+  .draft-clock-name.maria { color: var(--team-maria); }
+  .draft-clock-name.ryan { color: var(--team-ryan); }
+  .draft-clock-name.josh { color: var(--team-josh); }
+  .draft-clock-name.erik { color: var(--team-erik); }
+  .draft-input-row { display: flex; gap: 8px; }
+  .draft-input { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; color: var(--text); font-family: 'Barlow', sans-serif; font-size: 16px; }
+  .draft-input:focus { outline: none; border-color: var(--gold); }
+  .draft-pick-btn { background: var(--gold); color: #000; border: none; border-radius: 10px; padding: 12px 20px; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; -webkit-tap-highlight-color: transparent; white-space: nowrap; }
+  .draft-pick-btn:active { opacity: 0.8; }
+  .draft-pick-btn:disabled { opacity: 0.4; }
+
+  .draft-board { background: var(--card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+  .draft-board-header { padding: 12px 14px; border-bottom: 1px solid var(--border); background: var(--surface); display: flex; justify-content: space-between; align-items: center; }
+  .draft-board-title { font-family: 'Barlow Condensed', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); }
+  .draft-board-grid { display: grid; grid-template-columns: repeat(4, 1fr); }
+  .draft-board-col-header { padding: 8px 10px; font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; text-align: center; border-bottom: 1px solid var(--border); }
+  .draft-board-cell { padding: 8px 10px; font-size: 12px; border-bottom: 1px solid rgba(255,255,255,0.03); border-right: 1px solid rgba(255,255,255,0.03); text-align: center; min-height: 36px; display: flex; align-items: center; justify-content: center; line-height: 1.3; }
+  .draft-board-cell:nth-child(4n) { border-right: none; }
+  .draft-board-cell.pick-num { font-family: 'Bebas Neue', sans-serif; font-size: 18px; color: var(--muted); opacity: 0.4; }
+  .draft-complete { background: var(--card); border: 1px solid rgba(29,211,176,0.3); border-radius: 14px; padding: 24px; text-align: center; }
+  .draft-complete-title { font-family: 'Bebas Neue', sans-serif; font-size: 32px; letter-spacing: 3px; color: var(--teal); margin-bottom: 8px; }
+  .draft-complete-sub { font-size: 14px; color: var(--muted); margin-bottom: 20px; }
+
+  /* ── SWAPS ── */
+  .swap-token-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 4px; }
+  .swap-token-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; display: flex; align-items: center; gap: 12px; }
+  .swap-token-card.has-token { border-color: rgba(240,180,41,0.4); background: rgba(240,180,41,0.05); }
+  .swap-token-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+  .swap-token-info { flex: 1; min-width: 0; }
+  .swap-token-name { font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 2px; line-height: 1; }
+  .swap-token-count { font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-top: 2px; }
+  .swap-token-count.has { color: var(--gold); }
+  .swap-token-btns { display: flex; flex-direction: column; gap: 4px; }
+  .swap-token-btn { width: 28px; height: 28px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 16px; display: flex; align-items: center; justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .swap-token-btn:active { background: var(--border); }
+  .swap-use-section { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+  .swap-use-section h3 { font-family: 'Barlow Condensed', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
+  .swap-form-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .swap-form-label { font-family: 'Barlow Condensed', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); min-width: 80px; }
+  .swap-select { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; color: var(--text); font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 600; min-width: 0; }
+  .swap-select:focus { outline: none; border-color: var(--gold); }
+  .swap-input { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; color: var(--text); font-family: 'Barlow', sans-serif; font-size: 14px; min-width: 0; }
+  .swap-input:focus { outline: none; border-color: var(--gold); }
+  .swap-preview { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: var(--muted); margin-bottom: 10px; display: none; }
+  .swap-preview.visible { display: block; }
+  .swap-preview b { color: var(--text); }
+  .swap-preview .arrow { color: var(--gold); margin: 0 6px; }
+  .swap-history-list { display: flex; flex-direction: column; gap: 8px; }
+  .swap-history-item { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+  .swap-history-top { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .swap-history-team { font-family: 'Bebas Neue', sans-serif; font-size: 16px; letter-spacing: 1px; }
+  .swap-history-date { font-family: 'Barlow Condensed', sans-serif; font-size: 11px; color: var(--muted); letter-spacing: 1px; margin-left: auto; }
+  .swap-history-detail { font-size: 12px; color: var(--muted); }
+  .swap-history-detail b { color: var(--text); }
+  .swap-history-detail .arrow { color: var(--gold); margin: 0 4px; }
+
   /* ── UTILS ── */
   .loading-spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; }
   @keyframes spin { to { transform: rotate(360deg); } }
@@ -395,6 +471,12 @@
   </button>
   <button onclick="switchTab('rosters')">
     <span class="nav-icon">🤼</span>Roster
+  </button>
+  <button onclick="switchTab('draft')">
+    <span class="nav-icon">🎯</span>Draft
+  </button>
+  <button onclick="switchTab('swaps')">
+    <span class="nav-icon">🔄</span>Swaps
   </button>
   <button onclick="switchTab('settings')">
     <span class="nav-icon">⚙️</span>Settings
@@ -475,6 +557,18 @@
   <div id="tab-rosters" class="tab-panel">
     <div class="section-title"><span>Team</span> Rosters</div>
     <div id="rostersContent"></div>
+  </div>
+
+  <!-- DRAFT -->
+  <div id="tab-draft" class="tab-panel">
+    <div class="section-title"><span>Snake</span> Draft</div>
+    <div id="draftContent"></div>
+  </div>
+
+  <!-- SWAPS -->
+  <div id="tab-swaps" class="tab-panel">
+    <div class="section-title"><span>Wrestler</span> Swaps</div>
+    <div id="swapsContent"></div>
   </div>
 
   <!-- SETTINGS -->
@@ -632,7 +726,15 @@ let currentShowId = null;
 let editingTeam = 'maria';
 let wrestlerFilter = 'all';
 let pendingSchedule = [];
-let settingsLoaded = false; // prevent re-fetch overwriting in-progress edits
+let settingsLoaded = false;
+// Draft state
+let draftState = {
+  active: false,
+  order: ['maria','ryan','josh','erik'],
+  rounds: 12,
+  picks: [],
+};
+// swapState stored in state.swaps = { tokens: {maria:0,...}, history: [{team,slot,oldWrestler,newWrestler,date,show}] }
 
 // ─────────────────────────────────────────────
 // INIT
@@ -745,6 +847,10 @@ async function loadFromSheet() {
     const parsed = parseSheetValue(all[`aew_scores_${t}`]);
     if (parsed) state.scores[t] = parsed;
   }
+  const draft = parseSheetValue(all['aew_draft']);
+  if (draft) { draftState = Object.assign(draftState, draft); state.draft = draftState; }
+  const swaps = parseSheetValue(all['aew_swaps']);
+  if (swaps) state.swaps = swaps;
   // legacy fallback
   if (all['aew_all'] && !rosters) {
     const old = parseSheetValue(all['aew_all']);
@@ -1272,11 +1378,451 @@ async function saveSchedule() {
 // ─────────────────────────────────────────────
 // SETTINGS / NAV
 // ─────────────────────────────────────────────
+// ─────────────────────────────────────────────
+// DRAFT
+// ─────────────────────────────────────────────
+function renderDraft() {
+  const el = document.getElementById('draftContent');
+  if (!el) return;
+
+  // Load draft state from app state if saved
+  if (state.draft) {
+    draftState = Object.assign(draftState, state.draft);
+  }
+
+  if (draftState.active) {
+    renderDraftLive(el);
+  } else {
+    renderDraftSetup(el);
+  }
+}
+
+function renderDraftSetup(el) {
+  const totalPicks = draftState.order.length * draftState.rounds;
+  el.innerHTML = `
+    <div class="draft-setup">
+      <div class="settings-block">
+        <h3>Draft Order</h3>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Drag to reorder, or use arrows. This is the Round 1 order — snake draft reverses each round.</p>
+        <div class="draft-order-list" id="draftOrderList"></div>
+      </div>
+      <div class="settings-block">
+        <h3>Rounds</h3>
+        <div class="form-row">
+          <span class="form-label">Rounds</span>
+          <input type="number" id="draftRounds" min="1" max="20" value="${draftState.rounds}" style="width:80px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-family:'Barlow',sans-serif;font-size:15px;">
+          <span style="font-size:13px;color:var(--muted);font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;">${draftState.order.length} teams × rounds = ${totalPicks} total picks</span>
+        </div>
+      </div>
+      ${draftState.picks.length > 0 ? `
+      <div class="settings-block" style="border-color:rgba(232,50,74,0.3);">
+        <h3 style="color:var(--red);">Previous Draft Found</h3>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">${draftState.picks.length} picks already recorded. Starting a new draft will clear them.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn-primary" onclick="resumeDraft()">Resume Draft</button>
+          <button class="btn-secondary" onclick="clearAndStartDraft()">Start Fresh</button>
+        </div>
+      </div>` : `
+      <button class="btn-primary" style="width:100%;justify-content:center;padding:14px;" onclick="startDraft()">🎯 Start Draft</button>`}
+    </div>`;
+  renderDraftOrderList();
+}
+
+function renderDraftOrderList() {
+  const list = document.getElementById('draftOrderList');
+  if (!list) return;
+  list.innerHTML = draftState.order.map((team, i) => `
+    <div class="draft-order-item">
+      <span class="draft-order-num">${i+1}</span>
+      <span class="draft-order-name" style="color:${TEAM_COLORS[team]}">${TEAM_LABELS[team]}</span>
+      <div class="draft-order-btns">
+        <button class="draft-order-btn" onclick="moveDraftOrder(${i},-1)" ${i===0?'disabled':''}>↑</button>
+        <button class="draft-order-btn" onclick="moveDraftOrder(${i},1)" ${i===draftState.order.length-1?'disabled':''}>↓</button>
+      </div>
+    </div>`).join('');
+}
+
+function moveDraftOrder(idx, dir) {
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= draftState.order.length) return;
+  [draftState.order[idx], draftState.order[newIdx]] = [draftState.order[newIdx], draftState.order[idx]];
+  renderDraftOrderList();
+}
+
+function startDraft() {
+  const rounds = parseInt(document.getElementById('draftRounds').value) || 12;
+  draftState.rounds = rounds;
+  draftState.picks = [];
+  draftState.active = true;
+  saveDraftState();
+  renderDraft();
+}
+
+function resumeDraft() {
+  draftState.active = true;
+  renderDraft();
+}
+
+function clearAndStartDraft() {
+  if (!confirm('Clear all draft picks and start fresh?')) return;
+  draftState.picks = [];
+  startDraft();
+}
+
+function getCurrentPicker() {
+  const totalPicks = draftState.picks.length;
+  const numTeams = draftState.order.length;
+  const round = Math.floor(totalPicks / numTeams); // 0-indexed
+  const posInRound = totalPicks % numTeams;
+  // Snake: even rounds go forward, odd rounds go backward
+  const idx = round % 2 === 0 ? posInRound : (numTeams - 1 - posInRound);
+  return { team: draftState.order[idx], round: round + 1, pick: totalPicks + 1 };
+}
+
+function renderDraftLive(el) {
+  const totalPicks = draftState.order.length * draftState.rounds;
+  const isDone = draftState.picks.length >= totalPicks;
+
+  if (isDone) {
+    renderDraftComplete(el);
+    return;
+  }
+
+  const { team, round, pick } = getCurrentPicker();
+  const remaining = totalPicks - draftState.picks.length;
+
+  // Build board
+  const boardRows = Array.from({ length: draftState.rounds }, (_, r) => {
+    const roundPicks = {};
+    draftState.picks.filter(p => p.round === r + 1).forEach(p => { roundPicks[p.team] = p.wrestler; });
+    return draftState.order.map(t => roundPicks[t] || null);
+  });
+
+  const boardHTML = `
+    <div class="draft-board">
+      <div class="draft-board-header">
+        <span class="draft-board-title">Draft Board</span>
+        <span style="font-size:12px;color:var(--muted);font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;">${draftState.picks.length}/${totalPicks} picks</span>
+      </div>
+      <div class="draft-board-grid">
+        ${draftState.order.map(t => `<div class="draft-board-col-header" style="color:${TEAM_COLORS[t]}">${TEAM_LABELS[t]}</div>`).join('')}
+        ${boardRows.map((row, ri) => row.map((cell, ci) => {
+          const isSnakeReversed = ri % 2 !== 0;
+          const pickNum = isSnakeReversed
+            ? ri * draftState.order.length + (draftState.order.length - ci)
+            : ri * draftState.order.length + ci + 1;
+          return `<div class="draft-board-cell ${cell ? '' : 'pick-num'}">${cell || pickNum}</div>`;
+        }).join('')).join('')}
+      </div>
+    </div>`;
+
+  el.innerHTML = `
+    <div class="draft-live">
+      <div class="draft-on-clock ${team}">
+        <div class="draft-clock-round">Round ${round} · Pick ${pick} of ${totalPicks} · ${remaining} remaining</div>
+        <div class="draft-clock-label">On the Clock</div>
+        <div class="draft-clock-name ${team}">${TEAM_LABELS[team]}</div>
+        <div class="draft-input-row">
+          <input class="draft-input" id="draftPickInput" placeholder="Type wrestler name…" autocomplete="off"
+            onkeydown="if(event.key==='Enter')makePick()">
+          <button class="draft-pick-btn" id="draftPickBtn" onclick="makePick()">Pick</button>
+        </div>
+      </div>
+      ${draftState.picks.length > 0 ? `
+      <div style="display:flex;justify-content:flex-end;">
+        <button class="btn-secondary" style="font-size:11px;padding:6px 12px;" onclick="undoLastPick()">↩ Undo Last Pick</button>
+      </div>` : ''}
+      ${boardHTML}
+    </div>`;
+
+  // Auto-focus input
+  setTimeout(() => {
+    const inp = document.getElementById('draftPickInput');
+    if (inp) inp.focus();
+  }, 100);
+}
+
+function makePick() {
+  const inp = document.getElementById('draftPickInput');
+  const btn = document.getElementById('draftPickBtn');
+  const wrestler = inp ? inp.value.trim() : '';
+  if (!wrestler) return;
+
+  const { team, round } = getCurrentPicker();
+  const slot = getNextSlotForTeam(team);
+
+  draftState.picks.push({ team, wrestler, round, slot });
+
+  // Write into rosters immediately
+  state.rosters[team][slot] = wrestler;
+
+  btn.disabled = true;
+  saveDraftState().then(() => {
+    renderDraftLive(document.getElementById('draftContent'));
+  });
+}
+
+function getNextSlotForTeam(team) {
+  const used = new Set(draftState.picks.filter(p => p.team === team).map(p => p.slot));
+  return LETTERS.find(l => !used.has(l)) || 'a';
+}
+
+function undoLastPick() {
+  if (!draftState.picks.length) return;
+  const last = draftState.picks.pop();
+  // Clear from rosters
+  state.rosters[last.team][last.slot] = '';
+  saveDraftState().then(() => {
+    renderDraftLive(document.getElementById('draftContent'));
+  });
+}
+
+function renderDraftComplete(el) {
+  el.innerHTML = `
+    <div class="draft-live">
+      <div class="draft-complete">
+        <div class="draft-complete-title">Draft Complete!</div>
+        <div class="draft-complete-sub">${draftState.picks.length} picks locked in across ${draftState.rounds} rounds.</div>
+        <button class="btn-primary" onclick="finalizeDraft()">✓ Lock Rosters & Finish</button>
+      </div>
+      <div class="draft-board">
+        <div class="draft-board-header">
+          <span class="draft-board-title">Final Draft Board</span>
+        </div>
+        <div class="draft-board-grid">
+          ${draftState.order.map(t => `<div class="draft-board-col-header" style="color:${TEAM_COLORS[t]}">${TEAM_LABELS[t]}</div>`).join('')}
+          ${Array.from({ length: draftState.rounds }, (_, r) => {
+            const roundPicks = {};
+            draftState.picks.filter(p => p.round === r + 1).forEach(p => { roundPicks[p.team] = p.wrestler; });
+            return draftState.order.map(t => `<div class="draft-board-cell">${roundPicks[t] || '—'}</div>`).join('');
+          }).join('')}
+        </div>
+      </div>
+      <button class="btn-secondary" style="width:100%;justify-content:center;" onclick="resetDraft()">Start New Draft</button>
+    </div>`;
+}
+
+async function finalizeDraft() {
+  // Rosters already written pick-by-pick, just save to sheet and close draft
+  draftState.active = false;
+  await saveDraftState();
+  await sheetSet('aew_rosters', state.rosters);
+  renderRosters();
+  renderWrestlerList();
+  alert('Rosters locked in! Head to the Roster tab to see the final teams.');
+}
+
+function resetDraft() {
+  if (!confirm('Reset draft? This will clear all picks but keep current rosters.')) return;
+  draftState.active = false;
+  draftState.picks = [];
+  saveDraftState().then(() => renderDraft());
+}
+
+async function saveDraftState() {
+  state.draft = draftState;
+  await sheetSet('aew_draft', draftState);
+  await sheetSet('aew_rosters', state.rosters);
+}
+
+// ─────────────────────────────────────────────
+// SWAPS
+// ─────────────────────────────────────────────
+function getSwapState() {
+  if (!state.swaps) state.swaps = { tokens: { maria:0, ryan:0, josh:0, erik:0 }, history: [] };
+  if (!state.swaps.tokens) state.swaps.tokens = { maria:0, ryan:0, josh:0, erik:0 };
+  if (!state.swaps.history) state.swaps.history = [];
+  return state.swaps;
+}
+
+function renderSwaps() {
+  const el = document.getElementById('swapsContent');
+  if (!el) return;
+  const sw = getSwapState();
+  const nextShow = getNextShow();
+
+  // Token cards
+  const tokenCards = TEAMS.map(team => {
+    const count = sw.tokens[team] || 0;
+    return `<div class="swap-token-card ${count > 0 ? 'has-token' : ''}">
+      <span class="swap-token-dot" style="background:${TEAM_COLORS[team]}"></span>
+      <div class="swap-token-info">
+        <div class="swap-token-name" style="color:${TEAM_COLORS[team]}">${TEAM_LABELS[team]}</div>
+        <div class="swap-token-count ${count > 0 ? 'has' : ''}">${count} token${count !== 1 ? 's' : ''}</div>
+      </div>
+      <div class="swap-token-btns">
+        <button class="swap-token-btn" onclick="adjustToken('${team}',1)" title="Grant token">+</button>
+        <button class="swap-token-btn" onclick="adjustToken('${team}',-1)" title="Remove token" ${count === 0 ? 'disabled' : ''}>−</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Deadline notice
+  const deadlineHTML = nextShow
+    ? `<div style="background:rgba(240,180,41,0.08);border:1px solid rgba(240,180,41,0.2);border-radius:8px;padding:10px 14px;font-size:12px;font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;color:var(--muted);margin-bottom:14px;">
+        ⏰ Tokens must be used before: <b style="color:var(--gold)">${showLabel(nextShow.type)} — ${fmtDate(nextShow.date)}</b>
+       </div>`
+    : '';
+
+  // Teams with tokens can use them
+  const teamsWithTokens = TEAMS.filter(t => (sw.tokens[t] || 0) > 0);
+  const useSection = teamsWithTokens.length > 0 ? `
+    <div class="swap-use-section" style="margin-bottom:16px;">
+      <h3>Use a Swap Token</h3>
+      ${deadlineHTML}
+      <div class="swap-form-row">
+        <span class="swap-form-label">Team</span>
+        <select class="swap-select" id="swapTeamSel" onchange="updateSwapSlots()">
+          <option value="">Select team…</option>
+          ${teamsWithTokens.map(t => `<option value="${t}">${TEAM_LABELS[t]}</option>`).join('')}
+        </select>
+      </div>
+      <div class="swap-form-row">
+        <span class="swap-form-label">Drop</span>
+        <select class="swap-select" id="swapSlotSel" onchange="updateSwapPreview()">
+          <option value="">Select wrestler…</option>
+        </select>
+      </div>
+      <div class="swap-form-row">
+        <span class="swap-form-label">Add</span>
+        <input class="swap-input" id="swapNewName" placeholder="New wrestler name…" oninput="updateSwapPreview()">
+      </div>
+      <div class="swap-preview" id="swapPreview"></div>
+      <button class="btn-primary" onclick="executeSwap()">🔄 Execute Swap</button>
+      <span id="swapMsg" style="margin-left:10px;font-size:12px;font-family:'Barlow Condensed',sans-serif;display:none;"></span>
+    </div>` : `
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;text-align:center;color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:2px;text-transform:uppercase;margin-bottom:16px;">
+      No tokens available — grant one above
+    </div>`;
+
+  // History
+  const historyHTML = sw.history.length > 0 ? `
+    <div class="settings-block">
+      <h3>Swap History</h3>
+      <div class="swap-history-list">
+        ${[...sw.history].reverse().map(h => `
+          <div class="swap-history-item">
+            <div class="swap-history-top">
+              <span class="swap-history-team" style="color:${TEAM_COLORS[h.team]}">${TEAM_LABELS[h.team]}</span>
+              <span class="swap-history-date">${h.date}${h.show ? ' · ' + h.show : ''}</span>
+            </div>
+            <div class="swap-history-detail">
+              Slot ${h.slot.toUpperCase()} · <b>${h.oldWrestler || '—'}</b><span class="arrow">→</span><b>${h.newWrestler}</b>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>` : '';
+
+  el.innerHTML = `
+    <div class="settings-block">
+      <h3>Swap Tokens — Commissioner</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Grant tokens to teams that earn them. Teams must use their token before the next show.</p>
+      <div class="swap-token-grid">${tokenCards}</div>
+    </div>
+    ${useSection}
+    ${historyHTML}`;
+}
+
+function getNextShow() {
+  const today = new Date().toISOString().slice(0,10);
+  return state.schedule.find(s => s.date >= today) || null;
+}
+
+async function adjustToken(team, delta) {
+  const sw = getSwapState();
+  sw.tokens[team] = Math.max(0, (sw.tokens[team] || 0) + delta);
+  await sheetSet('aew_swaps', state.swaps);
+  renderSwaps();
+}
+
+function updateSwapSlots() {
+  const team = document.getElementById('swapTeamSel').value;
+  const sel = document.getElementById('swapSlotSel');
+  sel.innerHTML = '<option value="">Select wrestler…</option>';
+  if (!team) return;
+  LETTERS.forEach(l => {
+    const name = state.rosters[team][l];
+    if (name) {
+      const opt = document.createElement('option');
+      opt.value = l;
+      opt.textContent = `${l.toUpperCase()} — ${name}`;
+      sel.appendChild(opt);
+    }
+  });
+  updateSwapPreview();
+}
+
+function updateSwapPreview() {
+  const team = document.getElementById('swapTeamSel')?.value;
+  const slot = document.getElementById('swapSlotSel')?.value;
+  const newName = document.getElementById('swapNewName')?.value.trim();
+  const preview = document.getElementById('swapPreview');
+  if (!preview) return;
+  if (team && slot && newName) {
+    const oldName = state.rosters[team][slot] || '—';
+    preview.innerHTML = `<b>${TEAM_LABELS[team]}</b> · Slot ${slot.toUpperCase()}: <b>${oldName}</b><span class="arrow">→</span><b>${newName}</b>`;
+    preview.classList.add('visible');
+  } else {
+    preview.classList.remove('visible');
+  }
+}
+
+async function executeSwap() {
+  const team = document.getElementById('swapTeamSel')?.value;
+  const slot = document.getElementById('swapSlotSel')?.value;
+  const newName = document.getElementById('swapNewName')?.value.trim();
+  const msg = document.getElementById('swapMsg');
+
+  if (!team || !slot || !newName) { alert('Please fill in all fields.'); return; }
+
+  const sw = getSwapState();
+  if ((sw.tokens[team] || 0) < 1) { alert('No tokens available for this team.'); return; }
+
+  const oldName = state.rosters[team][slot] || '';
+  const today = new Date().toISOString().slice(0,10);
+  const nextShow = getNextShow();
+
+  // Record history
+  sw.history.push({
+    team,
+    slot,
+    oldWrestler: oldName,
+    newWrestler: newName,
+    date: today,
+    show: nextShow ? `${showLabel(nextShow.type).replace(/.*? /,'')} ${fmtShort(nextShow.date)}` : '',
+  });
+
+  // Deduct token
+  sw.tokens[team] = Math.max(0, (sw.tokens[team] || 1) - 1);
+
+  // Update roster
+  state.rosters[team][slot] = newName;
+
+  msg.textContent = 'Saving…'; msg.style.display = 'inline'; msg.style.color = 'var(--gold)';
+
+  try {
+    await Promise.all([
+      sheetSet('aew_swaps', state.swaps),
+      sheetSet('aew_rosters', state.rosters),
+    ]);
+    msg.textContent = '✓ Swap complete!';
+    msg.style.color = 'var(--teal)';
+    renderSwaps();
+    renderRosters();
+    renderWrestlerList();
+  } catch(e) {
+    msg.textContent = '✗ Error saving';
+    msg.style.color = 'var(--red)';
+  }
+  msg.style.display = 'inline';
+  setTimeout(() => { msg.style.display = 'none'; }, 3000);
+}
+
 function switchTab(name) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
   document.getElementById(`tab-${name}`).classList.add('active');
-  ['leaderboard','score','rosters','settings'].forEach((t,i) => {
+  ['leaderboard','score','rosters','draft','swaps','settings'].forEach((t,i) => {
     if (t===name) document.querySelectorAll('nav button')[i].classList.add('active');
   });
   // hide save bar when not on score tab
@@ -1310,6 +1856,8 @@ function switchTab(name) {
       .catch(() => setSyncStatus('Offline', 'err'));
   }
   if (name === 'settings') _applySettingsTab();
+  if (name === 'draft') renderDraft();
+  if (name === 'swaps') renderSwaps();
 }
 
 function _applySettingsTab() {
