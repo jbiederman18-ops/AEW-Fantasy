@@ -774,19 +774,37 @@ function updateSeasonNameDisplay() {
 // ─────────────────────────────────────────────
 // GOOGLE SHEET
 // ─────────────────────────────────────────────
+function parseRaw(raw) {
+  // Values come from Sheets as strings. Parse once (or twice if double-encoded).
+  if (raw === null || raw === undefined) return null;
+  if (typeof raw !== 'string') return raw;
+  try {
+    const first = JSON.parse(raw);
+    // double-encoded: parsed result is still a string
+    if (typeof first === 'string') {
+      try { return JSON.parse(first); } catch(e) { return first; }
+    }
+    return first;
+  } catch(e) { return raw; }
+}
+
 async function sheetGet(key) {
   const r = await fetch(`${scriptUrl}?action=get&key=${encodeURIComponent(key)}`);
   const j = await r.json();
-  if (j.ok && j.value !== null) {
-    try { return JSON.parse(j.value); } catch(e) { return j.value; }
-  }
+  if (j.ok && j.value !== null) return parseRaw(j.value);
   return null;
 }
 
 async function sheetGetAll() {
   const r = await fetch(`${scriptUrl}?action=getAll`);
   const j = await r.json();
-  return j.ok ? j.value : {};
+  if (!j.ok) return {};
+  // Pre-parse every value so loadFromSheet can use them directly
+  const out = {};
+  for (const [k, v] of Object.entries(j.value)) {
+    out[k] = parseRaw(v);
+  }
+  return out;
 }
 
 async function sheetSet(key, value) {
@@ -821,42 +839,26 @@ async function saveToSheet() {
   ]);
 }
 
-function parseSheetValue(raw) {
-  // Handles single or double encoded JSON from Google Sheets
-  if (raw === null || raw === undefined) return null;
-  if (typeof raw === 'object') return raw;
-  try {
-    const first = JSON.parse(raw);
-    // If it parsed to a string, it was double-encoded — parse again
-    if (typeof first === 'string') return JSON.parse(first);
-    return first;
-  } catch(e) { return null; }
-}
-
 async function loadFromSheet() {
   const all = await sheetGetAll();
-  console.log('[LOAD] raw aew_rosters type:', typeof all['aew_rosters'], '| value prefix:', String(all['aew_rosters']).slice(0,40));
-  const schedule   = parseSheetValue(all['aew_schedule']);
-  const rosters    = parseSheetValue(all['aew_rosters']);
-  const seasonName = parseSheetValue(all['aew_seasonname']);
-  console.log('[LOAD] parsed rosters maria.a:', rosters?.maria?.a);
-  if (schedule)   state.schedule   = schedule;
-  if (rosters)    state.rosters    = rosters;
-  if (seasonName) state.seasonName = seasonName;
+  // Values are already parsed by sheetGetAll — use directly
+  if (all['aew_schedule'] && typeof all['aew_schedule'] === 'object') state.schedule = all['aew_schedule'];
+  if (all['aew_rosters']  && typeof all['aew_rosters']  === 'object') state.rosters  = all['aew_rosters'];
+  if (all['aew_seasonname']) state.seasonName = String(all['aew_seasonname']);
   for (const t of TEAMS) {
-    const parsed = parseSheetValue(all[`aew_scores_${t}`]);
-    if (parsed) state.scores[t] = parsed;
+    const v = all[`aew_scores_${t}`];
+    if (v && typeof v === 'object') state.scores[t] = v;
   }
-  const draft = parseSheetValue(all['aew_draft']);
-  if (draft) { draftState = Object.assign(draftState, draft); state.draft = draftState; }
-  const swaps = parseSheetValue(all['aew_swaps']);
-  if (swaps) state.swaps = swaps;
-  // legacy fallback
-  if (all['aew_all'] && !rosters) {
-    const old = parseSheetValue(all['aew_all']);
-    if (old?.rosters)  state.rosters  = old.rosters;
-    if (old?.schedule) state.schedule = old.schedule;
-    if (old?.scores)   state.scores   = old.scores;
+  const draft = all['aew_draft'];
+  if (draft && typeof draft === 'object') { draftState = Object.assign(draftState, draft); state.draft = draftState; }
+  const swaps = all['aew_swaps'];
+  if (swaps && typeof swaps === 'object') state.swaps = swaps;
+  // legacy fallback for old single-blob format
+  const legacy = all['aew_all'];
+  if (legacy && typeof legacy === 'object' && !all['aew_rosters']) {
+    if (legacy.rosters)  state.rosters  = legacy.rosters;
+    if (legacy.schedule) state.schedule = legacy.schedule;
+    if (legacy.scores)   state.scores   = legacy.scores;
   }
 }
 
@@ -1235,8 +1237,7 @@ async function saveRosterTeam(team) {
     snapshot[l] = inp ? inp.value.trim() : (state.rosters[team][l] || '');
   });
 
-  console.log('[ROSTER SAVE] Starting save for team:', team);
-  console.log('[ROSTER SAVE] Snapshot:', JSON.stringify(snapshot));
+
 
   const msg = document.getElementById(`rsavemsg_${team}`);
   const btn = document.getElementById(`redit_${team}`);
@@ -1245,15 +1246,8 @@ async function saveRosterTeam(team) {
 
   try {
     LETTERS.forEach(l => { state.rosters[team][l] = snapshot[l]; });
-    console.log('[ROSTER SAVE] State updated, sending to sheet...');
-
-    const ok = await sheetSet('aew_rosters', state.rosters);
-    console.log('[ROSTER SAVE] sheetSet returned:', ok);
-
-    // verify it landed by reading back
-    const verify = await sheetGet('aew_rosters');
-    console.log('[ROSTER SAVE] Verify read-back, team a name:', verify?.[team]?.a);
-
+  
+    await sheetSet('aew_rosters', state.rosters);
     msg.textContent = '✓ Saved!';
     msg.style.color = 'var(--teal)';
     btn.classList.remove('editing');
@@ -1262,7 +1256,6 @@ async function saveRosterTeam(team) {
     document.querySelectorAll(`#rblock_${team} .roster-row`).forEach(r => r.classList.remove('edit-mode'));
     renderRosters();
     renderWrestlerList();
-    console.log('[ROSTER SAVE] Done. State rosters team a name:', state.rosters[team].a);
   } catch(e) {
     console.error('[ROSTER SAVE] ERROR:', e);
     msg.textContent = '✗ Error — try again';
