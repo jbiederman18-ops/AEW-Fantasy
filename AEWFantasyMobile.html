@@ -1,0 +1,1376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AEW Fantasy">
+<meta name="theme-color" content="#0a0a0f">
+<title>AEW Fantasy</title>
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%230a0a0f'/%3E%3Crect width='512' height='512' fill='url(%23bg)'/%3E%3Cdefs%3E%3CradialGradient id='bg' cx='30%25' cy='20%25'%3E%3Cstop offset='0%25' stop-color='%231a1410'/%3E%3Cstop offset='100%25' stop-color='%230a0a0f'/%3E%3C/radialGradient%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0%25' stop-color='%23FFD84D'/%3E%3Cstop offset='100%25' stop-color='%23C88A10'/%3E%3C/linearGradient%3E%3C/defs%3E%3C!-- A --%3E%3Cpolygon points='40,420 130,92 220,420' fill='url(%23g)'/%3E%3Cpolygon points='80,420 130,220 180,420' fill='%230a0a0f'/%3E%3Crect x='68' y='290' width='124' height='30' fill='url(%23g)'/%3E%3C!-- E --%3E%3Crect x='248' y='92' width='32' height='328' fill='url(%23g)'/%3E%3Crect x='248' y='92' width='140' height='32' fill='url(%23g)'/%3E%3Crect x='248' y='246' width='116' height='30' fill='url(%23g)'/%3E%3Crect x='248' y='388' width='140' height='32' fill='url(%23g)'/%3E%3C!-- W --%3E%3Cpolygon points='408,92 432,92 462,300 438,300' fill='url(%23g)'/%3E%3Cpolygon points='438,300 462,300 476,185 498,185' fill='url(%23g)'/%3E%3Cpolygon points='408,92 432,92 450,420 426,420' fill='url(%23g)'/%3E%3Cpolygon points='438,300 476,185 498,185 462,420 450,420' fill='url(%23g)'/%3E%3Cpolygon points='476,185 498,185 510,300 472,300' fill='url(%23g)'/%3E%3Cpolygon points='472,300 510,300 520,420 496,420 462,420' fill='url(%23g)'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --card: #16161f;
+    --border: #2a2a3a;
+    --gold: #f0b429;
+    --gold-dim: #9a7419;
+    --red: #e8324a;
+    --teal: #1dd3b0;
+    --blue: #4a90e2;
+    --text: #e8e8f0;
+    --muted: #7070a0;
+    --team-maria: #e84393;
+    --team-ryan: #4a90e2;
+    --team-josh: #1dd3b0;
+    --team-erik: #f0b429;
+    --dynamite: #f0b429;
+    --collision: #4a90e2;
+    --ppv: #e84393;
+    --nav-h: 60px;
+    --header-h: 64px;
+    --safe-bottom: env(safe-area-inset-bottom, 16px);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Barlow', sans-serif;
+    overflow-x: hidden;
+    overscroll-behavior: none;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse 60% 40% at 20% 10%, rgba(240,180,41,0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 50% at 80% 90%, rgba(232,50,74,0.05) 0%, transparent 60%);
+    pointer-events: none; z-index: 0;
+  }
+
+  /* ── HEADER ── */
+  header {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    height: var(--header-h);
+    background: rgba(10,10,15,0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 16px;
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .logo { display: flex; align-items: baseline; gap: 10px; }
+  .logo-aew { font-family: 'Bebas Neue', sans-serif; font-size: 36px; color: var(--gold); letter-spacing: 3px; text-shadow: 0 0 24px rgba(240,180,41,0.5); line-height: 1; }
+  .logo-sub { font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 4px; color: var(--muted); text-transform: uppercase; display: none; }
+  @media (min-width: 480px) { .logo-sub { display: block; } }
+  .header-right { display: flex; align-items: center; gap: 8px; }
+  #syncStatus { font-size: 11px; font-family: 'Barlow Condensed', sans-serif; letter-spacing: 1px; padding: 3px 8px; border-radius: 4px; font-weight: 600; text-transform: uppercase; white-space: nowrap; }
+  .sync-ok { background: rgba(29,211,176,0.12); color: var(--teal); border: 1px solid rgba(29,211,176,0.2); }
+  .sync-err { background: rgba(232,50,74,0.12); color: var(--red); border: 1px solid rgba(232,50,74,0.2); }
+  .sync-loading { background: rgba(240,180,41,0.12); color: var(--gold); border: 1px solid rgba(240,180,41,0.2); }
+
+  /* ── BOTTOM NAV ── */
+  nav {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+    height: calc(var(--nav-h) + var(--safe-bottom));
+    padding-bottom: var(--safe-bottom);
+    background: rgba(10,10,15,0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border);
+    display: flex; align-items: stretch;
+    /* ensure it always kisses the bottom edge */
+    margin-bottom: 0;
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+  nav button {
+    flex: 1; background: none; border: none;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    color: var(--muted); cursor: pointer; transition: color 0.2s;
+    font-family: 'Barlow Condensed', sans-serif; font-size: 10px; font-weight: 700;
+    letter-spacing: 1px; text-transform: uppercase; padding: 0;
+    -webkit-tap-highlight-color: transparent;
+    position: relative;
+  }
+  nav button::before {
+    content: ''; position: absolute; top: 0; left: 20%; right: 20%; height: 2px;
+    background: var(--gold); border-radius: 0 0 2px 2px;
+    transform: scaleX(0); transition: transform 0.2s;
+  }
+  nav button.active { color: var(--gold); }
+  nav button.active::before { transform: scaleX(1); }
+  .nav-icon { font-size: 22px; line-height: 1; }
+
+  /* ── MAIN SCROLL AREA ── */
+  main {
+    position: relative; z-index: 5;
+    padding: calc(var(--header-h) + 16px) 16px calc(var(--nav-h) + var(--safe-bottom) + 24px);
+    max-width: 900px; margin: 0 auto;
+  }
+
+  /* ── TAB PANELS ── */
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ── SECTION TITLE ── */
+  .section-title { font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 3px; color: var(--text); margin-bottom: 16px; }
+  .section-title span { color: var(--gold); }
+
+  /* ── SHOW PILLS ── */
+  .show-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border-radius: 20px; font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+  .show-pill.dynamite { background: rgba(240,180,41,0.15); color: var(--dynamite); border: 1px solid rgba(240,180,41,0.3); }
+  .show-pill.collision { background: rgba(74,144,226,0.15); color: var(--collision); border: 1px solid rgba(74,144,226,0.3); }
+  .show-pill.ppv { background: rgba(232,67,147,0.15); color: var(--ppv); border: 1px solid rgba(232,67,147,0.3); }
+
+  /* ── STANDINGS ── */
+  .standings-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 28px; }
+  .team-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 16px; position: relative; overflow: hidden;
+    display: flex; align-items: center; gap: 14px;
+    transition: transform 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .team-card:active { transform: scale(0.99); }
+  .team-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
+  .team-card.maria::before { background: var(--team-maria); }
+  .team-card.ryan::before { background: var(--team-ryan); }
+  .team-card.josh::before { background: var(--team-josh); }
+  .team-card.erik::before { background: var(--team-erik); }
+  .team-card-rank { font-family: 'Bebas Neue', sans-serif; font-size: 36px; color: var(--muted); opacity: 0.25; min-width: 32px; text-align: center; line-height: 1; }
+  .team-card-rank.gold { color: var(--gold); opacity: 1; }
+  .team-card-rank.silver { color: #c0c0c0; opacity: 0.8; }
+  .team-card-rank.bronze { color: #cd7f32; opacity: 0.8; }
+  .team-card-info { flex: 1; min-width: 0; }
+  .team-card-label { font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; }
+  .team-card-name { font-family: 'Bebas Neue', sans-serif; font-size: 26px; letter-spacing: 2px; line-height: 1; }
+  .team-card.maria .team-card-name { color: var(--team-maria); }
+  .team-card.ryan .team-card-name { color: var(--team-ryan); }
+  .team-card.josh .team-card-name { color: var(--team-josh); }
+  .team-card.erik .team-card-name { color: var(--team-erik); }
+  .team-card-last { font-family: 'Barlow Condensed', sans-serif; font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .team-card-last b { color: var(--teal); }
+  .team-card-pts { text-align: right; }
+  .team-card-pts-num { font-family: 'Bebas Neue', sans-serif; font-size: 40px; line-height: 1; color: var(--text); }
+  .team-card-pts-label { font-family: 'Barlow Condensed', sans-serif; font-size: 10px; font-weight: 600; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; }
+
+  /* ── CHART ── */
+  .chart-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 28px; overflow: hidden; }
+  .chart-header { font-family: 'Barlow Condensed', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+  .chart-legend { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  .chart-legend-item { display: flex; align-items: center; gap: 5px; font-family: 'Barlow Condensed', sans-serif; font-size: 11px; color: var(--muted); font-weight: 600; letter-spacing: 1px; text-transform: uppercase; }
+  .chart-legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .chart-scroll { overflow-x: auto; padding-bottom: 32px; -webkit-overflow-scrolling: touch; }
+  .chart-inner { display: flex; gap: 8px; align-items: flex-end; min-height: 120px; }
+  .chart-col { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; position: relative; }
+  .chart-bars-group { display: flex; align-items: flex-end; gap: 2px; height: 100px; }
+  .chart-bar { width: 11px; border-radius: 3px 3px 0 0; transition: height 0.5s ease; min-height: 2px; }
+  .chart-bar.maria { background: var(--team-maria); }
+  .chart-bar.ryan { background: var(--team-ryan); }
+  .chart-bar.josh { background: var(--team-josh); }
+  .chart-bar.erik { background: var(--team-erik); }
+  .chart-col-label { position: absolute; bottom: -28px; font-family: 'Barlow Condensed', sans-serif; font-size: 9px; color: var(--muted); white-space: nowrap; transform: rotate(-40deg); transform-origin: top center; }
+
+  /* ── WRESTLER TABLE ── */
+  .wrestler-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin-bottom: 28px; }
+  .wrestler-wrap-header { padding: 12px 14px; border-bottom: 1px solid var(--border); background: var(--surface); }
+  .wrestler-wrap-header h3 { font-family: 'Barlow Condensed', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  .filter-row { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; -webkit-overflow-scrolling: touch; }
+  .filter-row::-webkit-scrollbar { display: none; }
+  .filter-tab { flex-shrink: 0; background: none; border: 1px solid var(--border); border-radius: 20px; padding: 4px 12px; color: var(--muted); font-family: 'Barlow Condensed', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+  .filter-tab.active { color: var(--gold); border-color: var(--gold); background: rgba(240,180,41,0.08); }
+  .filter-tab.maria.active { color: var(--team-maria); border-color: var(--team-maria); background: rgba(232,67,147,0.08); }
+  .filter-tab.ryan.active { color: var(--team-ryan); border-color: var(--team-ryan); background: rgba(74,144,226,0.08); }
+  .filter-tab.josh.active { color: var(--team-josh); border-color: var(--team-josh); background: rgba(29,211,176,0.08); }
+  .filter-tab.erik.active { color: var(--team-erik); border-color: var(--team-erik); background: rgba(240,180,41,0.08); }
+  .wrestler-row { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .wrestler-row:last-child { border-bottom: none; }
+  .wrestler-row:active { background: rgba(255,255,255,0.02); }
+  .wr-rank { font-family: 'Bebas Neue', sans-serif; font-size: 18px; color: var(--muted); min-width: 26px; text-align: center; }
+  .wr-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .wr-name { flex: 1; font-size: 13px; font-weight: 500; min-width: 0; }
+  .wr-pts { font-family: 'Bebas Neue', sans-serif; font-size: 22px; color: var(--text); }
+  .wr-bar-wrap { width: 50px; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; flex-shrink: 0; }
+  .wr-bar { height: 100%; border-radius: 2px; }
+
+  /* ── SCORE ENTRY ── */
+  .team-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+  .team-btn {
+    background: var(--card); border: 2px solid var(--border); border-radius: 12px;
+    padding: 14px 10px; cursor: pointer; transition: all 0.2s; text-align: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .team-btn:active { transform: scale(0.97); }
+  .team-btn.selected.maria { border-color: var(--team-maria); background: rgba(232,67,147,0.08); }
+  .team-btn.selected.ryan { border-color: var(--team-ryan); background: rgba(74,144,226,0.08); }
+  .team-btn.selected.josh { border-color: var(--team-josh); background: rgba(29,211,176,0.08); }
+  .team-btn.selected.erik { border-color: var(--team-erik); background: rgba(240,180,41,0.08); }
+  .team-btn-label { font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+  .team-btn-name { font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 2px; line-height: 1; }
+  .team-btn.selected.maria .team-btn-name { color: var(--team-maria); }
+  .team-btn.selected.ryan .team-btn-name { color: var(--team-ryan); }
+  .team-btn.selected.josh .team-btn-name { color: var(--team-josh); }
+  .team-btn.selected.erik .team-btn-name { color: var(--team-erik); }
+
+  .score-panel { display: none; }
+  .score-panel.visible { display: block; }
+
+  .show-select-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
+  .show-select-wrap label { font-family: 'Barlow Condensed', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+  .show-select-wrap select { flex: 1; background: transparent; border: none; color: var(--text); font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; min-width: 0; }
+  .show-select-wrap select:focus { outline: none; }
+
+  .scoring-list { display: flex; flex-direction: column; gap: 10px; }
+  .wrestler-score-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .wsc-header {
+    padding: 13px 14px; display: flex; align-items: center; justify-content: space-between;
+    background: var(--surface); cursor: pointer; user-select: none;
+    -webkit-tap-highlight-color: transparent; min-height: 52px;
+  }
+  .wsc-header:active { background: rgba(255,255,255,0.03); }
+  .wsc-left { display: flex; align-items: center; gap: 10px; }
+  .wsc-letter { font-family: 'Bebas Neue', sans-serif; font-size: 22px; color: var(--muted); }
+  .wsc-name { font-family: 'Barlow Condensed', sans-serif; font-size: 16px; font-weight: 700; }
+  .wsc-right { display: flex; align-items: center; gap: 8px; }
+  .wsc-pts { font-family: 'Bebas Neue', sans-serif; font-size: 20px; color: var(--gold); }
+  .wsc-chevron { font-size: 12px; color: var(--muted); transition: transform 0.2s; }
+  .wsc-chevron.open { transform: rotate(180deg); }
+  .acc-list { display: none; }
+  .acc-list.open { display: block; }
+  .acc-item {
+    display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+    border-top: 1px solid rgba(255,255,255,0.04); min-height: 48px;
+  }
+  .acc-item.has-count { background: rgba(240,180,41,0.05); }
+  .acc-item.has-count .acc-label { color: var(--gold); }
+  .acc-item.has-count .acc-badge { color: var(--gold); border-color: rgba(240,180,41,0.3); }
+  .acc-label { flex: 1; font-size: 13px; color: var(--text); line-height: 1.4; }
+  .acc-badge { font-family: 'Barlow Condensed', sans-serif; font-size: 12px; font-weight: 700; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 2px 7px; flex-shrink: 0; }
+  .stepper { display: flex; align-items: center; gap: 0; flex-shrink: 0; }
+  .stepper-btn { width: 32px; height: 32px; background: var(--surface); border: 1px solid var(--border); color: var(--text); font-size: 18px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; -webkit-tap-highlight-color: transparent; transition: background 0.1s; user-select: none; }
+  .stepper-btn:first-child { border-radius: 8px 0 0 8px; }
+  .stepper-btn:last-child { border-radius: 0 8px 8px 0; }
+  .stepper-btn:active { background: var(--border); }
+  .stepper-count { min-width: 32px; height: 32px; background: var(--card); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-family: 'Bebas Neue', sans-serif; font-size: 18px; color: var(--text); }
+  .stepper-count.nonzero { color: var(--gold); background: rgba(240,180,41,0.08); }
+
+  /* floating save bar */
+  .save-bar {
+    position: fixed; bottom: calc(var(--nav-h) + var(--safe-bottom)); left: 0; right: 0; z-index: 90;
+    background: rgba(10,10,15,0.96); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid var(--border);
+    padding: 10px 16px;
+    padding-left: calc(16px + env(safe-area-inset-left, 0px));
+    padding-right: calc(16px + env(safe-area-inset-right, 0px));
+    display: none; align-items: center; gap: 12px;
+  }
+  .save-bar.visible { display: flex; }
+  .save-bar-total { font-family: 'Bebas Neue', sans-serif; font-size: 22px; color: var(--text); }
+  .save-bar-total span { color: var(--gold); }
+  .save-bar-msg { font-size: 12px; font-family: 'Barlow Condensed', sans-serif; color: var(--teal); display: none; }
+  .btn-save { background: var(--gold); color: #000; border: none; border-radius: 10px; padding: 12px 24px; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; margin-left: auto; display: flex; align-items: center; gap: 6px; -webkit-tap-highlight-color: transparent; transition: opacity 0.15s; flex-shrink: 0; }
+  .btn-save:active { opacity: 0.8; }
+  .btn-save:disabled { opacity: 0.4; }
+
+  /* ── ROSTERS ── */
+  .roster-team-block { background: var(--card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin-bottom: 16px; }
+  .roster-team-header { padding: 14px 16px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border); background: var(--surface); }
+  .roster-team-header-left { display: flex; align-items: center; gap: 10px; flex: 1; }
+  .roster-dot { display: inline-block; width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+  .roster-team-name { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 2px; }
+  .roster-team-total { font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700; color: var(--muted); }
+  .roster-team-total span { color: var(--gold); }
+  .roster-edit-btn { background: none; border: 1px solid var(--border); border-radius: 8px; padding: 6px 14px; font-family: 'Barlow Condensed', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); cursor: pointer; -webkit-tap-highlight-color: transparent; transition: all 0.15s; flex-shrink: 0; }
+  .roster-edit-btn:active { border-color: var(--gold); color: var(--gold); }
+  .roster-edit-btn.editing { background: var(--gold); color: #000; border-color: var(--gold); }
+  .roster-body { padding: 10px 12px; }
+  .roster-row { display: flex; align-items: center; gap: 10px; padding: 7px 4px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .roster-row:last-child { border-bottom: none; }
+  .roster-letter { font-family: 'Bebas Neue', sans-serif; font-size: 20px; color: var(--muted); min-width: 22px; text-align: center; flex-shrink: 0; }
+  .roster-name-view { flex: 1; font-size: 13px; font-weight: 500; line-height: 1.3; }
+  .roster-pts-view { font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700; color: var(--gold); flex-shrink: 0; }
+  .roster-name-input { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; color: var(--text); font-family: 'Barlow', sans-serif; font-size: 13px; display: none; }
+  .roster-name-input:focus { outline: none; border-color: var(--gold); }
+  .roster-row.edit-mode .roster-name-view { display: none; }
+  .roster-row.edit-mode .roster-pts-view { display: none; }
+  .roster-row.edit-mode .roster-name-input { display: block; }
+  .roster-save-row { padding: 10px 12px; border-top: 1px solid var(--border); display: none; align-items: center; gap: 10px; }
+  .roster-save-row.visible { display: flex; }
+  .roster-save-msg { font-size: 12px; font-family: 'Barlow Condensed', sans-serif; letter-spacing: 1px; }
+
+  /* ── SETTINGS ── */
+  .settings-block { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 16px; }
+  .settings-block h3 { font-family: 'Barlow Condensed', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
+  .form-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .form-label { font-family: 'Barlow Condensed', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); min-width: 90px; }
+  .form-row input[type="date"] { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; color: var(--text); font-family: 'Barlow', sans-serif; font-size: 15px; min-width: 0; -webkit-appearance: none; }
+  .form-row input[type="date"]:focus { outline: none; border-color: var(--gold); }
+
+  .btn-primary { background: var(--gold); color: #000; border: none; border-radius: 10px; padding: 12px 20px; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 14px; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: opacity 0.15s; display: inline-flex; align-items: center; gap: 6px; }
+  .btn-primary:active { opacity: 0.8; }
+  .btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 10px; padding: 10px 16px; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: all 0.15s; }
+  .btn-secondary:active { border-color: var(--gold); }
+
+  .schedule-list { display: flex; flex-direction: column; gap: 6px; max-height: 380px; overflow-y: auto; margin-bottom: 14px; -webkit-overflow-scrolling: touch; }
+  .schedule-row { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
+  .sched-day { font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); min-width: 28px; }
+  .sched-date { font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 600; color: var(--text); flex: 1; }
+  .sched-type-btns { display: flex; gap: 3px; }
+  .sched-type-btn { background: none; border: 1px solid var(--border); border-radius: 4px; padding: 3px 7px; font-family: 'Barlow Condensed', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; color: var(--muted); -webkit-tap-highlight-color: transparent; transition: all 0.1s; }
+  .sched-type-btn.active.dynamite { background: rgba(240,180,41,0.15); color: var(--dynamite); border-color: rgba(240,180,41,0.4); }
+  .sched-type-btn.active.collision { background: rgba(74,144,226,0.15); color: var(--collision); border-color: rgba(74,144,226,0.4); }
+  .sched-type-btn.active.ppv { background: rgba(232,67,147,0.15); color: var(--ppv); border-color: rgba(232,67,147,0.4); }
+  .sched-remove { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 16px; padding: 4px; -webkit-tap-highlight-color: transparent; }
+  .sched-remove:active { color: var(--red); }
+
+  .edit-roster-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+  .edit-roster-row { display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; }
+  .edit-letter { font-family: 'Bebas Neue', sans-serif; font-size: 20px; color: var(--gold); min-width: 20px; text-align: center; }
+  .edit-roster-row input { flex: 1; background: transparent; border: none; color: var(--text); font-family: 'Barlow', sans-serif; font-size: 14px; min-width: 0; }
+  .edit-roster-row input:focus { outline: none; }
+  .team-edit-tabs { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 14px; -webkit-overflow-scrolling: touch; }
+  .team-edit-tabs::-webkit-scrollbar { display: none; }
+
+  .instructions-box { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 14px; font-size: 13px; line-height: 1.8; color: var(--muted); }
+  .instructions-box strong { color: var(--gold); display: block; margin-bottom: 6px; font-family: 'Barlow Condensed', sans-serif; letter-spacing: 1px; text-transform: uppercase; font-size: 12px; }
+  .instructions-box ol { padding-left: 16px; }
+  .instructions-box a { color: var(--gold); }
+  .script-box { position: relative; margin-bottom: 14px; }
+  .script-box pre { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-size: 10px; color: #a0e4cb; overflow-x: auto; max-height: 180px; line-height: 1.6; }
+  .script-copy-btn { position: absolute; top: 8px; right: 8px; background: var(--gold); color: #000; border: none; border-radius: 6px; padding: 4px 10px; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; }
+  .url-row { display: flex; gap: 8px; }
+  .url-row input { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; color: var(--text); font-family: 'Barlow', sans-serif; font-size: 13px; min-width: 0; }
+  .url-row input:focus { outline: none; border-color: var(--gold); }
+  #connectionMsg { margin-top: 8px; font-size: 12px; font-family: 'Barlow Condensed', sans-serif; letter-spacing: 1px; }
+
+  /* ── UTILS ── */
+  .loading-spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .empty { text-align: center; padding: 40px 20px; color: var(--muted); font-family: 'Barlow Condensed', sans-serif; font-size: 13px; letter-spacing: 2px; text-transform: uppercase; }
+  .save-msg-ok { color: var(--teal); }
+  .save-msg-err { color: var(--red); }
+  .no-season { background: var(--card); border: 1px solid rgba(240,180,41,0.2); border-radius: 12px; padding: 28px; text-align: center; }
+  .no-season strong { color: var(--gold); display: block; font-family: 'Barlow Condensed', sans-serif; font-size: 15px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px; }
+  .no-season p { font-size: 13px; color: var(--muted); }
+  .gap-sm { height: 12px; }
+
+  @media (min-width: 640px) {
+    main { padding-left: 24px; padding-right: 24px; }
+    .team-grid { grid-template-columns: repeat(4, 1fr); }
+    .roster-grid { grid-template-columns: repeat(3, 1fr); }
+    .acc-list { display: none; }
+    .acc-list.open { display: grid; grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-aew">AEW</div>
+    <div class="logo-sub">Fantasy · <span id="seasonNameDisplay">Road Chip</span></div>
+  </div>
+  <div class="header-right">
+    <div id="syncStatus" class="sync-loading"><span class="loading-spinner"></span> Loading</div>
+  </div>
+</header>
+
+<!-- BOTTOM NAV -->
+<nav>
+  <button class="active" onclick="switchTab('leaderboard')">
+    <span class="nav-icon">🏆</span>Standings
+  </button>
+  <button onclick="switchTab('score')">
+    <span class="nav-icon">✏️</span>Scores
+  </button>
+  <button onclick="switchTab('rosters')">
+    <span class="nav-icon">🤼</span>Roster
+  </button>
+  <button onclick="switchTab('settings')">
+    <span class="nav-icon">⚙️</span>Settings
+  </button>
+</nav>
+
+<!-- SAVE BAR (floats above nav when scoring) -->
+<div class="save-bar" id="saveBar">
+  <div class="save-bar-total">Total: <span id="weekTotalDisplay">0</span> pts</div>
+  <div class="save-bar-msg" id="saveBarMsg"></div>
+  <button class="btn-save" id="submitBtn" onclick="submitScores()">💾 Save</button>
+</div>
+
+<main>
+
+  <!-- LEADERBOARD -->
+  <div id="tab-leaderboard" class="tab-panel active">
+    <div class="section-title"><span>Season</span> Standings</div>
+    <div id="standingsList" class="standings-list">
+      <div class="empty"><span class="loading-spinner" style="width:28px;height:28px;border-width:3px;"></span></div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-header">Points by Show</div>
+      <div class="chart-legend">
+        <div class="chart-legend-item"><div class="chart-legend-dot" style="background:var(--team-maria)"></div>Maria</div>
+        <div class="chart-legend-item"><div class="chart-legend-dot" style="background:var(--team-ryan)"></div>Ryan</div>
+        <div class="chart-legend-item"><div class="chart-legend-dot" style="background:var(--team-josh)"></div>Josh</div>
+        <div class="chart-legend-item"><div class="chart-legend-dot" style="background:var(--team-erik)"></div>Erik</div>
+      </div>
+      <div class="chart-scroll"><div class="chart-inner" id="showChart"></div></div>
+    </div>
+
+    <div class="wrestler-wrap">
+      <div class="wrestler-wrap-header">
+        <h3>Wrestler Rankings</h3>
+        <div class="filter-row">
+          <button class="filter-tab active" onclick="filterWrestlers('all',this)">All</button>
+          <button class="filter-tab maria" onclick="filterWrestlers('maria',this)">Maria</button>
+          <button class="filter-tab ryan" onclick="filterWrestlers('ryan',this)">Ryan</button>
+          <button class="filter-tab josh" onclick="filterWrestlers('josh',this)">Josh</button>
+          <button class="filter-tab erik" onclick="filterWrestlers('erik',this)">Erik</button>
+        </div>
+      </div>
+      <div id="wrestlerList"></div>
+    </div>
+  </div>
+
+  <!-- SCORE ENTRY -->
+  <div id="tab-score" class="tab-panel">
+    <div class="section-title"><span>Enter</span> Scores</div>
+    <div class="team-grid">
+      <div class="team-btn maria" data-team="maria" onclick="selectTeam('maria')">
+        <div class="team-btn-label">Team</div><div class="team-btn-name">Maria</div>
+      </div>
+      <div class="team-btn ryan" data-team="ryan" onclick="selectTeam('ryan')">
+        <div class="team-btn-label">Team</div><div class="team-btn-name">Ryan</div>
+      </div>
+      <div class="team-btn josh" data-team="josh" onclick="selectTeam('josh')">
+        <div class="team-btn-label">Team</div><div class="team-btn-name">Josh</div>
+      </div>
+      <div class="team-btn erik" data-team="erik" onclick="selectTeam('erik')">
+        <div class="team-btn-label">Team</div><div class="team-btn-name">Erik</div>
+      </div>
+    </div>
+    <div class="score-panel" id="scorePanel">
+      <div class="show-select-wrap">
+        <label>Show</label>
+        <select id="showSelect" onchange="loadShowScores()"></select>
+        <span id="showTypePill"></span>
+      </div>
+      <div class="scoring-list" id="scoringList"></div>
+      <div class="gap-sm"></div>
+    </div>
+  </div>
+
+  <!-- ROSTERS -->
+  <div id="tab-rosters" class="tab-panel">
+    <div class="section-title"><span>Team</span> Rosters</div>
+    <div id="rostersContent"></div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div id="tab-settings" class="tab-panel">
+    <div class="section-title"><span>Settings</span></div>
+
+    <!-- Connection -->
+    <div class="settings-block">
+      <h3>Google Sheet Connection</h3>
+      <div class="instructions-box">
+        <strong>📋 One-Time Setup</strong>
+        <ol>
+          <li>Go to <a href="https://sheets.google.com" target="_blank">Google Sheets</a> → New spreadsheet</li>
+          <li>Extensions → Apps Script → delete existing code → paste script below</li>
+          <li>Deploy → New deployment → Web App</li>
+          <li>Execute as: <b>Me</b> · Who has access: <b>Anyone</b></li>
+          <li>Deploy, authorize, copy URL, paste below</li>
+        </ol>
+      </div>
+      <div class="script-box">
+        <pre id="appsScriptCode"></pre>
+        <button class="script-copy-btn" onclick="copyScript()">Copy</button>
+      </div>
+      <label style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px;">Apps Script URL</label>
+      <div class="url-row">
+        <input type="url" id="scriptUrlInput" placeholder="https://script.google.com/macros/s/.../exec">
+        <button class="btn-primary" onclick="saveScriptUrl()">Connect</button>
+      </div>
+      <div id="connectionMsg"></div>
+    </div>
+
+    <!-- Season -->
+    <div class="settings-block">
+      <h3>Season Schedule</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Set dates — Wednesdays auto-fill as Dynamite, Saturdays as Collision. Toggle any Sunday to PPV.</p>
+      <div class="form-row">
+        <span class="form-label">Season Name</span>
+        <input type="text" id="seasonNameInput" placeholder="e.g. Road Chip" style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-family:'Barlow',sans-serif;font-size:15px;">
+        <button class="btn-primary" onclick="saveSeasonName()" style="flex-shrink:0;">Save</button>
+      </div>
+      <span id="seasonNameMsg" style="font-size:12px;font-family:'Barlow Condensed',sans-serif;margin-bottom:12px;display:none;"></span>
+      <div class="form-row">
+        <span class="form-label">Start</span>
+        <input type="date" id="seasonStart">
+      </div>
+      <div class="form-row">
+        <span class="form-label">End</span>
+        <input type="date" id="seasonEnd">
+      </div>
+      <button class="btn-primary" onclick="generateSchedule()" style="margin-bottom:16px;">Generate Schedule</button>
+
+      <div id="scheduleBuilder" style="display:none;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);" id="scheduleCount"></span>
+          <button class="btn-secondary" style="font-size:11px;padding:6px 12px;" onclick="addCustomShow()">+ Add Show</button>
+        </div>
+        <div class="schedule-list" id="scheduleGrid"></div>
+        <button class="btn-primary" onclick="saveSchedule()">Save Schedule</button>
+        <span id="scheduleSaveMsg" style="margin-left:10px;font-size:12px;font-family:'Barlow Condensed',sans-serif;display:none;"></span>
+      </div>
+    </div>
+
+
+
+  </div>
+</main>
+
+<script>
+// ─────────────────────────────────────────────
+// HARDCODED SCRIPT URL — no setup needed
+// ─────────────────────────────────────────────
+const HARDCODED_URL = 'https://script.google.com/macros/s/AKfycbyr0zdJF7zxbELK46TxWXVOCddLsM2upRf5IR_juNSG3NYQR9T_ABgJ8PqSHbqy4o0A9Q/exec';
+
+const TEAMS = ['maria','ryan','josh','erik'];
+const TEAM_LABELS = { maria:'Maria', ryan:'Ryan', josh:'Josh', erik:'Erik' };
+const TEAM_COLORS = { maria:'#e84393', ryan:'#4a90e2', josh:'#1dd3b0', erik:'#f0b429' };
+const LETTERS = 'abcdefghijkl'.split('');
+const ACCOMPLISHMENTS = [
+  { key:'win',          label:'Win a Match',                                                        pts:5  },
+  { key:'main',         label:'Main Event a Show',                                                  pts:4  },
+  { key:'runin',        label:'Run-In',                                                              pts:2  },
+  { key:'fluid',        label:'Fluid Leak (Substantial) / Five-Star Classic',                       pts:8  },
+  { key:'squashJobber', label:'Squash a Jobber (Shawn Dean Counts) / Collects Cash',                pts:2  },
+  { key:'squashNotable',label:'Squash a Notable Name (Not Shawn Dean)',                             pts:5  },
+  { key:'promoBack',    label:'Promo Segment (Backstage) / Watches on Little TV',                   pts:2  },
+  { key:'promoLive',    label:'Promo Segment (Live Crowd)',                                          pts:3  },
+  { key:'faceheel',     label:'Face/Heel Turn',                                                      pts:12 },
+  { key:'timelimit',    label:'Time Limit Draw / DQ',                                                pts:10 },
+  { key:'respect',      label:'Show of Respect or Gets His Shit In',                                pts:2  },
+  { key:'loss',         label:'Loses a Televised Match',                                             pts:2  },
+  { key:'writtenoff',   label:"Written off TV / Big Return / Takes Off the Mask",                   pts:10 },
+  { key:'stunt',        label:'Big Stunt w/ Non-Ring Prop',                                         pts:8  },
+  { key:'aewTitle',     label:'Wins an AEW Title',                                                  pts:20 },
+  { key:'thirdTitle',   label:'Wins a 3rd Party Title',                                             pts:12 },
+  { key:'defAew',       label:'Defends an AEW Title',                                               pts:9  },
+  { key:'defThird',     label:'Defends a 3rd Party Title',                                          pts:6  },
+  { key:'brawl',        label:'Pull-Apart Brawl / Beats Up a Horde of Security',                    pts:4  },
+];
+
+const APPS_SCRIPT_CODE = `const SHEET_NAME = 'AEWData';
+function doGet(e) {
+  const action = e.parameter.action;
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) { sheet = ss.insertSheet(SHEET_NAME); sheet.appendRow(['key','value']); }
+  try {
+    if (action === 'get') {
+      const key = e.parameter.key;
+      const data = sheet.getDataRange().getValues();
+      for (let i = 1; i < data.length; i++) {
+        if (data[i][0] === key) return output(JSON.stringify({ok:true,value:data[i][1]}));
+      }
+      return output(JSON.stringify({ok:true,value:null}));
+    }
+    if (action === 'getAll') {
+      const data = sheet.getDataRange().getValues();
+      const result = {};
+      for (let i = 1; i < data.length; i++) { if (data[i][0]) result[data[i][0]] = data[i][1]; }
+      return output(JSON.stringify({ok:true,value:result}));
+    }
+    if (action === 'set') {
+      const key = e.parameter.key; const value = e.parameter.value;
+      const data = sheet.getDataRange().getValues();
+      for (let i = 1; i < data.length; i++) {
+        if (data[i][0] === key) { sheet.getRange(i+1,2).setValue(value); return output(JSON.stringify({ok:true})); }
+      }
+      sheet.appendRow([key,value]);
+      return output(JSON.stringify({ok:true}));
+    }
+    return output(JSON.stringify({ok:false,error:'Unknown action'}));
+  } catch(err) { return output(JSON.stringify({ok:false,error:err.toString()})); }
+}
+function output(text) {
+  return ContentService.createTextOutput(text).setMimeType(ContentService.MimeType.JSON);
+}`;
+
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
+let scriptUrl = HARDCODED_URL;
+let state = {
+  rosters: {
+    maria: { a:'Konosuke Takeshita', b:'Kris Statlander', c:'Swerve Strickland', d:'Fucking Cash Wheeler Again', e:'Orange Cassidy', f:'Dani Garcia', g:'Mina Shirakawa of the Timeless Love Bombs', h:'Shelton Benjamin', i:'Adam Copeland', j:'Roderick Strong', k:'Jamie Hayter', l:'Kevin Knight' },
+    ryan:  { a:'Mark Briscoe', b:'Don Callis', c:'Kyle Fletcher', d:'Timeless Toni Storm of the Timeless Love Bombs', e:'Hangman Adam Page', f:'Shibata', g:'Claudio Castagnoli', h:'Bandido', i:'Skye Blue', j:'Eddie Kingston', k:'Harley Cameron', l:'The 200,000 Dollar Man Juuice Robinson' },
+    josh:  { a:'Samoa Joe', b:'Ultimo Mone', c:'Ricochet', d:'Kazuchika Okada', e:'PAC', f:'Brody King', g:'Marina Shafir', h:'Mr. Instant Replay who I remember as being named Matthew Buck', i:'Speedball Mike Bailey', j:'MJF', k:'Mansoor', l:'Jungle Boy Jacob Perrold' },
+    erik:  { a:'Darby Allin', b:'Jon Moxley', c:'Tommaso Ciampa', d:'Dax Harwood', e:'Wheeler Yuta', f:"Kyle O'Reilly", g:'Nick Buck', h:'Willow Nightingale', i:'HOOK', j:'Bobby Lashley', k:'Christian Cage', l:'Julia Hart' },
+  },
+  scores: {},
+  schedule: [],
+  seasonName: 'Road Chip',
+};
+
+let currentTeam = null;
+let currentShowId = null;
+let editingTeam = 'maria';
+let wrestlerFilter = 'all';
+let pendingSchedule = [];
+let settingsLoaded = false; // prevent re-fetch overwriting in-progress edits
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('appsScriptCode').textContent = APPS_SCRIPT_CODE;
+  document.getElementById('scriptUrlInput').value = scriptUrl;
+  initFromSheet();
+});
+
+async function initFromSheet() {
+  setSyncStatus('Loading…', 'loading');
+  try {
+    await loadFromSheet();
+    setSyncStatus('Live', 'ok');
+  } catch(e) {
+    setSyncStatus('Offline', 'err');
+  }
+  renderAll();
+}
+
+function renderAll() {
+  updateSeasonNameDisplay();
+  renderStandings();
+  renderShowChart();
+  renderWrestlerList();
+  renderRosters();
+  populateShowSelect();
+}
+
+function updateSeasonNameDisplay() {
+  const name = state.seasonName || 'Fantasy';
+  document.getElementById('seasonNameDisplay').textContent = name;
+  document.title = `AEW ${name} — Fantasy League`;
+}
+
+// ─────────────────────────────────────────────
+// GOOGLE SHEET
+// ─────────────────────────────────────────────
+async function sheetGet(key) {
+  const r = await fetch(`${scriptUrl}?action=get&key=${encodeURIComponent(key)}`);
+  const j = await r.json();
+  if (j.ok && j.value !== null) {
+    try { return JSON.parse(j.value); } catch(e) { return j.value; }
+  }
+  return null;
+}
+
+async function sheetGetAll() {
+  const r = await fetch(`${scriptUrl}?action=getAll`);
+  const j = await r.json();
+  return j.ok ? j.value : {};
+}
+
+async function sheetSet(key, value) {
+  const json = JSON.stringify(value);
+  const encoded = encodeURIComponent(json);
+  if (encoded.length <= 1800) {
+    const r = await fetch(`${scriptUrl}?action=set&key=${encodeURIComponent(key)}&value=${encoded}`);
+    const j = await r.json();
+    if (!j.ok) throw new Error(`Sheet set failed for key: ${key}`);
+    return true;
+  }
+  // chunk it
+  const CHUNK = 1400;
+  const chunks = [];
+  for (let i = 0; i < json.length; i += CHUNK) chunks.push(json.slice(i, i + CHUNK));
+  await _setRaw(`${key}__chunks`, String(chunks.length));
+  for (let i = 0; i < chunks.length; i++) await _setRaw(`${key}__chunk${i}`, chunks[i]);
+  return true;
+}
+
+async function _setRaw(key, value) {
+  const r = await fetch(`${scriptUrl}?action=set&key=${encodeURIComponent(key)}&value=${encodeURIComponent(value)}`);
+  return r.ok;
+}
+
+async function saveToSheet() {
+  await Promise.all([
+    sheetSet('aew_schedule', state.schedule),
+    sheetSet('aew_rosters', state.rosters),
+    sheetSet('aew_seasonname', state.seasonName),
+    ...TEAMS.map(t => sheetSet(`aew_scores_${t}`, state.scores[t] || {}))
+  ]);
+}
+
+function parseSheetValue(raw) {
+  // Handles single or double encoded JSON from Google Sheets
+  if (raw === null || raw === undefined) return null;
+  if (typeof raw === 'object') return raw;
+  try {
+    const first = JSON.parse(raw);
+    // If it parsed to a string, it was double-encoded — parse again
+    if (typeof first === 'string') return JSON.parse(first);
+    return first;
+  } catch(e) { return null; }
+}
+
+async function loadFromSheet() {
+  const all = await sheetGetAll();
+  console.log('[LOAD] raw aew_rosters type:', typeof all['aew_rosters'], '| value prefix:', String(all['aew_rosters']).slice(0,40));
+  const schedule   = parseSheetValue(all['aew_schedule']);
+  const rosters    = parseSheetValue(all['aew_rosters']);
+  const seasonName = parseSheetValue(all['aew_seasonname']);
+  console.log('[LOAD] parsed rosters maria.a:', rosters?.maria?.a);
+  if (schedule)   state.schedule   = schedule;
+  if (rosters)    state.rosters    = rosters;
+  if (seasonName) state.seasonName = seasonName;
+  for (const t of TEAMS) {
+    const parsed = parseSheetValue(all[`aew_scores_${t}`]);
+    if (parsed) state.scores[t] = parsed;
+  }
+  // legacy fallback
+  if (all['aew_all'] && !rosters) {
+    const old = parseSheetValue(all['aew_all']);
+    if (old?.rosters)  state.rosters  = old.rosters;
+    if (old?.schedule) state.schedule = old.schedule;
+    if (old?.scores)   state.scores   = old.scores;
+  }
+}
+
+// ─────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────
+function showId(show) { return `${show.date}_${show.type}`; }
+
+function fmtDate(d) {
+  const [y,m,dy] = d.split('-').map(Number);
+  return new Date(y,m-1,dy).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+}
+function fmtShort(d) {
+  const [y,m,dy] = d.split('-').map(Number);
+  return new Date(y,m-1,dy).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+}
+function dayName(d) {
+  const [y,m,dy] = d.split('-').map(Number);
+  return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(y,m-1,dy).getDay()];
+}
+function showLabel(type) { return {dynamite:'⚡ Dynamite',collision:'💥 Collision',ppv:'🏆 PPV'}[type]||type; }
+
+function getShowPts(team, sid) {
+  if (!state.scores[team]?.[sid]) return 0;
+  let total = 0;
+  for (const l of LETTERS) {
+    if (!state.scores[team][sid][l]) continue;
+    for (const a of ACCOMPLISHMENTS) {
+      total += getCount(state.scores[team][sid][l], a.key) * a.pts;
+    }
+  }
+  return total;
+}
+function getTeamTotal(team) {
+  return state.schedule.reduce((s, show) => s + getShowPts(team, showId(show)), 0);
+}
+function getWrestlerPts(team, letter) {
+  return state.schedule.reduce((s, show) => {
+    const sid = showId(show);
+    if (!state.scores[team]?.[sid]?.[letter]) return s;
+    return s + ACCOMPLISHMENTS.reduce((pts, a) => pts + getCount(state.scores[team][sid][letter], a.key) * a.pts, 0);
+  }, 0);
+}
+function getLastShow() {
+  const sorted = [...state.schedule].sort((a,b) => b.date.localeCompare(a.date));
+  return sorted.find(s => TEAMS.some(t => getShowPts(t, showId(s)) > 0));
+}
+
+// ─────────────────────────────────────────────
+// STANDINGS
+// ─────────────────────────────────────────────
+function renderStandings() {
+  const el = document.getElementById('standingsList');
+  if (!state.schedule.length) {
+    el.innerHTML = `<div class="no-season"><strong>No Season Configured</strong><p>Go to Settings → Season Schedule to set up your shows.</p></div>`;
+    return;
+  }
+  const totals = TEAMS.map(t => ({ team:t, pts: getTeamTotal(t) })).sort((a,b) => b.pts - a.pts);
+  const last = getLastShow();
+  const rankClass = ['gold','silver','bronze',''];
+  el.innerHTML = totals.map((item, i) => {
+    const lastPts = last ? getShowPts(item.team, showId(last)) : 0;
+    const lastLabel = last ? `${showLabel(last.type).replace(/.*? /,'')} ${fmtShort(last.date)}` : '—';
+    return `<div class="team-card ${item.team}">
+      <div class="team-card-rank ${rankClass[i]}">${i+1}</div>
+      <div class="team-card-info">
+        <div class="team-card-label">Team</div>
+        <div class="team-card-name">${TEAM_LABELS[item.team]}</div>
+        <div class="team-card-last">Last: <b>${lastPts} pts</b> · ${lastLabel}</div>
+      </div>
+      <div class="team-card-pts">
+        <div class="team-card-pts-num">${item.pts}</div>
+        <div class="team-card-pts-label">pts</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ─────────────────────────────────────────────
+// CHART
+// ─────────────────────────────────────────────
+function renderShowChart() {
+  const el = document.getElementById('showChart');
+  const shows = state.schedule.filter(s => TEAMS.some(t => getShowPts(t, showId(s)) > 0));
+  if (!shows.length) { el.innerHTML = '<div style="color:var(--muted);font-size:12px;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:2px;text-transform:uppercase;">No data yet</div>'; return; }
+  let max = 1;
+  shows.forEach(s => TEAMS.forEach(t => { max = Math.max(max, getShowPts(t, showId(s))); }));
+  el.innerHTML = shows.map(show => {
+    const sid = showId(show);
+    return `<div class="chart-col">
+      <div class="chart-bars-group">
+        ${TEAMS.map(t => {
+          const pts = getShowPts(t, sid);
+          const h = Math.round((pts/max)*100);
+          return `<div class="chart-bar ${t}" style="height:${Math.max(h,pts>0?3:0)}px;" title="${TEAM_LABELS[t]}: ${pts}"></div>`;
+        }).join('')}
+      </div>
+      <div class="chart-col-label">${showLabel(show.type).replace(/.*? /,'')} ${fmtShort(show.date)}</div>
+    </div>`;
+  }).join('');
+}
+
+// ─────────────────────────────────────────────
+// WRESTLER LIST
+// ─────────────────────────────────────────────
+function renderWrestlerList() {
+  let wrestlers = TEAMS.flatMap(team =>
+    LETTERS.map(l => ({ team, letter:l, name: state.rosters[team][l], pts: getWrestlerPts(team, l) }))
+    .filter(w => w.name)
+  );
+  if (wrestlerFilter !== 'all') wrestlers = wrestlers.filter(w => w.team === wrestlerFilter);
+  wrestlers.sort((a,b) => b.pts - a.pts);
+  const max = wrestlers.length ? Math.max(...wrestlers.map(w => w.pts), 1) : 1;
+  const el = document.getElementById('wrestlerList');
+  if (!wrestlers.length) { el.innerHTML = '<div class="empty">No wrestlers</div>'; return; }
+  el.innerHTML = wrestlers.map((w,i) => `
+    <div class="wrestler-row">
+      <div class="wr-rank">${i+1}</div>
+      <div class="wr-dot" style="background:${TEAM_COLORS[w.team]}"></div>
+      <div class="wr-name">${w.name}</div>
+      <div class="wr-pts">${w.pts}</div>
+      <div class="wr-bar-wrap"><div class="wr-bar" style="width:${Math.round(w.pts/max*100)}%;background:${TEAM_COLORS[w.team]};"></div></div>
+    </div>`).join('');
+}
+
+function filterWrestlers(team, btn) {
+  wrestlerFilter = team;
+  document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderWrestlerList();
+}
+
+// ─────────────────────────────────────────────
+// SCORE ENTRY
+// ─────────────────────────────────────────────
+function populateShowSelect() {
+  const sel = document.getElementById('showSelect');
+  sel.innerHTML = '';
+  if (!state.schedule.length) {
+    sel.innerHTML = '<option>No season configured — go to Settings</option>';
+    return;
+  }
+  let lastMonth = '';
+  state.schedule.forEach(show => {
+    const month = show.date.slice(0,7);
+    if (month !== lastMonth) {
+      const [y,m] = month.split('-');
+      const label = new Date(parseInt(y), parseInt(m)-1, 1).toLocaleDateString('en-US',{month:'long',year:'numeric'});
+      const og = document.createElement('optgroup');
+      og.label = label;
+      sel.appendChild(og);
+      lastMonth = month;
+    }
+    const opt = document.createElement('option');
+    opt.value = showId(show);
+    opt.textContent = `${showLabel(show.type).replace(/.*? /,'')} — ${fmtDate(show.date)}`;
+    sel.lastChild.appendChild(opt);
+  });
+  const today = new Date().toISOString().slice(0,10);
+  const last = getLastShow();
+  if (last) sel.value = showId(last);
+  else { const p = [...state.schedule].filter(s => s.date <= today).pop(); if (p) sel.value = showId(p); }
+  updateShowPill();
+}
+
+function updateShowPill() {
+  const sid = document.getElementById('showSelect').value;
+  const show = state.schedule.find(s => showId(s) === sid);
+  document.getElementById('showTypePill').innerHTML = show ? `<span class="show-pill ${show.type}">${showLabel(show.type)}</span>` : '';
+}
+
+function selectTeam(team) {
+  currentTeam = team;
+  document.querySelectorAll('.team-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelector(`.team-btn[data-team="${team}"]`).classList.add('selected');
+  document.getElementById('scorePanel').classList.add('visible');
+  document.getElementById('saveBar').classList.add('visible');
+  loadShowScores();
+}
+
+function loadShowScores() {
+  if (!currentTeam) return;
+  const sid = document.getElementById('showSelect').value;
+  currentShowId = sid;
+  updateShowPill();
+  const teamScores = state.scores[currentTeam]?.[sid] || {};
+  const list = document.getElementById('scoringList');
+  list.innerHTML = LETTERS.map(letter => {
+    const name = state.rosters[currentTeam][letter];
+    if (!name) return '';
+    const ls = teamScores[letter] || {};
+    const pts = ACCOMPLISHMENTS.reduce((s,a) => s + (getCount(ls,a.key) * a.pts), 0);
+    const accs = ACCOMPLISHMENTS.map(a => {
+      const count = getCount(ls, a.key);
+      return `<div class="acc-item ${count>0?'has-count':''}" id="accrow_${letter}_${a.key}">
+        <span class="acc-label">${a.label}</span>
+        <span class="acc-badge">+${a.pts}</span>
+        <div class="stepper">
+          <button class="stepper-btn" onclick="stepAcc('${letter}','${a.key}',-1)">−</button>
+          <div class="stepper-count ${count>0?'nonzero':''}" id="cnt_${letter}_${a.key}">${count}</div>
+          <button class="stepper-btn" onclick="stepAcc('${letter}','${a.key}',1)">+</button>
+        </div>
+      </div>`;
+    }).join('');
+    return `<div class="wrestler-score-card" id="card_${letter}">
+      <div class="wsc-header" onclick="toggleCard('${letter}')">
+        <div class="wsc-left">
+          <span class="wsc-letter">${letter.toUpperCase()}</span>
+          <span class="wsc-name">${name}</span>
+        </div>
+        <div class="wsc-right">
+          <span class="wsc-pts" id="prev_${letter}">${pts>0?'+'+pts+' pts':''}</span>
+          <span class="wsc-chevron" id="chev_${letter}">▼</span>
+        </div>
+      </div>
+      <div class="acc-list" id="accs_${letter}">${accs}</div>
+    </div>`;
+  }).join('');
+  recalcTotal();
+}
+
+function toggleCard(l) {
+  document.getElementById(`accs_${l}`).classList.toggle('open');
+  document.getElementById(`chev_${l}`).classList.toggle('open');
+}
+
+function getCount(ls, key) {
+  const v = ls[key];
+  if (!v) return 0;
+  if (typeof v === 'number') return v;
+  if (v === true) return 1; // legacy boolean support
+  return 0;
+}
+
+function stepAcc(l, key, delta) {
+  // Read current live counts from DOM into a temp object
+  if (!window._liveCounts) window._liveCounts = {};
+  if (!window._liveCounts[l]) window._liveCounts[l] = {};
+  const cur = parseInt(document.getElementById(`cnt_${l}_${key}`).textContent) || 0;
+  const next = Math.max(0, cur + delta);
+  window._liveCounts[l][key] = next;
+
+  // Update count display
+  const countEl = document.getElementById(`cnt_${l}_${key}`);
+  countEl.textContent = next;
+  countEl.className = `stepper-count ${next > 0 ? 'nonzero' : ''}`;
+
+  // Update row highlight
+  const row = document.getElementById(`accrow_${l}_${key}`);
+  row.classList.toggle('has-count', next > 0);
+  row.querySelector('.acc-label').style.color = next > 0 ? 'var(--gold)' : '';
+  row.querySelector('.acc-badge').style.color = next > 0 ? 'var(--gold)' : '';
+  row.querySelector('.acc-badge').style.borderColor = next > 0 ? 'rgba(240,180,41,0.3)' : '';
+
+  recalcTotal();
+}
+
+function recalcTotal() {
+  let total = 0;
+  for (const l of LETTERS) {
+    let pts = 0;
+    for (const a of ACCOMPLISHMENTS) {
+      const countEl = document.getElementById(`cnt_${l}_${a.key}`);
+      const count = countEl ? (parseInt(countEl.textContent) || 0) : 0;
+      total += count * a.pts;
+      pts   += count * a.pts;
+    }
+    const prev = document.getElementById(`prev_${l}`);
+    if (prev) prev.textContent = pts > 0 ? `+${pts} pts` : '';
+  }
+  document.getElementById('weekTotalDisplay').textContent = total;
+}
+
+async function submitScores() {
+  if (!currentTeam || !currentShowId) return;
+  const btn = document.getElementById('submitBtn');
+  const msg = document.getElementById('saveBarMsg');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loading-spinner"></span> Saving';
+  msg.style.display = 'none';
+
+  if (!state.scores[currentTeam]) state.scores[currentTeam] = {};
+  state.scores[currentTeam][currentShowId] = {};
+  for (const l of LETTERS) {
+    const ld = {};
+    for (const a of ACCOMPLISHMENTS) {
+      const countEl = document.getElementById(`cnt_${l}_${a.key}`);
+      const count = countEl ? (parseInt(countEl.textContent) || 0) : 0;
+      if (count > 0) ld[a.key] = count;
+    }
+    state.scores[currentTeam][currentShowId][l] = ld;
+  }
+  window._liveCounts = {};
+
+  try {
+    await saveToSheet();
+    msg.textContent = '✓ Saved!';
+    msg.className = 'save-bar-msg save-msg-ok';
+    msg.style.display = 'block';
+    renderStandings(); renderShowChart(); renderWrestlerList();
+    setTimeout(() => { msg.style.display = 'none'; }, 3000);
+  } catch(e) {
+    msg.textContent = '✗ Error saving';
+    msg.className = 'save-bar-msg save-msg-err';
+    msg.style.display = 'block';
+  }
+  btn.disabled = false;
+  btn.innerHTML = '💾 Save';
+}
+
+// ─────────────────────────────────────────────
+// ROSTERS
+// ─────────────────────────────────────────────
+function renderRosters() {
+  const container = document.getElementById('rostersContent');
+  if (!container) return;
+  container.innerHTML = TEAMS.map(team => {
+    const total = getTeamTotal(team);
+    const rows = LETTERS.map(l => {
+      const name = state.rosters[team][l] || '';
+      const pts = getWrestlerPts(team, l);
+      return `<div class="roster-row" id="rrow_${team}_${l}">
+        <div class="roster-letter">${l.toUpperCase()}</div>
+        <div class="roster-name-view">${name || '<span style="color:var(--muted)">—</span>'}</div>
+        <input class="roster-name-input" id="rinput_${team}_${l}" type="text" value="${name.replace(/"/g,'&quot;')}" placeholder="Wrestler name">
+        <div class="roster-pts-view">${pts > 0 ? pts + ' pts' : ''}</div>
+      </div>`;
+    }).join('');
+    return `<div class="roster-team-block" id="rblock_${team}">
+      <div class="roster-team-header">
+        <div class="roster-team-header-left">
+          <span class="roster-dot" style="background:${TEAM_COLORS[team]}"></span>
+          <span class="roster-team-name" style="color:${TEAM_COLORS[team]}">${TEAM_LABELS[team]}</span>
+          <span class="roster-team-total"><span>${total}</span> pts</span>
+        </div>
+        <button class="roster-edit-btn" id="redit_${team}" onclick="toggleRosterEdit('${team}')">Edit</button>
+      </div>
+      <div class="roster-body">${rows}</div>
+      <div class="roster-save-row" id="rsaverow_${team}">
+        <button class="btn-primary" style="padding:10px 20px;font-size:13px;" onclick="saveRosterTeam('${team}')">Save ${TEAM_LABELS[team]}</button>
+        <span class="roster-save-msg" id="rsavemsg_${team}"></span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleRosterEdit(team) {
+  const btn = document.getElementById(`redit_${team}`);
+  const saveRow = document.getElementById(`rsaverow_${team}`);
+  const isEditing = btn.classList.contains('editing');
+  if (isEditing) {
+    // cancel — revert inputs to state values
+    LETTERS.forEach(l => {
+      const inp = document.getElementById(`rinput_${team}_${l}`);
+      if (inp) inp.value = state.rosters[team][l] || '';
+    });
+    btn.classList.remove('editing');
+    btn.textContent = 'Edit';
+    saveRow.classList.remove('visible');
+    document.querySelectorAll(`#rblock_${team} .roster-row`).forEach(r => r.classList.remove('edit-mode'));
+  } else {
+    btn.classList.add('editing');
+    btn.textContent = 'Cancel';
+    saveRow.classList.add('visible');
+    document.querySelectorAll(`#rblock_${team} .roster-row`).forEach(r => r.classList.add('edit-mode'));
+    // focus first input
+    const first = document.getElementById(`rinput_${team}_a`);
+    if (first) first.focus();
+  }
+}
+
+async function saveRosterTeam(team) {
+  const snapshot = {};
+  LETTERS.forEach(l => {
+    const inp = document.getElementById(`rinput_${team}_${l}`);
+    snapshot[l] = inp ? inp.value.trim() : (state.rosters[team][l] || '');
+  });
+
+  console.log('[ROSTER SAVE] Starting save for team:', team);
+  console.log('[ROSTER SAVE] Snapshot:', JSON.stringify(snapshot));
+
+  const msg = document.getElementById(`rsavemsg_${team}`);
+  const btn = document.getElementById(`redit_${team}`);
+  msg.textContent = 'Saving…'; msg.style.color = 'var(--teal)';
+  btn.disabled = true;
+
+  try {
+    LETTERS.forEach(l => { state.rosters[team][l] = snapshot[l]; });
+    console.log('[ROSTER SAVE] State updated, sending to sheet...');
+
+    const ok = await sheetSet('aew_rosters', state.rosters);
+    console.log('[ROSTER SAVE] sheetSet returned:', ok);
+
+    // verify it landed by reading back
+    const verify = await sheetGet('aew_rosters');
+    console.log('[ROSTER SAVE] Verify read-back, team a name:', verify?.[team]?.a);
+
+    msg.textContent = '✓ Saved!';
+    msg.style.color = 'var(--teal)';
+    btn.classList.remove('editing');
+    btn.textContent = 'Edit';
+    document.getElementById(`rsaverow_${team}`).classList.remove('visible');
+    document.querySelectorAll(`#rblock_${team} .roster-row`).forEach(r => r.classList.remove('edit-mode'));
+    renderRosters();
+    renderWrestlerList();
+    console.log('[ROSTER SAVE] Done. State rosters team a name:', state.rosters[team].a);
+  } catch(e) {
+    console.error('[ROSTER SAVE] ERROR:', e);
+    msg.textContent = '✗ Error — try again';
+    msg.style.color = 'var(--red)';
+    LETTERS.forEach(l => { state.rosters[team][l] = snapshot[l]; });
+  }
+
+  btn.disabled = false;
+  setTimeout(() => { msg.textContent = ''; }, 3000);
+}
+
+// ─────────────────────────────────────────────
+// SCHEDULE BUILDER
+// ─────────────────────────────────────────────
+function generateSchedule() {
+  const startVal = document.getElementById('seasonStart').value;
+  const endVal   = document.getElementById('seasonEnd').value;
+  if (!startVal || !endVal) { alert('Set both start and end dates.'); return; }
+  if (startVal >= endVal)   { alert('End date must be after start.'); return; }
+
+  const shows = [];
+  const oldPPVs = new Set(state.schedule.filter(s => s.type==='ppv').map(s => s.date));
+  const d = new Date(startVal + 'T12:00:00');
+  const end = new Date(endVal + 'T12:00:00');
+  while (d <= end) {
+    const day = d.getDay();
+    const iso = d.toISOString().slice(0,10);
+    if (day === 3) shows.push({ date:iso, type: oldPPVs.has(iso) ? 'ppv' : 'dynamite' });
+    else if (day === 6) shows.push({ date:iso, type: oldPPVs.has(iso) ? 'ppv' : 'collision' });
+    else if (day === 0 && oldPPVs.has(iso)) shows.push({ date:iso, type:'ppv' });
+    d.setDate(d.getDate()+1);
+  }
+  pendingSchedule = shows;
+  renderScheduleBuilder();
+  document.getElementById('scheduleBuilder').style.display = 'block';
+}
+
+function renderScheduleBuilder() {
+  document.getElementById('scheduleCount').textContent = `${pendingSchedule.length} shows`;
+  document.getElementById('scheduleGrid').innerHTML = pendingSchedule.map((show, idx) => `
+    <div class="schedule-row" id="srow_${idx}">
+      <span class="sched-day">${dayName(show.date)}</span>
+      <span class="sched-date">${fmtShort(show.date)}</span>
+      <div class="sched-type-btns">
+        <button class="sched-type-btn dynamite ${show.type==='dynamite'?'active':''}" onclick="setShowType(${idx},'dynamite')">Dyn</button>
+        <button class="sched-type-btn collision ${show.type==='collision'?'active':''}" onclick="setShowType(${idx},'collision')">Col</button>
+        <button class="sched-type-btn ppv ${show.type==='ppv'?'active':''}" onclick="setShowType(${idx},'ppv')">PPV</button>
+      </div>
+      <button class="sched-remove" onclick="removeShow(${idx})">✕</button>
+    </div>`).join('');
+}
+
+function setShowType(idx, type) {
+  pendingSchedule[idx].type = type;
+  const row = document.getElementById(`srow_${idx}`);
+  row.querySelectorAll('.sched-type-btn').forEach(b => b.classList.remove('active'));
+  row.querySelector(`.sched-type-btn.${type}`).classList.add('active');
+}
+
+function removeShow(idx) {
+  pendingSchedule.splice(idx, 1);
+  renderScheduleBuilder();
+}
+
+function addCustomShow() {
+  const dateStr = prompt('Enter show date (YYYY-MM-DD):');
+  if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) { alert('Use YYYY-MM-DD format'); return; }
+  const day = new Date(dateStr+'T12:00:00').getDay();
+  const type = day===0?'ppv':day===6?'collision':'dynamite';
+  pendingSchedule.push({date:dateStr, type});
+  pendingSchedule.sort((a,b) => a.date.localeCompare(b.date));
+  renderScheduleBuilder();
+}
+
+async function saveSeasonName() {
+  const val = document.getElementById('seasonNameInput').value.trim();
+  if (!val) return;
+  state.seasonName = val;
+  const msg = document.getElementById('seasonNameMsg');
+  msg.textContent = 'Saving…'; msg.style.display = 'inline'; msg.style.color = 'var(--teal)';
+  try {
+    await sheetSet('aew_seasonname', state.seasonName);
+    msg.textContent = '✓ Saved!';
+    updateSeasonNameDisplay();
+  } catch(e) {
+    msg.textContent = '✗ Error saving';
+    msg.style.color = 'var(--red)';
+  }
+  setTimeout(() => { msg.style.display = 'none'; }, 3000);
+}
+
+async function saveSchedule() {
+  const newIds = new Set(pendingSchedule.map(s => showId(s)));
+  for (const team of TEAMS) {
+    if (!state.scores[team]) continue;
+    for (const sid of Object.keys(state.scores[team])) {
+      if (!newIds.has(sid)) delete state.scores[team][sid];
+    }
+  }
+  state.schedule = [...pendingSchedule];
+  const nameInput = document.getElementById('seasonNameInput').value.trim();
+  if (nameInput) state.seasonName = nameInput;
+  const msg = document.getElementById('scheduleSaveMsg');
+  msg.textContent = 'Saving…'; msg.style.display = 'inline'; msg.style.color = 'var(--teal)';
+  try {
+    await saveToSheet();
+    msg.textContent = `✓ ${state.schedule.length} shows saved!`;
+    renderAll();
+  } catch(e) { msg.textContent = '✗ Error'; msg.style.color = 'var(--red)'; }
+  setTimeout(() => { msg.style.display = 'none'; }, 3000);
+}
+
+// ─────────────────────────────────────────────
+// SETTINGS / NAV
+// ─────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById(`tab-${name}`).classList.add('active');
+  ['leaderboard','score','rosters','settings'].forEach((t,i) => {
+    if (t===name) document.querySelectorAll('nav button')[i].classList.add('active');
+  });
+  // hide save bar when not on score tab
+  if (name !== 'score') {
+    document.getElementById('saveBar').classList.remove('visible');
+  } else if (currentTeam) {
+    document.getElementById('saveBar').classList.add('visible');
+  }
+  // re-fetch on tab switch — skip settings (protect in-progress edits)
+  if (scriptUrl && name !== 'settings') {
+    settingsLoaded = false;
+    setSyncStatus('Syncing…', 'loading');
+    // snapshot rosters before fetch so we can restore if needed
+    const rosterSnapshot = JSON.parse(JSON.stringify(state.rosters));
+    loadFromSheet()
+      .then(() => {
+        setSyncStatus('Live', 'ok');
+        const anyEditing = TEAMS.some(t => {
+          const btn = document.getElementById(`redit_${t}`);
+          return btn && btn.classList.contains('editing');
+        });
+        if (anyEditing) {
+          // restore rosters to snapshot — don't overwrite in-progress edits
+          state.rosters = rosterSnapshot;
+          renderStandings(); renderShowChart(); renderWrestlerList();
+        } else {
+          renderAll();
+        }
+        if (name === 'score' && currentTeam) loadShowScores();
+      })
+      .catch(() => setSyncStatus('Offline', 'err'));
+  }
+  if (name === 'settings') _applySettingsTab();
+}
+
+function _applySettingsTab() {
+  // Only fetch fresh data the first time settings is opened.
+  // After that, leave the input fields alone so edits aren't overwritten.
+  if (settingsLoaded) return;
+  settingsLoaded = true;
+
+  const populate = () => {
+    document.getElementById('seasonNameInput').value = state.seasonName || '';
+    if (state.schedule.length) {
+      document.getElementById('seasonStart').value = state.schedule[0].date;
+      document.getElementById('seasonEnd').value   = state.schedule[state.schedule.length-1].date;
+      pendingSchedule = JSON.parse(JSON.stringify(state.schedule));
+      renderScheduleBuilder();
+      document.getElementById('scheduleBuilder').style.display = 'block';
+    }
+  };
+
+  if (scriptUrl) {
+    loadFromSheet()
+      .then(() => { setSyncStatus('Live', 'ok'); populate(); })
+      .catch(() => { setSyncStatus('Offline', 'err'); populate(); });
+  } else {
+    populate();
+  }
+}
+
+async function saveScriptUrl() {
+  const val = document.getElementById('scriptUrlInput').value.trim();
+  if (!val || !val.startsWith('https://')) {
+    document.getElementById('connectionMsg').innerHTML = '<span style="color:var(--red);">✗ Invalid URL</span>';
+    return;
+  }
+  scriptUrl = val;
+  localStorage.setItem('aew_script_url_override', scriptUrl);
+  document.getElementById('connectionMsg').innerHTML = '<span style="color:var(--gold);">Testing…</span>';
+  setSyncStatus('Connecting…', 'loading');
+  try {
+    await loadFromSheet();
+    document.getElementById('connectionMsg').innerHTML = '<span style="color:var(--teal);">✓ Connected!</span>';
+    setSyncStatus('Live', 'ok');
+    renderAll();
+  } catch(e) {
+    document.getElementById('connectionMsg').innerHTML = '<span style="color:var(--red);">✗ Failed. Check URL & sharing settings.</span>';
+    setSyncStatus('Offline', 'err');
+  }
+}
+
+function setSyncStatus(text, type) {
+  const el = document.getElementById('syncStatus');
+  el.className = type==='ok' ? 'sync-ok' : type==='err' ? 'sync-err' : 'sync-loading';
+  el.innerHTML = text;
+}
+
+function copyScript() {
+  navigator.clipboard.writeText(APPS_SCRIPT_CODE).then(() => {
+    const btn = document.querySelector('.script-copy-btn');
+    if (btn) { btn.textContent = 'Copied!'; setTimeout(() => btn.textContent = 'Copy', 2000); }
+  });
+}
+</script>
+</body>
+</html>
