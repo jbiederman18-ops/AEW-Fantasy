@@ -735,6 +735,7 @@ let draftState = {
   picks: [],
 };
 // swapState stored in state.swaps = { tokens: {maria:0,...}, history: [{team,slot,oldWrestler,newWrestler,date,show}] }
+let lastWriteTime = 0; // timestamp of last sheetSet call — blocks sync for 5s after write
 
 // ─────────────────────────────────────────────
 // INIT
@@ -819,6 +820,7 @@ async function sheetGetAll() {
 }
 
 async function sheetSet(key, value) {
+  lastWriteTime = Date.now(); // block sync for 5s after any write
   const json = JSON.stringify(value);
   const encoded = encodeURIComponent(json);
   // Google Apps Script GET URL limit is ~8000 chars — stay well under it
@@ -1836,29 +1838,35 @@ function switchTab(name) {
   } else if (currentTeam) {
     document.getElementById('saveBar').classList.add('visible');
   }
-  // re-fetch on tab switch — skip settings (protect in-progress edits)
+  // re-fetch on tab switch — skip settings and skip if a write just happened
   if (scriptUrl && name !== 'settings') {
     settingsLoaded = false;
-    setSyncStatus('Syncing…', 'loading');
-    // snapshot rosters before fetch so we can restore if needed
-    const rosterSnapshot = JSON.parse(JSON.stringify(state.rosters));
-    loadFromSheet()
-      .then(() => {
-        setSyncStatus('Live', 'ok');
-        const anyEditing = TEAMS.some(t => {
-          const btn = document.getElementById(`redit_${t}`);
-          return btn && btn.classList.contains('editing');
-        });
-        if (anyEditing) {
-          // restore rosters to snapshot — don't overwrite in-progress edits
-          state.rosters = rosterSnapshot;
-          renderStandings(); renderShowChart(); renderWrestlerList();
-        } else {
-          renderAll();
-        }
-        if (name === 'score' && currentTeam) loadShowScores();
-      })
-      .catch(() => setSyncStatus('Offline', 'err'));
+    const msSinceWrite = Date.now() - lastWriteTime;
+    if (msSinceWrite < 5000) {
+      // Too soon after a write — sheet may not have propagated yet, skip sync
+      setSyncStatus('Live', 'ok');
+      renderAll();
+      if (name === 'score' && currentTeam) loadShowScores();
+    } else {
+      setSyncStatus('Syncing…', 'loading');
+      const rosterSnapshot = JSON.parse(JSON.stringify(state.rosters));
+      loadFromSheet()
+        .then(() => {
+          setSyncStatus('Live', 'ok');
+          const anyEditing = TEAMS.some(t => {
+            const btn = document.getElementById(`redit_${t}`);
+            return btn && btn.classList.contains('editing');
+          });
+          if (anyEditing) {
+            state.rosters = rosterSnapshot;
+            renderStandings(); renderShowChart(); renderWrestlerList();
+          } else {
+            renderAll();
+          }
+          if (name === 'score' && currentTeam) loadShowScores();
+        })
+        .catch(() => setSyncStatus('Offline', 'err'));
+    }
   }
   if (name === 'settings') _applySettingsTab();
   if (name === 'draft') renderDraft();
