@@ -825,7 +825,9 @@ async function sheetSet(key, value) {
   const json = JSON.stringify(value);
   const encoded = encodeURIComponent(json);
   // Google Apps Script GET URL limit is ~8000 chars — stay well under it
-  if (encoded.length <= 6000) {
+  // Keep URL under ~1800 total (GAS limit is ~2000)
+  const baseUrlLen = scriptUrl.length + 30 + encodeURIComponent(key).length;
+  if (baseUrlLen + encoded.length <= 1700) {
     const r = await fetch(`${scriptUrl}?action=set&key=${encodeURIComponent(key)}&value=${encoded}`);
     const j = await r.json();
     if (!j.ok) throw new Error(`Sheet set failed for key: ${key}`);
@@ -845,11 +847,16 @@ async function _setRaw(key, value) {
   return r.ok;
 }
 
+async function saveRosters() {
+  // Save each team's roster separately — combined payload exceeds GAS URL limit
+  await Promise.all(TEAMS.map(t => sheetSet(`aew_roster_${t}`, state.rosters[t] || {})));
+}
+
 async function saveToSheet() {
   await Promise.all([
     sheetSet('aew_schedule', state.schedule),
-    sheetSet('aew_rosters', state.rosters),
     sheetSet('aew_seasonname', state.seasonName),
+    saveRosters(),
     ...TEAMS.map(t => sheetSet(`aew_scores_${t}`, state.scores[t] || {}))
   ]);
 }
@@ -858,13 +865,38 @@ async function loadFromSheet() {
   const all = await sheetGetAll();
   // Skip any key we've written locally — our state is newer than the sheet
   if (!dirtyKeys.has('aew_schedule') && all['aew_schedule'] && typeof all['aew_schedule'] === 'object') state.schedule = all['aew_schedule'];
-  if (!dirtyKeys.has('aew_rosters')  && all['aew_rosters']  && typeof all['aew_rosters']  === 'object') state.rosters  = all['aew_rosters'];
   if (!dirtyKeys.has('aew_seasonname') && all['aew_seasonname']) state.seasonName = String(all['aew_seasonname']);
+  // Load per-team rosters (new format)
+  let anyRosterLoaded = false;
+  for (const t of TEAMS) {
+    const k = `aew_roster_${t}`;
+    if (!dirtyKeys.has(k) && all[k] && typeof all[k] === 'object') {
+      state.rosters[t] = all[k];
+      anyRosterLoaded = true;
+    }
+  }
+  // Fallback: old combined aew_rosters key
+  if (!anyRosterLoaded && !dirtyKeys.has('aew_rosters') && all['aew_rosters'] && typeof all['aew_rosters'] === 'object') {
+    state.rosters = all['aew_rosters'];
+  }
+  // Load per-show scores (new format: aew_score_TEAM_SHOWID)
+  for (const [k, v] of Object.entries(all)) {
+    if (!k.startsWith('aew_score_') || k.startsWith('aew_scores_') || k.startsWith('aew_roster_')) continue;
+    if (dirtyKeys.has(k)) continue;
+    if (typeof v !== 'object') continue;
+    // key format: aew_score_TEAM_DATE_TYPE
+    const withoutPrefix = k.slice('aew_score_'.length); // e.g. "maria_2025-11-26_dynamite"
+    const team = TEAMS.find(t => withoutPrefix.startsWith(t + '_'));
+    if (!team) continue;
+    const showId = withoutPrefix.slice(team.length + 1);
+    if (!state.scores[team]) state.scores[team] = {};
+    state.scores[team][showId] = v;
+  }
+  // Fallback: old combined aew_scores_TEAM key
   for (const t of TEAMS) {
     const k = `aew_scores_${t}`;
-    if (!dirtyKeys.has(k)) {
-      const v = all[k];
-      if (v && typeof v === 'object') state.scores[t] = v;
+    if (!dirtyKeys.has(k) && all[k] && typeof all[k] === 'object' && !state.scores[t]) {
+      state.scores[t] = all[k];
     }
   }
   if (!dirtyKeys.has('aew_draft')) {
@@ -875,9 +907,9 @@ async function loadFromSheet() {
     const swaps = all['aew_swaps'];
     if (swaps && typeof swaps === 'object') state.swaps = swaps;
   }
-  // legacy fallback
+  // legacy fallback for old single-blob format
   const legacy = all['aew_all'];
-  if (legacy && typeof legacy === 'object' && !all['aew_rosters'] && !dirtyKeys.has('aew_rosters')) {
+  if (legacy && typeof legacy === 'object' && !anyRosterLoaded && !all['aew_rosters']) {
     if (legacy.rosters)  state.rosters  = legacy.rosters;
     if (legacy.schedule) state.schedule = legacy.schedule;
     if (legacy.scores)   state.scores   = legacy.scores;
@@ -1176,7 +1208,8 @@ async function submitScores() {
   window._liveCounts = {};
 
   try {
-    await saveToSheet();
+    // Save just this show's scores — per-show key stays well under URL limit
+    await sheetSet(`aew_score_${currentTeam}_${currentShowId}`, state.scores[currentTeam][currentShowId]);
     msg.textContent = '✓ Saved!';
     msg.className = 'save-bar-msg save-msg-ok';
     msg.style.display = 'block';
@@ -1269,7 +1302,7 @@ async function saveRosterTeam(team) {
   try {
     LETTERS.forEach(l => { state.rosters[team][l] = snapshot[l]; });
   
-    await sheetSet('aew_rosters', state.rosters);
+    await sheetSet(`aew_roster_${team}`, state.rosters[team]);
     msg.textContent = '✓ Saved!';
     msg.style.color = 'var(--teal)';
     btn.classList.remove('editing');
@@ -1621,7 +1654,7 @@ async function finalizeDraft() {
   // Rosters already written pick-by-pick, just save to sheet and close draft
   draftState.active = false;
   await saveDraftState();
-  await sheetSet('aew_rosters', state.rosters);
+  await saveRosters();
   renderRosters();
   renderWrestlerList();
   alert('Rosters locked in! Head to the Roster tab to see the final teams.');
@@ -1637,7 +1670,7 @@ function resetDraft() {
 async function saveDraftState() {
   state.draft = draftState;
   await sheetSet('aew_draft', draftState);
-  await sheetSet('aew_rosters', state.rosters);
+  await saveRosters();
 }
 
 // ─────────────────────────────────────────────
@@ -1818,7 +1851,7 @@ async function executeSwap() {
   try {
     await Promise.all([
       sheetSet('aew_swaps', state.swaps),
-      sheetSet('aew_rosters', state.rosters),
+      sheetSet(`aew_roster_${team}`, state.rosters[team]),
     ]);
     msg.textContent = '✓ Swap complete!';
     msg.style.color = 'var(--teal)';
