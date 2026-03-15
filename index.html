@@ -1669,6 +1669,7 @@ function resetDraft() {
 
 async function saveDraftState() {
   state.draft = draftState;
+  // Save draft state first, then all four rosters sequentially (GAS throttles parallel)
   await sheetSet('aew_draft', draftState);
   await saveRosters();
 }
