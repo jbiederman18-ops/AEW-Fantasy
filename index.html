@@ -751,6 +751,11 @@ async function initFromSheet() {
   setSyncStatus('Loading…', 'loading');
   try {
     await loadFromSheet();
+    // If no roster keys exist in the sheet yet, push the hardcoded defaults up now
+    if (scriptUrl && !window._rostersInSheet) {
+      setSyncStatus('Saving rosters…', 'loading');
+      await saveRosters();
+    }
     setSyncStatus('Live', 'ok');
   } catch(e) {
     setSyncStatus('Offline', 'err');
@@ -878,7 +883,9 @@ async function loadFromSheet() {
   // Fallback: old combined aew_rosters key
   if (!anyRosterLoaded && !dirtyKeys.has('aew_rosters') && all['aew_rosters'] && typeof all['aew_rosters'] === 'object') {
     state.rosters = all['aew_rosters'];
+    anyRosterLoaded = true;
   }
+  window._rostersInSheet = anyRosterLoaded;
   // Load per-show scores (new format: aew_score_TEAM_SHOWID)
   for (const [k, v] of Object.entries(all)) {
     if (!k.startsWith('aew_score_') || k.startsWith('aew_scores_') || k.startsWith('aew_roster_')) continue;
