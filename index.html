@@ -34,8 +34,8 @@
     --ppv: #e84393;
     --nav-h: 60px;
     --header-h: 64px;
-    --safe-top: env(safe-area-inset-top, 59px);
-    --safe-bottom: env(safe-area-inset-bottom, 34px);
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
     --safe-left: env(safe-area-inset-left, 0px);
     --safe-right: env(safe-area-inset-right, 0px);
   }
@@ -742,24 +742,7 @@ const dirtyKeys = new Set();
 // ─────────────────────────────────────────────
 // INIT
 // ─────────────────────────────────────────────
-function applySafeAreas() {
-  if (!window.navigator.standalone) return;
-  // In standalone mode env() can return 0 on first paint — use CSS trick to read real value
-  const testEl = document.createElement('div');
-  testEl.style.cssText = 'position:fixed;top:env(safe-area-inset-top,0px);left:0;width:1px;height:1px;';
-  document.body.appendChild(testEl);
-  const top = testEl.getBoundingClientRect().top;
-  document.body.removeChild(testEl);
-  // iPhone 15 Pro Max Dynamic Island = 59px, older notch = 44px, no notch = 20px
-  const safeTop = top > 0 ? top : (screen.height >= 844 ? 59 : 44);
-  const safeBottom = 34; // all iPhones with home indicator
-  document.documentElement.style.setProperty('--safe-top', safeTop + 'px');
-  document.documentElement.style.setProperty('--safe-bottom', safeBottom + 'px');
-}
-
 document.addEventListener('DOMContentLoaded', () => {
-  applySafeAreas();
-  setTimeout(applySafeAreas, 100);
   document.getElementById('appsScriptCode').textContent = APPS_SCRIPT_CODE;
   document.getElementById('scriptUrlInput').value = scriptUrl;
   initFromSheet();
