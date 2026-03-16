@@ -907,13 +907,7 @@ async function loadFromSheet() {
     const swaps = all['aew_swaps'];
     if (swaps && typeof swaps === 'object') state.swaps = swaps;
   }
-  // legacy fallback for old single-blob format
-  const legacy = all['aew_all'];
-  if (legacy && typeof legacy === 'object' && !anyRosterLoaded && !all['aew_rosters']) {
-    if (legacy.rosters)  state.rosters  = legacy.rosters;
-    if (legacy.schedule) state.schedule = legacy.schedule;
-    if (legacy.scores)   state.scores   = legacy.scores;
-  }
+  // legacy aew_all key intentionally ignored — data now stored in separate keys
 }
 
 // ─────────────────────────────────────────────
