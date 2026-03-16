@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="AEW Fantasy">
 <meta name="theme-color" content="#0a0a0f">
 <title>AEW Fantasy</title>
@@ -63,16 +63,13 @@
   /* ── HEADER ── */
   header {
     position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-    height: calc(var(--header-h) + var(--safe-top));
+    height: var(--header-h);
     background: rgba(10,10,15,0.96);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border-bottom: 1px solid var(--border);
-    display: flex; align-items: flex-end; justify-content: space-between;
-    padding: 0 16px calc(10px);
-    padding-left: calc(16px + var(--safe-left));
-    padding-right: calc(16px + var(--safe-right));
-    padding-top: var(--safe-top);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 16px;
   }
   .logo { display: flex; align-items: baseline; gap: 10px; }
   .logo-aew { font-family: 'Bebas Neue', sans-serif; font-size: 36px; color: var(--gold); letter-spacing: 3px; text-shadow: 0 0 24px rgba(240,180,41,0.5); line-height: 1; }
@@ -89,8 +86,6 @@
     position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
     height: calc(var(--nav-h) + var(--safe-bottom));
     padding-bottom: var(--safe-bottom);
-    padding-left: var(--safe-left);
-    padding-right: var(--safe-right);
     background: rgba(10,10,15,0.98);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
@@ -118,10 +113,10 @@
   /* ── MAIN SCROLL AREA ── */
   main {
     position: relative; z-index: 5;
-    padding-top: calc(var(--header-h) + var(--safe-top) + 16px);
+    padding-top: calc(var(--header-h) + 16px);
     padding-bottom: calc(var(--nav-h) + var(--safe-bottom) + 24px);
-    padding-left: calc(16px + var(--safe-left));
-    padding-right: calc(16px + var(--safe-right));
+    padding-left: 16px;
+    padding-right: 16px;
     max-width: 900px; margin: 0 auto;
   }
 
@@ -747,7 +742,21 @@ const dirtyKeys = new Set();
 // ─────────────────────────────────────────────
 // INIT
 // ─────────────────────────────────────────────
+function applySafeAreas() {
+  // iOS sometimes returns 0 for env() on first paint in standalone mode
+  // Re-apply after a tick to get real values
+  const bottom = parseInt(getComputedStyle(document.documentElement)
+    .getPropertyValue('--safe-bottom')) || 0;
+  if (bottom === 0 && window.navigator.standalone) {
+    // iPhone with home indicator needs ~34px, older iPhones ~0px
+    // Dynamic Island / notch iPhones need ~59px top but 'black' status handles that
+    document.documentElement.style.setProperty('--safe-bottom', '34px');
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  applySafeAreas();
+  setTimeout(applySafeAreas, 100);
   document.getElementById('appsScriptCode').textContent = APPS_SCRIPT_CODE;
   document.getElementById('scriptUrlInput').value = scriptUrl;
   initFromSheet();
