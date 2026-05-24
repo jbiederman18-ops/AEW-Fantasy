@@ -1585,10 +1585,11 @@ function renderDraftLive(el) {
           <button class="draft-pick-btn" id="draftPickBtn" onclick="makePick()">Pick</button>
         </div>
       </div>
-      ${draftState.picks.length > 0 ? `
-      <div style="display:flex;justify-content:flex-end;">
-        <button class="btn-secondary" style="font-size:11px;padding:6px 12px;" onclick="undoLastPick()">↩ Undo Last Pick</button>
-      </div>` : ''}
+      <div style="display:flex;justify-content:space-between;align-items:center;min-height:28px;">
+        <span id="draftSaveStatus" style="font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:1px;color:var(--teal);"></span>
+        ${draftState.picks.length > 0 ? `
+        <button class="btn-secondary" style="font-size:11px;padding:6px 12px;" onclick="undoLastPick()">↩ Undo Last Pick</button>` : '<span></span>'}
+      </div>
       ${boardHTML}
     </div>`;
 
@@ -1601,21 +1602,28 @@ function renderDraftLive(el) {
 
 function makePick() {
   const inp = document.getElementById('draftPickInput');
-  const btn = document.getElementById('draftPickBtn');
   const wrestler = inp ? inp.value.trim() : '';
   if (!wrestler) return;
 
   const { team, round } = getCurrentPicker();
   const slot = getNextSlotForTeam(team);
 
+  // Record pick and update roster immediately
   draftState.picks.push({ team, wrestler, round, slot });
-
-  // Write into rosters immediately
   state.rosters[team][slot] = wrestler;
 
-  btn.disabled = true;
-  saveDraftState().then(() => {
-    renderDraftLive(document.getElementById('draftContent'));
+  // Re-render instantly — no waiting for sheet
+  inp.value = '';
+  renderDraftLive(document.getElementById('draftContent'));
+
+  // Save to sheet in the background — don't block the draft
+  saveDraftState().catch(() => {
+    // Show a subtle warning if save fails but don't interrupt
+    const el = document.getElementById('draftSaveStatus');
+    if (el) { el.textContent = '⚠ Save failed — check connection'; el.style.color = 'var(--red)'; }
+  }).then(() => {
+    const el = document.getElementById('draftSaveStatus');
+    if (el) { el.textContent = '✓ Saved'; el.style.color = 'var(--teal)'; setTimeout(() => { el.textContent = ''; }, 2000); }
   });
 }
 
@@ -1627,11 +1635,10 @@ function getNextSlotForTeam(team) {
 function undoLastPick() {
   if (!draftState.picks.length) return;
   const last = draftState.picks.pop();
-  // Clear from rosters
   state.rosters[last.team][last.slot] = '';
-  saveDraftState().then(() => {
-    renderDraftLive(document.getElementById('draftContent'));
-  });
+  // Re-render instantly, save in background
+  renderDraftLive(document.getElementById('draftContent'));
+  saveDraftState().catch(() => {});
 }
 
 function renderDraftComplete(el) {
