@@ -2118,11 +2118,10 @@ async function loadHistoricalData() {
 }
 
 function archiveGetTeamTotal(data, team) {
-  // Historical data doesn't have team scores — not applicable
-  if (data.isHistorical) return 0;
+  if (data.isHistorical || !data.schedule || !Array.isArray(data.schedule)) return 0;
   return data.schedule.reduce((s, show) => {
     const sid = `${show.date}_${show.type}`;
-    if (!data.scores[team]?.[sid]) return s;
+    if (!data.scores?.[team]?.[sid]) return s;
     let pts = 0;
     for (const l of LETTERS) {
       if (!data.scores[team][sid][l]) continue;
@@ -2133,10 +2132,10 @@ function archiveGetTeamTotal(data, team) {
 }
 
 function archiveGetWrestlerPts(data, team, letter) {
-  if (data.isHistorical) return 0;
+  if (data.isHistorical || !data.schedule || !Array.isArray(data.schedule)) return 0;
   return data.schedule.reduce((s, show) => {
     const sid = `${show.date}_${show.type}`;
-    if (!data.scores[team]?.[sid]?.[letter]) return s;
+    if (!data.scores?.[team]?.[sid]?.[letter]) return s;
     return s + ACCOMPLISHMENTS.reduce((pts,a) => pts + getCount(data.scores[team][sid][letter],a.key)*a.pts, 0);
   }, 0);
 }
