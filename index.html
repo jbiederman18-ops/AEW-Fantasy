@@ -2270,9 +2270,11 @@ function renderArchiveVault() {
 
   // App-tracked format
   const totals = TEAMS.map(t=>({team:t,pts:archiveGetTeamTotal(data,t)})).sort((a,b)=>b.pts-a.pts);
-  const showsWithData = data.schedule.filter(s => TEAMS.some(t => {
+  const schedule = Array.isArray(data.schedule) ? data.schedule : [];
+  const scores = data.scores || {};
+  const showsWithData = schedule.filter(s => TEAMS.some(t => {
     const sid=`${s.date}_${s.type}`;
-    return data.scores[t]?.[sid] && LETTERS.some(l => data.scores[t][sid]?.[l] && ACCOMPLISHMENTS.some(a=>getCount(data.scores[t][sid][l],a.key)>0));
+    return scores[t]?.[sid] && LETTERS.some(l => scores[t][sid]?.[l] && ACCOMPLISHMENTS.some(a=>getCount(scores[t][sid][l],a.key)>0));
   }));
   el.innerHTML = `
     <div style="display:flex;gap:6px;overflow-x:auto;margin-bottom:16px;-webkit-overflow-scrolling:touch;">${tabs}</div>
@@ -2301,7 +2303,7 @@ function renderArchiveVault() {
           <span class="archive-show-pill ${show.type}">${show.type==='ppv'?'PPV':show.type==='collision'?'Col':'Dyn'}</span>
           ${TEAMS.map(t=>{
             let pts=0;
-            if(data.scores[t]?.[sid]) for(const l of LETTERS) if(data.scores[t][sid][l]) for(const a of ACCOMPLISHMENTS) pts+=getCount(data.scores[t][sid][l],a.key)*a.pts;
+            if(scores[t]?.[sid]) for(const l of LETTERS) if(scores[t][sid][l]) for(const a of ACCOMPLISHMENTS) pts+=getCount(scores[t][sid][l],a.key)*a.pts;
             return `<span style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:${pts>0?TEAM_COLORS[t]:'var(--muted)'};min-width:44px;text-align:center;">${pts||'—'}</span>`;
           }).join('')}
         </div>`;
