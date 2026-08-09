@@ -651,13 +651,13 @@
       <button class="filter-tab active" onclick="switchArchive('trophy',this)">🏆 Trophy Room</button>
       <button class="filter-tab" onclick="switchArchive('hof',this)">⭐ Hall of Fame</button>
       <button class="filter-tab" onclick="switchArchive('vault',this)">📚 Season Vault</button>
-      <button class="filter-tab" onclick="switchArchive('h2h',this)">⚔️ Head to Head</button>
+      <button class="filter-tab" onclick="switchArchive('shame',this)">🏴 Hall of Shame</button>
       <button class="filter-tab" onclick="switchArchive('seasons',this)">➕ Seasons</button>
     </div>
     <div id="archiveTrophy" class="archive-panel active-archive"></div>
     <div id="archiveHof" class="archive-panel"></div>
     <div id="archiveVault" class="archive-panel"></div>
-    <div id="archiveH2h" class="archive-panel"></div>
+    <div id="archiveShame" class="archive-panel"></div>
     <div id="archiveSeasons" class="archive-panel"></div>
   </div>
 
@@ -2018,7 +2018,7 @@ function renderArchiveSub(sub) {
   if (sub === 'trophy') renderArchiveTrophy();
   else if (sub === 'hof') renderArchiveHof();
   else if (sub === 'vault') renderArchiveVault();
-  else if (sub === 'h2h') renderArchiveH2h();
+  else if (sub === 'shame') renderArchiveShame();
   else if (sub === 'seasons') renderArchiveSeasons();
 }
 
@@ -2220,14 +2220,9 @@ function renderArchiveHof() {
   const sorted = Object.values(allTime).sort((a,b)=>b.pts-a.pts);
   if (!sorted.length) { el.innerHTML = '<div class="empty">No points recorded yet</div>'; return; }
   const rankColors = ['var(--gold)','#c0c0c0','#cd7f32'];
-  // Hall of Fame — top 20
-  const top20 = sorted.slice(0, 20);
-  // Hall of Shame — bottom 10 (min 1 season, sorted ascending)
-  const shame = [...sorted].filter(w => w.seasons >= 1).sort((a,b) => a.pts - b.pts).slice(0, 10);
-
   el.innerHTML = `
     <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">${sorted.length} wrestlers · ${Object.keys(archiveData).length} seasons</div>
-    ${top20.map((w,i) => `<div class="archive-hof-row">
+    ${sorted.slice(0,20).map((w,i) => `<div class="archive-hof-row">
       <div class="archive-hof-rank" style="color:${rankColors[i]||'var(--muted)'}">${i+1}</div>
       <div class="archive-hof-dot" style="background:${w.team ? TEAM_COLORS[w.team] : 'var(--muted)'}"></div>
       <div style="flex:1;min-width:0;">
@@ -2235,17 +2230,6 @@ function renderArchiveHof() {
         <div class="archive-hof-team">${w.team ? TEAM_LABELS[w.team]+' · ' : ''}${w.seasons} season${w.seasons>1?'s':''}</div>
       </div>
       <div class="archive-hof-pts">${w.pts}</div>
-    </div>`).join('')}
-
-    <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--red);margin:20px 0 12px;display:flex;align-items:center;gap:8px;">🏴 Hall of Shame <span style="flex:1;height:1px;background:rgba(232,50,74,0.2);display:block;"></span></div>
-    ${shame.map((w,i) => `<div class="archive-hof-row" style="border-color:rgba(232,50,74,0.15);">
-      <div class="archive-hof-rank" style="color:var(--red);opacity:0.6;">${sorted.length - i}</div>
-      <div class="archive-hof-dot" style="background:${w.team ? TEAM_COLORS[w.team] : 'var(--muted)'}"></div>
-      <div style="flex:1;min-width:0;">
-        <div class="archive-hof-name">${w.name}</div>
-        <div class="archive-hof-team">${w.team ? TEAM_LABELS[w.team]+' · ' : ''}${w.seasons} season${w.seasons>1?'s':''}</div>
-      </div>
-      <div class="archive-hof-pts" style="color:var(--red);opacity:0.7;">${w.pts}</div>
     </div>`).join('')}`;
 }
 
@@ -2327,45 +2311,52 @@ function selectArchiveVault(name, btn) {
   renderArchiveVault();
 }
 
-function renderArchiveH2h() {
-  const el = document.getElementById('archiveH2h');
-  const seasons = Object.values(archiveData);
-  if (!seasons.length) { el.innerHTML = '<div class="empty">No seasons connected yet</div>'; return; }
-  const records = {};
-  for (const t of TEAMS) { records[t]={}; for (const t2 of TEAMS) if(t!==t2) records[t][t2]={wins:0,losses:0}; }
-  for (const data of seasons) {
-    const totals = TEAMS.map(t=>({team:t,pts:archiveGetTeamTotal(data,t)})).sort((a,b)=>b.pts-a.pts);
-    for (let i=0;i<totals.length;i++) {
-      for (let j=i+1;j<totals.length;j++) {
-        records[totals[i].team][totals[j].team].wins++;
-        records[totals[j].team][totals[i].team].losses++;
+function renderArchiveShame() {
+  const el = document.getElementById('archiveShame');
+  if (!Object.keys(archiveData).length) { el.innerHTML = '<div class="empty">No seasons connected yet</div>'; return; }
+
+  const allTime = {};
+  for (const [seasonName, data] of Object.entries(archiveData)) {
+    if (data.isHistorical) {
+      for (const w of (data.wrestlers || [])) {
+        if (!allTime[w.name]) allTime[w.name] = { name:w.name, pts:0, seasons:0, team:null };
+        allTime[w.name].pts += w.pts;
+        allTime[w.name].seasons++;
+      }
+    } else {
+      for (const team of TEAMS) {
+        for (const letter of LETTERS) {
+          const name = data.rosters[team]?.[letter];
+          if (!name) continue;
+          const pts = archiveGetWrestlerPts(data, team, letter);
+          if (!allTime[name]) allTime[name] = { name, pts:0, seasons:0, team };
+          allTime[name].pts += pts;
+          allTime[name].seasons++;
+        }
       }
     }
   }
-  el.innerHTML = TEAMS.map(team => {
-    const totalW = Object.values(records[team]).reduce((s,r)=>s+r.wins,0);
-    const totalL = Object.values(records[team]).reduce((s,r)=>s+r.losses,0);
-    return `
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px;">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
-          <div style="width:4px;height:36px;border-radius:2px;background:${TEAM_COLORS[team]};flex-shrink:0;"></div>
-          <div>
-            <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;color:${TEAM_COLORS[team]}">${TEAM_LABELS[team]}</div>
-            <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;color:var(--muted);letter-spacing:1px;">Overall: <b style="color:var(--gold)">${totalW}W</b> – <b>${totalL}L</b></div>
-          </div>
-        </div>
-        ${TEAMS.filter(t=>t!==team).map(opp => {
-          const r=records[team][opp], total=r.wins+r.losses, pct=total?Math.round(r.wins/total*100):0;
-          return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
-            <span style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:${TEAM_COLORS[opp]};min-width:56px;">${TEAM_LABELS[opp]}</span>
-            <div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden;">
-              <div style="height:100%;width:${pct}%;background:${TEAM_COLORS[team]};border-radius:3px;"></div>
-            </div>
-            <span style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--gold);min-width:40px;text-align:right;">${r.wins}–${r.losses}</span>
-          </div>`;
-        }).join('')}
-      </div>`;
-  }).join('');
+
+  const sorted = Object.values(allTime)
+    .filter(w => w.seasons >= 1)
+    .sort((a,b) => a.pts - b.pts);
+
+  if (!sorted.length) { el.innerHTML = '<div class="empty">No data yet</div>'; return; }
+
+  const totalWrestlers = Object.keys(allTime).length;
+
+  el.innerHTML = `
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:16px;">${sorted.length} wrestlers · ${Object.keys(archiveData).length} seasons</div>
+    ${sorted.map((w,i) => `
+    <div class="archive-hof-row" style="border-color:rgba(232,50,74,0.15);">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--red);opacity:0.7;min-width:36px;text-align:center;">${totalWrestlers - i}</div>
+      <div class="archive-hof-dot" style="background:${w.team ? TEAM_COLORS[w.team] : 'var(--muted)'}"></div>
+      <div style="flex:1;min-width:0;">
+        <div class="archive-hof-name">${w.name}</div>
+        <div class="archive-hof-team">${w.team ? TEAM_LABELS[w.team]+' · ' : ''}${w.seasons} season${w.seasons>1?'s':''}</div>
+      </div>
+      <div class="archive-hof-pts" style="color:var(--red);opacity:0.8;">${w.pts}</div>
+    </div>`).join('')}`;
 }
 
 function renderArchiveSeasons() {
