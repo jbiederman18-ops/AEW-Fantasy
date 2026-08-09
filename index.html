@@ -2223,10 +2223,10 @@ function renderArchiveHof() {
     <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">${sorted.length} wrestlers · ${Object.keys(archiveData).length} seasons</div>
     ${sorted.slice(0,20).map((w,i) => `<div class="archive-hof-row">
       <div class="archive-hof-rank" style="color:${rankColors[i]||'var(--muted)'}">${i+1}</div>
-      <div class="archive-hof-dot" style="background:${w.team ? TEAM_COLORS[w.team] : 'var(--muted)'}"></div>
+      <div class="archive-hof-dot" style="background:${(w.team && TEAM_COLORS[w.team]) ? TEAM_COLORS[w.team] : 'var(--muted)'}"></div>
       <div style="flex:1;min-width:0;">
         <div class="archive-hof-name">${w.name}</div>
-        <div class="archive-hof-team">${w.team ? TEAM_LABELS[w.team]+' · ' : ''}${w.seasons} season${w.seasons>1?'s':''}</div>
+        <div class="archive-hof-team">${(w.team && TEAM_LABELS[w.team]) ? TEAM_LABELS[w.team]+' · ' : ''}${w.seasons} season${w.seasons>1?'s':''}</div>
       </div>
       <div class="archive-hof-pts">${w.pts}</div>
     </div>`).join('')}`;
@@ -2349,10 +2349,10 @@ function renderArchiveShame() {
     ${sorted.map((w,i) => `
     <div class="archive-hof-row" style="border-color:rgba(232,50,74,0.15);">
       <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--red);opacity:0.7;min-width:36px;text-align:center;">${totalWrestlers - i}</div>
-      <div class="archive-hof-dot" style="background:${w.team ? TEAM_COLORS[w.team] : 'var(--muted)'}"></div>
+      <div class="archive-hof-dot" style="background:${(w.team && TEAM_COLORS[w.team]) ? TEAM_COLORS[w.team] : 'var(--muted)'}"></div>
       <div style="flex:1;min-width:0;">
         <div class="archive-hof-name">${w.name}</div>
-        <div class="archive-hof-team">${w.team ? TEAM_LABELS[w.team]+' · ' : ''}${w.seasons} season${w.seasons>1?'s':''}</div>
+        <div class="archive-hof-team">${(w.team && TEAM_LABELS[w.team]) ? TEAM_LABELS[w.team]+' · ' : ''}${w.seasons} season${w.seasons>1?'s':''}</div>
       </div>
       <div class="archive-hof-pts" style="color:var(--red);opacity:0.8;">${w.pts}</div>
     </div>`).join('')}`;
