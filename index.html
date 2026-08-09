@@ -2202,8 +2202,8 @@ function renderArchiveHof() {
         allTime[w.name].pts += w.pts;
         allTime[w.name].seasons++;
       }
-    } else {
-      for (const team of TEAMS) {
+    } else if (data.rosters) {
+      if (data.rosters) for (const team of TEAMS) {
         for (const letter of LETTERS) {
           const name = data.rosters[team]?.[letter];
           if (!name) continue;
@@ -2326,7 +2326,7 @@ function renderArchiveShame() {
         allTime[w.name].pts += w.pts;
         allTime[w.name].seasons++;
       }
-    } else {
+    } else if (data.rosters) {
       for (const team of TEAMS) {
         for (const letter of LETTERS) {
           const name = data.rosters[team]?.[letter];
