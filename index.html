@@ -844,6 +844,7 @@ let draftState = {
 // archiveSeasons stored in localStorage: [{name, url}]
 let archiveSeasons = JSON.parse(localStorage.getItem('aew_archive_seasons') || '[]');
 let archiveData = {}; // { [seasonName]: { rosters, scores, schedule, seasonName } }
+let histData = {}; // { [seasonName]: { seasonName, champion, wrestlers: [{name, pts}] } }
 let activeArchiveVault = null;
 let activeArchiveSub = 'trophy';
 // Keys written locally that should not be overwritten by a sync until page reload
@@ -2047,6 +2048,28 @@ async function fetchArchiveSeason(url) {
       if (assembled) all[base] = archiveParseRaw(assembled);
     }
   }
+
+  // Check for historical pre-app data (written by the history loader script)
+  const histIndex = all['aew_hist_index'];
+  if (histIndex && Array.isArray(histIndex)) {
+    // This sheet has historical data — load all seasons from it
+    const seasons = {};
+    for (const name of histIndex) {
+      const key = 'aew_hist_' + name.replace(/\s+/g, '_').toLowerCase();
+      const histData = all[key];
+      if (histData && histData.wrestlers) {
+        seasons[name] = {
+          seasonName: name,
+          isHistorical: true,
+          champion: histData.champion,
+          wrestlers: histData.wrestlers, // [{name, pts}]
+        };
+      }
+    }
+    return { isMultiSeason: true, seasons };
+  }
+
+  // Standard single-season format
   const data = { rosters:{}, scores:{}, schedule:[], seasonName:'Unknown' };
   if (all['aew_schedule'] && Array.isArray(all['aew_schedule'])) data.schedule = all['aew_schedule'];
   if (all['aew_seasonname']) data.seasonName = String(all['aew_seasonname']);
@@ -2067,15 +2090,36 @@ async function fetchArchiveSeason(url) {
 }
 
 async function loadArchiveSeasons() {
-  if (!archiveSeasons.length) return;
+  // Load connected season sheets
   for (const s of archiveSeasons) {
     try {
       archiveData[s.name] = await fetchArchiveSeason(s.url);
     } catch(e) { console.warn('Archive load failed:', s.name); }
   }
+  // Load historical data from current sheet
+  await loadHistoricalData();
+}
+
+async function loadHistoricalData() {
+  if (!scriptUrl) return;
+  try {
+    const indexRaw = await sheetGet('aew_hist_index');
+    if (!indexRaw) return;
+    const index = Array.isArray(indexRaw) ? indexRaw : JSON.parse(indexRaw);
+    for (const name of index) {
+      const key = 'aew_hist_' + name.replace(/\s+/g, '_').toLowerCase();
+      const data = await sheetGet(key);
+      if (data) {
+        // Convert to archive format
+        histData[name] = typeof data === 'string' ? JSON.parse(data) : data;
+      }
+    }
+  } catch(e) { console.warn('Historical data load failed:', e); }
 }
 
 function archiveGetTeamTotal(data, team) {
+  // Historical data doesn't have team scores — not applicable
+  if (data.isHistorical) return 0;
   return data.schedule.reduce((s, show) => {
     const sid = `${show.date}_${show.type}`;
     if (!data.scores[team]?.[sid]) return s;
@@ -2089,11 +2133,19 @@ function archiveGetTeamTotal(data, team) {
 }
 
 function archiveGetWrestlerPts(data, team, letter) {
+  if (data.isHistorical) return 0;
   return data.schedule.reduce((s, show) => {
     const sid = `${show.date}_${show.type}`;
     if (!data.scores[team]?.[sid]?.[letter]) return s;
     return s + ACCOMPLISHMENTS.reduce((pts,a) => pts + getCount(data.scores[team][sid][letter],a.key)*a.pts, 0);
   }, 0);
+}
+
+// Get total pts for a wrestler by name across historical data
+function archiveGetWrestlerPtsByName(data, name) {
+  if (!data.isHistorical || !data.wrestlers) return 0;
+  const w = data.wrestlers.find(w => w.name === name);
+  return w ? w.pts : 0;
 }
 
 function renderArchiveTrophy() {
@@ -2102,22 +2154,40 @@ function renderArchiveTrophy() {
     el.innerHTML = `<div style="background:var(--card);border:1px solid rgba(240,180,41,0.2);border-radius:12px;padding:28px;text-align:center;"><strong style="color:var(--gold);display:block;font-family:'Barlow Condensed',sans-serif;font-size:15px;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;">Trophy Case Empty</strong><p style="font-size:13px;color:var(--muted);">Add past seasons in the ➕ Seasons tab.</p></div>`;
     return;
   }
-  el.innerHTML = Object.entries(archiveData).map(([name, data]) => {
+  const sorted = Object.entries(archiveData).sort(([a],[b]) => {
+    const numA = parseInt(a.match(/\d+/)?.[0] || '0');
+    const numB = parseInt(b.match(/\d+/)?.[0] || '0');
+    return numA - numB;
+  });
+  el.innerHTML = sorted.map(([name, data]) => {
+    if (data.isHistorical) {
+      const top3 = (data.wrestlers || []).slice(0, 3);
+      const champ = top3[0];
+      return `<div class="archive-card">
+        <div class="archive-trophy-icon">🏆</div>
+        <div class="archive-season-label">${data.seasonName||name} · Top Scorer</div>
+        <div class="archive-champ-name" style="color:var(--gold-light)">${champ?.name||'Unknown'}</div>
+        <div class="archive-champ-pts">${champ?.pts||0} <span style="font-family:'Barlow Condensed',sans-serif;font-size:14px;color:var(--muted);letter-spacing:2px;">PTS</span></div>
+        ${top3.slice(1).map((w,i)=>`<div class="archive-runner-up">
+          <span class="archive-runner-rank">${i+2}</span>
+          <span class="archive-runner-name" style="color:var(--text)">${w.name}</span>
+          <span class="archive-runner-pts">${w.pts} pts</span>
+        </div>`).join('')}
+      </div>`;
+    }
     const totals = TEAMS.map(t=>({team:t,pts:archiveGetTeamTotal(data,t)})).sort((a,b)=>b.pts-a.pts);
     const champ = totals[0];
-    return `
-      <div class="archive-card">
-        <div class="archive-trophy-icon">🏆</div>
-        <div class="archive-season-label">${data.seasonName||name} · Season Champion</div>
-        <div class="archive-champ-name" style="color:${TEAM_COLORS[champ.team]}">${TEAM_LABELS[champ.team]}</div>
-        <div class="archive-champ-pts">${champ.pts} <span style="font-family:'Barlow Condensed',sans-serif;font-size:14px;color:var(--muted);letter-spacing:2px;">PTS</span></div>
-        ${totals.slice(1).map((item,i)=>`
-          <div class="archive-runner-up">
-            <span class="archive-runner-rank">${i+2}</span>
-            <span class="archive-runner-name" style="color:${TEAM_COLORS[item.team]}">${TEAM_LABELS[item.team]}</span>
-            <span class="archive-runner-pts">${item.pts} pts</span>
-          </div>`).join('')}
-      </div>`;
+    return `<div class="archive-card">
+      <div class="archive-trophy-icon">🏆</div>
+      <div class="archive-season-label">${data.seasonName||name} · Season Champion</div>
+      <div class="archive-champ-name" style="color:${TEAM_COLORS[champ.team]}">${TEAM_LABELS[champ.team]}</div>
+      <div class="archive-champ-pts">${champ.pts} <span style="font-family:'Barlow Condensed',sans-serif;font-size:14px;color:var(--muted);letter-spacing:2px;">PTS</span></div>
+      ${totals.slice(1).map((item,i)=>`<div class="archive-runner-up">
+        <span class="archive-runner-rank">${i+2}</span>
+        <span class="archive-runner-name" style="color:${TEAM_COLORS[item.team]}">${TEAM_LABELS[item.team]}</span>
+        <span class="archive-runner-pts">${item.pts} pts</span>
+      </div>`).join('')}
+    </div>`;
   }).join('');
 }
 
@@ -2126,41 +2196,92 @@ function renderArchiveHof() {
   if (!Object.keys(archiveData).length) { el.innerHTML = '<div class="empty">No seasons connected yet</div>'; return; }
   const allTime = {};
   for (const [seasonName, data] of Object.entries(archiveData)) {
-    for (const team of TEAMS) {
-      for (const letter of LETTERS) {
-        const name = data.rosters[team]?.[letter];
-        if (!name) continue;
-        const pts = archiveGetWrestlerPts(data, team, letter);
-        if (pts === 0) continue;
-        const key = `${team}|${name}`;
-        if (!allTime[key]) allTime[key] = { team, name, pts:0, seasons:0 };
-        allTime[key].pts += pts;
-        allTime[key].seasons++;
+    if (data.isHistorical) {
+      for (const w of (data.wrestlers || [])) {
+        if (!w.pts) continue;
+        if (!allTime[w.name]) allTime[w.name] = { name:w.name, pts:0, seasons:0, team:null };
+        allTime[w.name].pts += w.pts;
+        allTime[w.name].seasons++;
+      }
+    } else {
+      for (const team of TEAMS) {
+        for (const letter of LETTERS) {
+          const name = data.rosters[team]?.[letter];
+          if (!name) continue;
+          const pts = archiveGetWrestlerPts(data, team, letter);
+          if (!pts) continue;
+          if (!allTime[name]) allTime[name] = { name, pts:0, seasons:0, team };
+          allTime[name].pts += pts;
+          allTime[name].seasons++;
+        }
       }
     }
   }
   const sorted = Object.values(allTime).sort((a,b)=>b.pts-a.pts);
   if (!sorted.length) { el.innerHTML = '<div class="empty">No points recorded yet</div>'; return; }
   const rankColors = ['var(--gold)','#c0c0c0','#cd7f32'];
-  el.innerHTML = sorted.map((w,i) => `
-    <div class="archive-hof-row">
+  // Hall of Fame — top 20
+  const top20 = sorted.slice(0, 20);
+  // Hall of Shame — bottom 10 (min 1 season, sorted ascending)
+  const shame = [...sorted].filter(w => w.seasons >= 1).sort((a,b) => a.pts - b.pts).slice(0, 10);
+
+  el.innerHTML = `
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">${sorted.length} wrestlers · ${Object.keys(archiveData).length} seasons</div>
+    ${top20.map((w,i) => `<div class="archive-hof-row">
       <div class="archive-hof-rank" style="color:${rankColors[i]||'var(--muted)'}">${i+1}</div>
-      <div class="archive-hof-dot" style="background:${TEAM_COLORS[w.team]}"></div>
+      <div class="archive-hof-dot" style="background:${w.team ? TEAM_COLORS[w.team] : 'var(--muted)'}"></div>
       <div style="flex:1;min-width:0;">
         <div class="archive-hof-name">${w.name}</div>
-        <div class="archive-hof-team">${TEAM_LABELS[w.team]} · ${w.seasons} season${w.seasons>1?'s':''}</div>
+        <div class="archive-hof-team">${w.team ? TEAM_LABELS[w.team]+' · ' : ''}${w.seasons} season${w.seasons>1?'s':''}</div>
       </div>
       <div class="archive-hof-pts">${w.pts}</div>
-    </div>`).join('');
+    </div>`).join('')}
+
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--red);margin:20px 0 12px;display:flex;align-items:center;gap:8px;">🏴 Hall of Shame <span style="flex:1;height:1px;background:rgba(232,50,74,0.2);display:block;"></span></div>
+    ${shame.map((w,i) => `<div class="archive-hof-row" style="border-color:rgba(232,50,74,0.15);">
+      <div class="archive-hof-rank" style="color:var(--red);opacity:0.6;">${sorted.length - i}</div>
+      <div class="archive-hof-dot" style="background:${w.team ? TEAM_COLORS[w.team] : 'var(--muted)'}"></div>
+      <div style="flex:1;min-width:0;">
+        <div class="archive-hof-name">${w.name}</div>
+        <div class="archive-hof-team">${w.team ? TEAM_LABELS[w.team]+' · ' : ''}${w.seasons} season${w.seasons>1?'s':''}</div>
+      </div>
+      <div class="archive-hof-pts" style="color:var(--red);opacity:0.7;">${w.pts}</div>
+    </div>`).join('')}`;
 }
 
 function renderArchiveVault() {
   const el = document.getElementById('archiveVault');
   const names = Object.keys(archiveData);
   if (!names.length) { el.innerHTML = '<div class="empty">No seasons connected yet</div>'; return; }
-  if (!activeArchiveVault || !archiveData[activeArchiveVault]) activeArchiveVault = names[0];
-  const tabs = names.map(name => `<button class="filter-tab ${name===activeArchiveVault?'active':''}" onclick="selectArchiveVault('${name}',this)">${archiveData[name].seasonName||name}</button>`).join('');
+
+  // Sort seasons numerically
+  const sortedNames = names.sort((a,b) => {
+    const numA = parseInt(a.match(/\d+/)?.[0] || '0');
+    const numB = parseInt(b.match(/\d+/)?.[0] || '0');
+    return numA - numB;
+  });
+
+  if (!activeArchiveVault || !archiveData[activeArchiveVault]) activeArchiveVault = sortedNames[0];
+  const tabs = sortedNames.map(name => `<button class="filter-tab ${name===activeArchiveVault?'active':''}" style="white-space:nowrap;" onclick="selectArchiveVault('${name}',this)">${archiveData[name].seasonName||name}</button>`).join('');
   const data = archiveData[activeArchiveVault];
+
+  if (data.isHistorical) {
+    // Historical format — show wrestler leaderboard
+    const wrestlers = (data.wrestlers || []).slice(0, 20);
+    el.innerHTML = `
+      <div style="display:flex;gap:6px;overflow-x:auto;margin-bottom:16px;-webkit-overflow-scrolling:touch;">${tabs}</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:8px;">Top Scorers <span style="flex:1;height:1px;background:var(--border);display:block;"></span></div>
+      ${wrestlers.map((w,i) => `
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:11px 14px;display:flex;align-items:center;gap:10px;margin-bottom:7px;">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:${i===0?'var(--gold)':i===1?'#c0c0c0':i===2?'#cd7f32':'var(--muted)'};min-width:28px;">${i+1}</div>
+          <div style="flex:1;font-size:14px;font-weight:500;">${w.name}</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--gold);">${w.pts}</div>
+        </div>`).join('')}
+      ${data.wrestlers?.length > 20 ? `<div style="text-align:center;font-family:'Barlow Condensed',sans-serif;font-size:12px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;padding:12px;">+${data.wrestlers.length - 20} more wrestlers</div>` : ''}`;
+    return;
+  }
+
+  // App-tracked format
   const totals = TEAMS.map(t=>({team:t,pts:archiveGetTeamTotal(data,t)})).sort((a,b)=>b.pts-a.pts);
   const showsWithData = data.schedule.filter(s => TEAMS.some(t => {
     const sid=`${s.date}_${s.type}`;
@@ -2275,19 +2396,31 @@ async function addArchiveSeason() {
   const name = document.getElementById('archiveNewName').value.trim();
   const url  = document.getElementById('archiveNewUrl').value.trim();
   const msg  = document.getElementById('archiveAddMsg');
-  if (!name || !url) { msg.textContent='Fill in both fields'; msg.style.color='var(--red)'; msg.style.display='block'; return; }
+  if (!url) { msg.textContent='Please enter a URL'; msg.style.color='var(--red)'; msg.style.display='block'; return; }
   msg.textContent='Testing…'; msg.style.color='var(--gold)'; msg.style.display='block';
   try {
     const data = await fetchArchiveSeason(url);
-    archiveSeasons.push({ name, url });
-    localStorage.setItem('aew_archive_seasons', JSON.stringify(archiveSeasons));
-    archiveData[name] = data;
-    msg.textContent=`✓ "${name}" added!`; msg.style.color='var(--teal)';
+    if (data.isMultiSeason) {
+      // Sheet contains multiple historical seasons — add them all
+      archiveSeasons.push({ name: name || 'Historical Archive', url, isMultiSeason: true });
+      localStorage.setItem('aew_archive_seasons', JSON.stringify(archiveSeasons));
+      for (const [sName, sData] of Object.entries(data.seasons)) {
+        archiveData[sName] = sData;
+      }
+      const count = Object.keys(data.seasons).length;
+      msg.textContent=`✓ ${count} historical seasons loaded!`; msg.style.color='var(--teal)';
+    } else {
+      const label = name || data.seasonName || 'Unknown Season';
+      archiveSeasons.push({ name: label, url });
+      localStorage.setItem('aew_archive_seasons', JSON.stringify(archiveSeasons));
+      archiveData[label] = data;
+      msg.textContent=`✓ "${label}" added!`; msg.style.color='var(--teal)';
+    }
     document.getElementById('archiveNewName').value='';
     document.getElementById('archiveNewUrl').value='';
     renderArchive();
-  } catch(e) { msg.textContent='✗ Connection failed'; msg.style.color='var(--red)'; }
-  setTimeout(()=>{ msg.style.display='none'; }, 3000);
+  } catch(e) { msg.textContent=`✗ Connection failed: ${e.message}`; msg.style.color='var(--red)'; }
+  setTimeout(()=>{ msg.style.display='none'; }, 4000);
 }
 
 async function removeArchiveSeason(idx) {
