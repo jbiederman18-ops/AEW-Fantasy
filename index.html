@@ -2093,7 +2093,15 @@ async function loadArchiveSeasons() {
   // Load connected season sheets
   for (const s of archiveSeasons) {
     try {
-      archiveData[s.name] = await fetchArchiveSeason(s.url);
+      const data = await fetchArchiveSeason(s.url);
+      if (data.isMultiSeason) {
+        // Flatten all historical seasons into archiveData directly
+        for (const [seasonName, seasonData] of Object.entries(data.seasons)) {
+          archiveData[seasonName] = seasonData;
+        }
+      } else {
+        archiveData[s.name] = data;
+      }
     } catch(e) { console.warn('Archive load failed:', s.name); }
   }
   // Load historical data from current sheet
