@@ -1327,6 +1327,16 @@ async function loadFromSheet() {
 // ─────────────────────────────────────────────
 // HELPERS
 // ─────────────────────────────────────────────
+// Reads a stored count. Tolerates the legacy boolean format from when each
+// accomplishment was a checkbox rather than a counter.
+function getCount(row, key) {
+  const v = row ? row[key] : 0;
+  if (!v) return 0;
+  if (typeof v === 'number') return v;
+  if (v === true) return 1;
+  return 0;
+}
+
 function showId(show) { return `${show.date}_${show.type}`; }
 
 function fmtDate(d) {
@@ -1697,7 +1707,7 @@ function toggleCard(l) {
   renderScoringList();
   if (!wasOpen) {
     const card = document.getElementById(`card_${l}`);
-    if (card) card.scrollIntoView({ block:'start', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+    if (card && card.scrollIntoView) card.scrollIntoView({ block:'start', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
   }
 }
 
@@ -1708,7 +1718,7 @@ function toggleEvent(k) {
   renderScoringList();
   if (!wasOpen) {
     const card = document.getElementById(`evt_${k}`);
-    if (card) card.scrollIntoView({ block:'start', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+    if (card && card.scrollIntoView) card.scrollIntoView({ block:'start', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
   }
 }
 
