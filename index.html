@@ -39,20 +39,25 @@
     --nav-h: 60px;
     --header-h: 64px;
     --safe-top: env(safe-area-inset-top, 0px);
-    --safe-bottom: env(safe-area-inset-bottom, 34px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
     --safe-left: env(safe-area-inset-left, 0px);
     --safe-right: env(safe-area-inset-right, 0px);
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
-  html, body {
-    height: 100%;
+  html { height: 100%; }
+  /* App shell. Fixing the body to the visual viewport removes every
+     assumption about document height — which is what iOS standalone gets
+     wrong, leaving a gap the size of the Safari toolbar that isn't there. */
+  body {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    overscroll-behavior: none;
     background: var(--bg);
     color: var(--text);
     font-family: 'Inter', sans-serif;
-    overflow-x: hidden;
-    overscroll-behavior: none;
   }
 
   /* Entrance-ramp lighting: one warm key from above, a cool bounce below. */
@@ -164,13 +169,20 @@
 
   /* ── MAIN SCROLL AREA ── */
   main {
-    position: relative; z-index: 5;
-    padding-top: calc(var(--header-h) + var(--safe-top) + 16px);
-    padding-bottom: calc(var(--nav-h) + var(--safe-bottom) + 80px);
-    padding-left: 16px;
-    padding-right: 16px;
-    max-width: 900px; margin: 0 auto;
+    position: fixed; z-index: 5;
+    top: calc(var(--header-h) + var(--safe-top));
+    bottom: calc(var(--nav-h) + var(--safe-bottom));
+    left: 0; right: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    padding: 16px 16px 28px;
   }
+  /* the scroller spans the window; the reading column stays measured */
+  main > .tab-panel { max-width: 900px; margin: 0 auto; }
+  /* the floating save bar overlays the bottom of the scroller — give the
+     last card room to clear it, but only while it's showing */
+  body.has-savebar main { padding-bottom: 88px; }
 
   /* ── TAB PANELS ── */
   :focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 2px; }
@@ -868,11 +880,11 @@
     /* header and content clear the rail */
     header { left: var(--rail-w); padding-left: 28px; padding-right: 28px; }
     main {
-      margin-left: var(--rail-w);
-      max-width: 1180px;
-      padding-bottom: 56px;
+      left: var(--rail-w); right: 0;
+      padding-bottom: 40px;
       padding-left: 28px; padding-right: 28px;
     }
+    main > .tab-panel { max-width: 1180px; }
     .save-bar { left: var(--rail-w); padding-left: 28px; padding-right: 28px; }
 
     /* the sheet is a phone affordance; never surface it here */
@@ -892,10 +904,20 @@
   }
 
   @media (min-width: 1280px) {
-    main { max-width: 1320px; }
+    main > .tab-panel { max-width: 1320px; }
     .scoring-list { grid-template-columns: repeat(3, 1fr); }
     .roster-grid { grid-template-columns: repeat(6, 1fr); }
   }
+
+  /* Your roster names run long ("Cope, who you may know as Adam Copeland…"),
+     which was wrapping the points onto a second line. Let the name wrap and
+     keep the score on one line instead. */
+  .wsc-header { gap: 10px; }
+  .wsc-left { flex: 1; min-width: 0; }
+  .wsc-name { min-width: 0; overflow-wrap: anywhere; }
+  .wsc-right { flex-shrink: 0; }
+  .wsc-pts { white-space: nowrap; }
+  .event-name { overflow-wrap: anywhere; }
 
   /* ── UTILS ── */
   .loading-spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; }
@@ -1713,6 +1735,7 @@ async function selectTeam(team) {
   document.querySelector(`.team-btn[data-team="${team}"]`).classList.add('selected');
   document.getElementById('scorePanel').classList.add('visible');
   document.getElementById('saveBar').classList.add('visible');
+  document.body.classList.add('has-savebar');
   populateShowSelect(); // refresh ✓ marks for the selected team
   loadShowScores();
 }
@@ -3207,8 +3230,10 @@ function switchTab(name) {
   // hide save bar when not on score tab
   if (name !== 'score') {
     document.getElementById('saveBar').classList.remove('visible');
+    document.body.classList.remove('has-savebar');
   } else if (currentTeam) {
     document.getElementById('saveBar').classList.add('visible');
+    document.body.classList.add('has-savebar');
   }
   // re-fetch on tab switch — skip settings, dirty keys are protected in loadFromSheet
   if (scriptUrl && name !== 'settings') {
