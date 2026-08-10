@@ -359,6 +359,140 @@
   .btn-save:active { opacity: 0.8; }
   .btn-save:disabled { opacity: 0.4; }
 
+  /* ── SCORING: mode toggle, show nav, quick taps, event chips ── */
+  .show-select-wrap { gap: 6px; padding: 6px 8px; }
+  .show-nav {
+    flex-shrink: 0; width: 34px; height: 34px; border-radius: 4px;
+    background: var(--surface); border: 1px solid var(--border); color: var(--text);
+    font-size: 20px; line-height: 1; cursor: pointer;
+    -webkit-tap-highlight-color: transparent; transition: border-color .15s, opacity .15s;
+  }
+  .show-nav:active { border-color: var(--gold); }
+  .show-nav:disabled { opacity: 0.28; cursor: default; }
+  .show-select-wrap select { text-align: center; text-align-last: center; padding: 6px 0; }
+
+  .show-meta {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; margin: -6px 0 14px; min-height: 24px;
+  }
+  .jump-btn {
+    background: none; border: none; color: var(--muted); cursor: pointer;
+    font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600;
+    letter-spacing: 0.3px; padding: 4px 2px;
+    -webkit-tap-highlight-color: transparent; transition: color .15s;
+  }
+  .jump-btn:active { color: var(--gold); }
+
+  .mode-toggle {
+    display: flex; gap: 4px; margin-bottom: 14px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 5px; padding: 4px;
+  }
+  .mode-btn {
+    flex: 1; background: none; border: none; border-radius: 3px;
+    padding: 9px 8px; cursor: pointer; color: var(--muted);
+    font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700;
+    letter-spacing: 0.3px; -webkit-tap-highlight-color: transparent;
+    transition: background .15s, color .15s;
+  }
+  .mode-btn.active { background: rgba(245,194,66,0.12); color: var(--gold); }
+
+  /* group headers inside an expanded wrestler */
+  .acc-group-label {
+    font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 700;
+    letter-spacing: 1.6px; text-transform: uppercase; color: var(--muted);
+    padding: 12px 14px 5px; opacity: 0.75;
+  }
+  .acc-group-label.standalone { padding: 16px 2px 7px; opacity: 1; }
+
+  /* one-tap row for the handful of things that happen most often */
+  .quick-row {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    padding: 12px 14px 4px;
+  }
+  .quick-btn {
+    flex: 1 1 auto; min-width: 72px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 4px; padding: 11px 10px; cursor: pointer;
+    color: var(--text); font-family: 'Inter', sans-serif;
+    font-size: 12px; font-weight: 700; letter-spacing: 0.2px;
+    -webkit-tap-highlight-color: transparent;
+    transition: border-color .12s, background .12s, transform .08s;
+  }
+  .quick-btn:active { transform: translateY(1px); }
+  .quick-btn.on {
+    border-color: var(--gold-dim); background: rgba(245,194,66,0.12); color: var(--gold);
+  }
+  .quick-btn b { font-weight: 800; }
+
+  /* event-first mode */
+  .event-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 5px; overflow: hidden; margin-bottom: 8px;
+    border-left: 3px solid transparent; transition: border-left-color .2s;
+  }
+  .event-card.scored { border-left-color: var(--gold); }
+  .event-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 13px 14px; cursor: pointer; background: var(--surface);
+    min-height: 50px; -webkit-tap-highlight-color: transparent;
+  }
+  .event-header:active { background: rgba(255,255,255,0.03); }
+  .event-name {
+    flex: 1; font-family: 'Inter', sans-serif; font-size: 14px;
+    font-weight: 600; line-height: 1.3; min-width: 0;
+  }
+  .event-badge {
+    font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 700;
+    color: var(--muted); background: var(--card); border: 1px solid var(--border);
+    border-radius: 3px; padding: 2px 7px; flex-shrink: 0;
+  }
+  .event-tally {
+    font-family: 'Anton', sans-serif; font-size: 17px; color: var(--gold);
+    min-width: 14px; text-align: right; font-variant-numeric: tabular-nums;
+  }
+  .chip-grid {
+    display: none; grid-template-columns: repeat(2, 1fr);
+    gap: 6px; padding: 10px 12px 12px;
+  }
+  .chip-grid.open { display: grid; }
+  .chip {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 4px; padding: 11px 10px; cursor: pointer;
+    color: var(--text); font-family: 'Inter', sans-serif;
+    font-size: 12px; font-weight: 500; text-align: left;
+    min-height: 44px; -webkit-tap-highlight-color: transparent;
+    transition: border-color .12s, background .12s, transform .08s;
+  }
+  .chip:active { transform: translateY(1px); }
+  .chip.on { border-color: var(--gold-dim); background: rgba(245,194,66,0.12); }
+  .chip-name {
+    flex: 1; min-width: 0; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap;
+  }
+  .chip.on .chip-name { color: var(--gold); }
+  .chip-count {
+    font-family: 'Anton', sans-serif; font-size: 15px; color: var(--gold);
+    flex-shrink: 0; font-variant-numeric: tabular-nums;
+  }
+
+  /* save state readout in the floating bar */
+  .save-state {
+    font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 700;
+    letter-spacing: 0.8px; text-transform: uppercase;
+    padding: 3px 8px; border-radius: 3px; white-space: nowrap;
+  }
+  .save-state.saved    { color: var(--muted); background: transparent; }
+  .save-state.unsaved  { color: var(--gold); background: rgba(245,194,66,0.12); }
+  .save-state.saving   { color: var(--muted); background: rgba(255,255,255,0.05); }
+  .save-state.failed   { color: var(--red); background: rgba(212,43,63,0.14); }
+  .save-bar.dirty { border-top-color: var(--gold-dim); }
+
+  @media (min-width: 560px) {
+    .chip-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+
   /* ── ROSTERS ── */
   .roster-team-block { background: var(--card); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; margin-bottom: 16px; }
   .roster-team-header { padding: 14px 16px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border); background: var(--surface); }
@@ -638,6 +772,7 @@
 <!-- SAVE BAR (floats above nav when scoring) -->
 <div class="save-bar" id="saveBar">
   <div class="save-bar-total">Total: <span id="weekTotalDisplay">0</span> pts</div>
+  <span class="save-state saved" id="saveState">Saved</span>
   <div class="save-bar-msg" id="saveBarMsg"></div>
   <button class="btn-save" id="submitBtn" onclick="submitScores()">💾 Save</button>
 </div>
@@ -696,9 +831,17 @@
     </div>
     <div class="score-panel" id="scorePanel">
       <div class="show-select-wrap">
-        <label>Show</label>
-        <select id="showSelect" onchange="loadShowScores()"></select>
+        <button class="show-nav" id="showPrev" aria-label="Previous show" onclick="stepShow(-1)">‹</button>
+        <select id="showSelect" onchange="changeShow()"></select>
+        <button class="show-nav" id="showNext" aria-label="Next show" onclick="stepShow(1)">›</button>
+      </div>
+      <div class="show-meta">
         <span id="showTypePill"></span>
+        <button class="jump-btn" onclick="jumpToNextUnscored()">Next unscored →</button>
+      </div>
+      <div class="mode-toggle" id="scoreModeToggle" role="tablist" aria-label="Scoring mode">
+        <button class="mode-btn active" role="tab" onclick="setScoreMode('wrestler', this)">By wrestler</button>
+        <button class="mode-btn" role="tab" onclick="setScoreMode('event', this)">By event</button>
       </div>
       <div class="scoring-list" id="scoringList"></div>
       <div class="gap-sm"></div>
@@ -850,6 +993,18 @@ const ACCOMPLISHMENTS = [
   { key:'brawl',        label:'Pull-Apart Brawl / Beats Up a Horde of Security',                    pts:4  },
 ];
 
+// Accomplishments grouped the way a show actually unfolds, so the list is
+// scannable instead of 19 undifferentiated rows.
+const ACC_GROUPS = [
+  { id:'match', label:'Matches',     keys:['win','loss','main','squashNotable','squashJobber','timelimit'] },
+  { id:'mic',   label:'Mic & Story', keys:['promoLive','promoBack','faceheel','respect','writtenoff'] },
+  { id:'title', label:'Titles',      keys:['aewTitle','defAew','thirdTitle','defThird'] },
+  { id:'chaos', label:'Chaos',       keys:['runin','brawl','stunt','fluid'] },
+];
+// The handful that account for most entries on a normal Dynamite.
+const QUICK_KEYS = ['win','loss','main','promoLive'];
+const ACC_BY_KEY = Object.fromEntries(ACCOMPLISHMENTS.map(a => [a.key, a]));
+
 const APPS_SCRIPT_CODE = `const SHEET_NAME = 'AEWData';
 function doGet(e) {
   const action = e.parameter.action;
@@ -909,6 +1064,23 @@ let state = {
 
 let currentTeam = null;
 let currentShowId = null;
+// Scoring working set. This — not the DOM — is the source of truth while editing.
+let liveCounts = {};              // { letter: { accKey: count } }
+let scoreMode = 'wrestler';       // 'wrestler' | 'event'
+let openCards = new Set();        // accordion state, one at a time
+let openEvents = new Set();
+let isDirty = false;              // unsaved taps present
+let autosaveTimer = null;
+const AUTOSAVE_MS = 2500;
+
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function prefersReducedMotion() {
+  return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
 let editingTeam = 'maria';
 let wrestlerFilter = 'all';
 let pendingSchedule = [];
@@ -952,6 +1124,11 @@ function isKeyHeld(key) {
 // ─────────────────────────────────────────────
 // INIT
 // ─────────────────────────────────────────────
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') flushScores();
+});
+window.addEventListener('pagehide', () => { flushScores(); });
+
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('appsScriptCode').textContent = APPS_SCRIPT_CODE;
   document.getElementById('scriptUrlInput').value = scriptUrl;
@@ -1263,7 +1440,7 @@ function renderWrestlerList() {
     <div class="wrestler-row">
       <div class="wr-rank">${i+1}</div>
       <div class="wr-dot" style="background:${TEAM_COLORS[w.team]}"></div>
-      <div class="wr-name">${w.name}</div>
+      <div class="wr-name">${esc(w.name)}</div>
       <div class="wr-pts">${w.pts}</div>
       <div class="wr-bar-wrap"><div class="wr-bar" style="width:${Math.round(w.pts/max*100)}%;background:${TEAM_COLORS[w.team]};"></div></div>
     </div>`).join('');
@@ -1313,13 +1490,16 @@ function populateShowSelect() {
 }
 
 function updateShowPill() {
+  updateShowNavState();
   const sid = document.getElementById('showSelect').value;
   const show = state.schedule.find(s => showId(s) === sid);
   document.getElementById('showTypePill').innerHTML = show ? `<span class="show-pill ${show.type}">${showLabel(show.type)}</span>` : '';
 }
 
-function selectTeam(team) {
+async function selectTeam(team) {
+  await flushScores();          // don't lose taps when switching teams
   currentTeam = team;
+  openCards.clear(); openEvents.clear();
   document.querySelectorAll('.team-btn').forEach(b => b.classList.remove('selected'));
   document.querySelector(`.team-btn[data-team="${team}"]`).classList.add('selected');
   document.getElementById('scorePanel').classList.add('visible');
@@ -1328,137 +1508,335 @@ function selectTeam(team) {
   loadShowScores();
 }
 
+async function stepShow(delta) {
+  const sel = document.getElementById('showSelect');
+  const opts = Array.from(sel.querySelectorAll('option'));
+  const i = opts.findIndex(o => o.value === sel.value);
+  const next = opts[i + delta];
+  if (!next) return;
+  sel.value = next.value;
+  await changeShow();
+}
+
+function jumpToNextUnscored() {
+  if (!currentTeam) return;
+  const sel = document.getElementById('showSelect');
+  const today = new Date().toISOString().slice(0,10);
+  // First unscored show that has already aired; otherwise the first unscored at all.
+  const aired = state.schedule.filter(s => s.date <= today);
+  const pool = aired.length ? aired : state.schedule;
+  const target = pool.find(s => getShowPts(currentTeam, showId(s)) === 0);
+  if (!target) { toastShowNav('Every show is scored'); return; }
+  sel.value = showId(target);
+  changeShow();
+}
+
+function toastShowNav(msg) {
+  const el = document.getElementById('showTypePill');
+  if (!el) return;
+  const prev = el.innerHTML;
+  el.innerHTML = `<span class="show-pill dynamite">${esc(msg)}</span>`;
+  setTimeout(() => { updateShowPill(); }, 1800);
+}
+
+function updateShowNavState() {
+  const sel = document.getElementById('showSelect');
+  if (!sel) return;
+  const opts = Array.from(sel.querySelectorAll('option'));
+  const i = opts.findIndex(o => o.value === sel.value);
+  const prevB = document.getElementById('showPrev');
+  const nextB = document.getElementById('showNext');
+  if (prevB) prevB.disabled = i <= 0;
+  if (nextB) nextB.disabled = i === -1 || i >= opts.length - 1;
+}
+
+async function changeShow() {
+  await flushScores();          // commit the show you're leaving before loading the next
+  openCards.clear(); openEvents.clear();
+  loadShowScores();
+}
+
 function loadShowScores() {
   if (!currentTeam) return;
   const sid = document.getElementById('showSelect').value;
   currentShowId = sid;
   updateShowPill();
-  const teamScores = state.scores[currentTeam]?.[sid] || {};
+
+  // Seed the working set from saved state. liveCounts is the single source of
+  // truth from here — the DOM only ever reflects it.
+  const saved = state.scores[currentTeam]?.[sid] || {};
+  liveCounts = {};
+  for (const l of LETTERS) {
+    liveCounts[l] = {};
+    for (const a of ACCOMPLISHMENTS) {
+      const n = getCount(saved[l] || {}, a.key);
+      if (n > 0) liveCounts[l][a.key] = n;
+    }
+  }
+  setDirty(false);
+  renderScoringList();
+}
+
+function countOf(letter, key) {
+  return (liveCounts[letter] && liveCounts[letter][key]) || 0;
+}
+
+function wrestlerPtsLive(letter) {
+  let pts = 0;
+  const row = liveCounts[letter] || {};
+  for (const key in row) {
+    const a = ACC_BY_KEY[key];
+    if (a) pts += row[key] * a.pts;
+  }
+  return pts;
+}
+
+function showTotalLive() {
+  let t = 0;
+  for (const l of LETTERS) t += wrestlerPtsLive(l);
+  return t;
+}
+
+// ── rendering ────────────────────────────────────────────────────────────
+function renderScoringList() {
   const list = document.getElementById('scoringList');
-  list.innerHTML = LETTERS.map(letter => {
+  if (!list) return;
+  list.innerHTML = scoreMode === 'wrestler' ? wrestlerModeHTML() : eventModeHTML();
+  updateTotals();
+}
+
+function accRowHTML(letter, a) {
+  const count = countOf(letter, a.key);
+  return `<div class="acc-item ${count>0?'has-count':''}" id="accrow_${letter}_${a.key}">
+    <span class="acc-label">${esc(a.label)}</span>
+    <span class="acc-badge">+${a.pts}</span>
+    <div class="stepper">
+      <button class="stepper-btn" aria-label="Remove one ${esc(a.label)}" onclick="stepAcc('${letter}','${a.key}',-1)">−</button>
+      <div class="stepper-count ${count>0?'nonzero':''}" id="cnt_${letter}_${a.key}">${count}</div>
+      <button class="stepper-btn" aria-label="Add one ${esc(a.label)}" onclick="stepAcc('${letter}','${a.key}',1)">+</button>
+    </div>
+  </div>`;
+}
+
+function wrestlerModeHTML() {
+  return LETTERS.map(letter => {
     const name = state.rosters[currentTeam][letter];
     if (!name) return '';
-    const ls = teamScores[letter] || {};
-    const pts = ACCOMPLISHMENTS.reduce((s,a) => s + (getCount(ls,a.key) * a.pts), 0);
-    const accs = ACCOMPLISHMENTS.map(a => {
-      const count = getCount(ls, a.key);
-      return `<div class="acc-item ${count>0?'has-count':''}" id="accrow_${letter}_${a.key}">
-        <span class="acc-label">${a.label}</span>
-        <span class="acc-badge">+${a.pts}</span>
-        <div class="stepper">
-          <button class="stepper-btn" onclick="stepAcc('${letter}','${a.key}',-1)">−</button>
-          <div class="stepper-count ${count>0?'nonzero':''}" id="cnt_${letter}_${a.key}">${count}</div>
-          <button class="stepper-btn" onclick="stepAcc('${letter}','${a.key}',1)">+</button>
-        </div>
-      </div>`;
+    const pts = wrestlerPtsLive(letter);
+    const open = openCards.has(letter);
+
+    const quick = QUICK_KEYS.map(k => {
+      const a = ACC_BY_KEY[k]; if (!a) return '';
+      const c = countOf(letter, k);
+      return `<button class="quick-btn ${c>0?'on':''}" onclick="stepAcc('${letter}','${k}',1)">
+        ${esc(a.label.split(' / ')[0])}${c>0?` <b>${c}</b>`:''}
+      </button>`;
     }).join('');
+
+    const groups = ACC_GROUPS.map(g => `
+      <div class="acc-group-label">${g.label}</div>
+      ${g.keys.map(k => ACC_BY_KEY[k] ? accRowHTML(letter, ACC_BY_KEY[k]) : '').join('')}
+    `).join('');
+
     return `<div class="wrestler-score-card${pts>0?' scored':''}" id="card_${letter}">
       <div class="wsc-header" onclick="toggleCard('${letter}')">
         <div class="wsc-left">
           <span class="wsc-letter">${letter.toUpperCase()}</span>
-          <span class="wsc-name">${name}</span>
+          <span class="wsc-name">${esc(name)}</span>
         </div>
         <div class="wsc-right">
           <span class="wsc-pts" id="prev_${letter}">${pts>0?'+'+pts+' pts':''}</span>
-          <span class="wsc-chevron" id="chev_${letter}">▼</span>
+          <span class="wsc-chevron${open?' open':''}" id="chev_${letter}">▼</span>
         </div>
       </div>
-      <div class="acc-list" id="accs_${letter}">${accs}</div>
+      <div class="acc-list${open?' open':''}" id="accs_${letter}">
+        <div class="quick-row">${quick}</div>
+        ${groups}
+      </div>
     </div>`;
   }).join('');
-  recalcTotal();
 }
 
+// Event-first entry: pick what happened, then tap who it happened to.
+function eventModeHTML() {
+  return ACC_GROUPS.map(g => `
+    <div class="acc-group-label standalone">${g.label}</div>
+    ${g.keys.map(k => {
+      const a = ACC_BY_KEY[k]; if (!a) return '';
+      const open = openEvents.has(k);
+      let tally = 0;
+      for (const l of LETTERS) tally += countOf(l, k);
+      return `<div class="event-card${tally>0?' scored':''}" id="evt_${k}">
+        <div class="event-header" onclick="toggleEvent('${k}')">
+          <span class="event-name">${esc(a.label)}</span>
+          <span class="event-badge">+${a.pts}</span>
+          <span class="event-tally" id="evttally_${k}">${tally>0?tally:''}</span>
+          <span class="wsc-chevron${open?' open':''}" id="evtchev_${k}">▼</span>
+        </div>
+        <div class="chip-grid${open?' open':''}" id="evtbody_${k}">
+          ${LETTERS.map(l => {
+            const name = state.rosters[currentTeam][l];
+            if (!name) return '';
+            const c = countOf(l, k);
+            return `<button class="chip${c>0?' on':''}" id="chip_${l}_${k}" onclick="stepAcc('${l}','${k}',1)">
+              <span class="chip-name">${esc(name)}</span>
+              ${c>0?`<span class="chip-count">${c}</span>`:''}
+            </button>`;
+          }).join('')}
+        </div>
+      </div>`;
+    }).join('')}
+  `).join('');
+}
+
+// ── interaction ──────────────────────────────────────────────────────────
 function toggleCard(l) {
-  document.getElementById(`accs_${l}`).classList.toggle('open');
-  document.getElementById(`chev_${l}`).classList.toggle('open');
+  const wasOpen = openCards.has(l);
+  openCards.clear();                 // accordion: one open at a time
+  if (!wasOpen) openCards.add(l);
+  renderScoringList();
+  if (!wasOpen) {
+    const card = document.getElementById(`card_${l}`);
+    if (card) card.scrollIntoView({ block:'start', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+  }
 }
 
-function getCount(ls, key) {
-  const v = ls[key];
-  if (!v) return 0;
-  if (typeof v === 'number') return v;
-  if (v === true) return 1; // legacy boolean support
-  return 0;
+function toggleEvent(k) {
+  const wasOpen = openEvents.has(k);
+  openEvents.clear();
+  if (!wasOpen) openEvents.add(k);
+  renderScoringList();
+  if (!wasOpen) {
+    const card = document.getElementById(`evt_${k}`);
+    if (card) card.scrollIntoView({ block:'start', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+  }
 }
 
-function stepAcc(l, key, delta) {
-  // Read current live counts from DOM into a temp object
-  if (!window._liveCounts) window._liveCounts = {};
-  if (!window._liveCounts[l]) window._liveCounts[l] = {};
-  const cur = parseInt(document.getElementById(`cnt_${l}_${key}`).textContent) || 0;
-  const next = Math.max(0, cur + delta);
-  window._liveCounts[l][key] = next;
-
-  // Update count display
-  const countEl = document.getElementById(`cnt_${l}_${key}`);
-  countEl.textContent = next;
-  countEl.className = `stepper-count ${next > 0 ? 'nonzero' : ''}`;
-
-  // Update row highlight
-  const row = document.getElementById(`accrow_${l}_${key}`);
-  row.classList.toggle('has-count', next > 0);
-  row.querySelector('.acc-label').style.color = next > 0 ? 'var(--gold)' : '';
-  row.querySelector('.acc-badge').style.color = next > 0 ? 'var(--gold)' : '';
-  row.querySelector('.acc-badge').style.borderColor = next > 0 ? 'rgba(240,180,41,0.3)' : '';
-
-  recalcTotal();
+function setScoreMode(mode, btn) {
+  scoreMode = mode;
+  document.querySelectorAll('#scoreModeToggle .mode-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderScoringList();
 }
 
-function recalcTotal() {
-  let total = 0;
-  for (const l of LETTERS) {
-    let pts = 0;
-    for (const a of ACCOMPLISHMENTS) {
-      const countEl = document.getElementById(`cnt_${l}_${a.key}`);
-      const count = countEl ? (parseInt(countEl.textContent) || 0) : 0;
-      total += count * a.pts;
-      pts   += count * a.pts;
-    }
+function stepAcc(letter, key, delta) {
+  const next = Math.max(0, countOf(letter, key) + delta);
+  if (!liveCounts[letter]) liveCounts[letter] = {};
+  if (next === 0) delete liveCounts[letter][key];
+  else liveCounts[letter][key] = next;
+
+  // Touch only the nodes that changed — no full re-render, no DOM scanning.
+  const cnt = document.getElementById(`cnt_${letter}_${key}`);
+  if (cnt) {
+    cnt.textContent = next;
+    cnt.className = `stepper-count ${next>0?'nonzero':''}`;
+    const row = document.getElementById(`accrow_${letter}_${key}`);
+    if (row) row.classList.toggle('has-count', next > 0);
+  }
+  const chip = document.getElementById(`chip_${letter}_${key}`);
+  if (chip) {
+    chip.classList.toggle('on', next > 0);
+    const cc = chip.querySelector('.chip-count');
+    if (next > 0) {
+      if (cc) cc.textContent = next;
+      else chip.insertAdjacentHTML('beforeend', `<span class="chip-count">${next}</span>`);
+    } else if (cc) cc.remove();
+  }
+  const quickBtns = document.querySelectorAll(`#accs_${letter} .quick-btn`);
+  if (quickBtns.length) {
+    QUICK_KEYS.forEach((qk, i) => {
+      if (qk !== key || !quickBtns[i]) return;
+      const a = ACC_BY_KEY[qk];
+      quickBtns[i].classList.toggle('on', next > 0);
+      quickBtns[i].innerHTML = `${esc(a.label.split(' / ')[0])}${next>0?` <b>${next}</b>`:''}`;
+    });
+  }
+  const tally = document.getElementById(`evttally_${key}`);
+  if (tally) {
+    let t = 0;
+    for (const l of LETTERS) t += countOf(l, key);
+    tally.textContent = t > 0 ? t : '';
+    const ev = document.getElementById(`evt_${key}`);
+    if (ev) ev.classList.toggle('scored', t > 0);
+  }
+
+  updateTotals(letter);
+  setDirty(true);
+  scheduleAutosave();
+}
+
+// Only rewrites the few elements that display a total.
+function updateTotals(changedLetter) {
+  const letters = changedLetter ? [changedLetter] : LETTERS;
+  for (const l of letters) {
+    const pts = wrestlerPtsLive(l);
     const prev = document.getElementById(`prev_${l}`);
     if (prev) prev.textContent = pts > 0 ? `+${pts} pts` : '';
     const card = document.getElementById(`card_${l}`);
     if (card) card.classList.toggle('scored', pts > 0);
   }
-  document.getElementById('weekTotalDisplay').textContent = total;
+  const totalEl = document.getElementById('weekTotalDisplay');
+  if (totalEl) totalEl.textContent = showTotalLive();
 }
 
-async function submitScores() {
+function recalcTotal() { updateTotals(); }   // kept for any older call sites
+
+function setDirty(v) {
+  isDirty = v;
+  const bar = document.getElementById('saveBar');
+  if (bar) bar.classList.toggle('dirty', v);
+  const st = document.getElementById('saveState');
+  if (!st) return;
+  if (v) { st.textContent = 'Unsaved'; st.className = 'save-state unsaved'; }
+}
+
+function scheduleAutosave() {
+  clearTimeout(autosaveTimer);
+  const st = document.getElementById('saveState');
+  if (st) { st.textContent = 'Unsaved'; st.className = 'save-state unsaved'; }
+  autosaveTimer = setTimeout(() => { submitScores(true); }, AUTOSAVE_MS);
+}
+
+// Push any pending edits immediately — used when leaving the tab, changing show,
+// or when the app is backgrounded mid-show.
+async function flushScores() {
+  clearTimeout(autosaveTimer);
+  if (isDirty && currentTeam && currentShowId) await submitScores(true);
+}
+
+async function submitScores(auto = false) {
   if (!currentTeam || !currentShowId) return;
   const btn = document.getElementById('submitBtn');
-  const msg = document.getElementById('saveBarMsg');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="loading-spinner"></span> Saving';
-  msg.style.display = 'none';
+  const st  = document.getElementById('saveState');
+  clearTimeout(autosaveTimer);
 
+  if (!auto && btn) { btn.disabled = true; btn.innerHTML = '<span class="loading-spinner"></span> Saving'; }
+  if (st) { st.textContent = 'Saving…'; st.className = 'save-state saving'; }
+
+  // Commit the working set into app state.
   if (!state.scores[currentTeam]) state.scores[currentTeam] = {};
-  state.scores[currentTeam][currentShowId] = {};
+  const committed = {};
   for (const l of LETTERS) {
-    const ld = {};
-    for (const a of ACCOMPLISHMENTS) {
-      const countEl = document.getElementById(`cnt_${l}_${a.key}`);
-      const count = countEl ? (parseInt(countEl.textContent) || 0) : 0;
-      if (count > 0) ld[a.key] = count;
+    const row = {};
+    for (const key in (liveCounts[l] || {})) {
+      const n = liveCounts[l][key];
+      if (n > 0) row[key] = n;
     }
-    state.scores[currentTeam][currentShowId][l] = ld;
+    committed[l] = row;
   }
-  window._liveCounts = {};
+  state.scores[currentTeam][currentShowId] = committed;
 
   try {
-    // Save just this show's scores — per-show key stays well under URL limit
-    await sheetSet(`aew_score_${currentTeam}_${currentShowId}`, state.scores[currentTeam][currentShowId]);
-    msg.textContent = '✓ Saved!';
-    msg.className = 'save-bar-msg save-msg-ok';
-    msg.style.display = 'block';
+    await sheetSet(`aew_score_${currentTeam}_${currentShowId}`, committed);
+    setDirty(false);
+    if (st) { st.textContent = 'Saved'; st.className = 'save-state saved'; }
     renderStandings(); renderShowChart(); renderWrestlerList();
-    setTimeout(() => { msg.style.display = 'none'; }, 3000);
   } catch(e) {
-    msg.textContent = '✗ Error saving';
-    msg.className = 'save-bar-msg save-msg-err';
-    msg.style.display = 'block';
+    if (st) { st.textContent = 'Save failed — retrying'; st.className = 'save-state failed'; }
+    // Keep the edits and try again shortly rather than dropping them.
+    autosaveTimer = setTimeout(() => submitScores(true), 6000);
   }
-  btn.disabled = false;
-  btn.innerHTML = '💾 Save';
+  if (!auto && btn) { btn.disabled = false; btn.innerHTML = '💾 Save'; }
 }
 
 // ─────────────────────────────────────────────
@@ -1474,8 +1852,8 @@ function renderRosters() {
       const pts = getWrestlerPts(team, l);
       return `<div class="roster-row" id="rrow_${team}_${l}">
         <div class="roster-letter">${l.toUpperCase()}</div>
-        <div class="roster-name-view">${name || '<span style="color:var(--muted)">—</span>'}</div>
-        <input class="roster-name-input" id="rinput_${team}_${l}" type="text" value="${name.replace(/"/g,'&quot;')}" placeholder="Wrestler name">
+        <div class="roster-name-view">${name ? esc(name) : '<span style="color:var(--muted)">—</span>'}</div>
+        <input class="roster-name-input" id="rinput_${team}_${l}" type="text" value="${esc(name)}" placeholder="Wrestler name">
         <div class="roster-pts-view">${pts > 0 ? pts + ' pts' : ''}</div>
       </div>`;
     }).join('');
@@ -1796,7 +2174,7 @@ function renderDraftLive(el) {
           const pickNum = isSnakeReversed
             ? ri * draftState.order.length + (draftState.order.length - ci)
             : ri * draftState.order.length + ci + 1;
-          return `<div class="draft-board-cell ${cell ? '' : 'pick-num'}">${cell || pickNum}</div>`;
+          return `<div class="draft-board-cell ${cell ? '' : 'pick-num'}">${cell ? esc(cell) : pickNum}</div>`;
         }).join('')).join('')}
       </div>
     </div>`;
@@ -1886,7 +2264,7 @@ function renderDraftComplete(el) {
           ${Array.from({ length: draftState.rounds }, (_, r) => {
             const roundPicks = {};
             draftState.picks.filter(p => p.round === r + 1).forEach(p => { roundPicks[p.team] = p.wrestler; });
-            return draftState.order.map(t => `<div class="draft-board-cell">${roundPicks[t] || '—'}</div>`).join('');
+            return draftState.order.map(t => `<div class="draft-board-cell">${roundPicks[t] ? esc(roundPicks[t]) : '—'}</div>`).join('');
           }).join('')}
         </div>
       </div>
@@ -2000,7 +2378,7 @@ function renderSwaps() {
               <span class="swap-history-date">${h.date}${h.show ? ' · ' + h.show : ''}</span>
             </div>
             <div class="swap-history-detail">
-              Slot ${h.slot.toUpperCase()} · <b>${h.oldWrestler || '—'}</b><span class="arrow">→</span><b>${h.newWrestler}</b>
+              Slot ${h.slot.toUpperCase()} · <b>${esc(h.oldWrestler || '—')}</b><span class="arrow">→</span><b>${esc(h.newWrestler)}</b>
             </div>
           </div>`).join('')}
       </div>
@@ -2286,11 +2664,11 @@ function renderArchiveTrophy() {
       return `<div class="archive-card">
         <div class="archive-trophy-icon">🏆</div>
         <div class="archive-season-label">${data.seasonName||name} · Top Scorer</div>
-        <div class="archive-champ-name" style="color:var(--gold-light)">${champ?.name||'Unknown'}</div>
+        <div class="archive-champ-name" style="color:var(--gold-light)">${esc(champ?.name||'Unknown')}</div>
         <div class="archive-champ-pts">${champ?.pts||0} <span style="font-family:'Inter',sans-serif;font-size:14px;color:var(--muted);letter-spacing:2px;">PTS</span></div>
         ${top3.slice(1).map((w,i)=>`<div class="archive-runner-up">
           <span class="archive-runner-rank">${i+2}</span>
-          <span class="archive-runner-name" style="color:var(--text)">${w.name}</span>
+          <span class="archive-runner-name" style="color:var(--text)">${esc(w.name)}</span>
           <span class="archive-runner-pts">${w.pts} pts</span>
         </div>`).join('')}
       </div>`;
@@ -2350,7 +2728,7 @@ function renderArchiveHof() {
       <div class="archive-hof-rank" style="color:${rankColors[i]||'var(--muted)'}">${i+1}</div>
       <div class="archive-hof-dot" style="background:${teamColor}"></div>
       <div style="flex:1;min-width:0;">
-        <div class="archive-hof-name">${w.name}</div>
+        <div class="archive-hof-name">${esc(w.name)}</div>
         <div class="archive-hof-team">${teamLabel}${w.seasons} season${w.seasons>1?'s':''}</div>
       </div>
       <div class="archive-hof-pts">${w.pts}</div>
@@ -2382,7 +2760,7 @@ function renderArchiveVault() {
       ${wrestlers.map((w,i) => `
         <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:11px 14px;display:flex;align-items:center;gap:10px;margin-bottom:7px;">
           <div style="font-family:'Anton',sans-serif;font-size:22px;color:${i===0?'var(--gold)':i===1?'#c0c0c0':i===2?'#cd7f32':'var(--muted)'};min-width:28px;">${i+1}</div>
-          <div style="flex:1;font-size:14px;font-weight:500;">${w.name}</div>
+          <div style="flex:1;font-size:14px;font-weight:500;">${esc(w.name)}</div>
           <div style="font-family:'Anton',sans-serif;font-size:28px;color:var(--gold);">${w.pts}</div>
         </div>`).join('')}
       ${data.wrestlers?.length > 20 ? `<div style="text-align:center;font-family:'Inter',sans-serif;font-size:12px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;padding:12px;">+${data.wrestlers.length - 20} more wrestlers</div>` : ''}`;
@@ -2480,7 +2858,7 @@ function renderArchiveShame() {
       <div style="font-family:'Anton',sans-serif;font-size:24px;color:var(--red);opacity:0.7;min-width:36px;text-align:center;">${totalWrestlers - i}</div>
       <div class="archive-hof-dot" style="background:${teamColor}"></div>
       <div style="flex:1;min-width:0;">
-        <div class="archive-hof-name">${w.name}</div>
+        <div class="archive-hof-name">${esc(w.name)}</div>
         <div class="archive-hof-team">${teamLabel}${w.seasons} season${w.seasons>1?'s':''}</div>
       </div>
       <div class="archive-hof-pts" style="color:var(--red);opacity:0.8;">${w.pts}</div>
@@ -2601,6 +2979,10 @@ async function startNewSeason() {
 }
 
 function switchTab(name) {
+  // Commit pending score taps before navigating away — losing a live entry
+  // because someone glanced at the standings is not acceptable.
+  if (isDirty) flushScores();
+
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
   document.getElementById(`tab-${name}`).classList.add('active');
