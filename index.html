@@ -12,9 +12,10 @@
 <title>AEW Fantasy</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="apple-touch-icon-precomposed" sizes="180x180" href="apple-touch-icon-precomposed.png">
 <link rel="icon" type="image/svg+xml" href="icon.svg">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -1014,6 +1015,8 @@
     <button onclick="toggleDiag()">close</button>
   </div>
   <pre id="diagBody"></pre>
+  <div style="border-top:1px solid var(--border);margin:8px 0 6px"></div>
+  <pre id="diagIcons"></pre>
   <p class="diag-hint">Tap the AEW logo to hide. Screenshot this and send it over.</p>
 </div>
 
@@ -1409,12 +1412,36 @@ function isKeyHeld(key) {
 // ─────────────────────────────────────────────
 // The one number the whole shell hangs off. window.innerHeight is the actual
 // visible height in iOS standalone, where 100vh is not.
-const BUILD_ID = 'b0811-1851';
+const BUILD_ID = 'b0811-2344';
 
 function toggleDiag() {
   const p = document.getElementById('diagPanel');
   p.classList.toggle('open');
   if (p.classList.contains('open')) renderDiag();
+}
+
+// Fetch each icon the page asks for and report what the server actually returns.
+// A 404 here means the files were never deployed; 200 means it's iOS icon cache.
+async function checkIcons() {
+  const files = ['apple-touch-icon.png','apple-touch-icon-precomposed.png',
+                 'icon-192.png','icon-512.png','icon.svg','manifest.json','config.json'];
+  const el = document.getElementById('diagIcons');
+  if (!el) return;
+  el.textContent = 'checking…';
+  const lines = [];
+  for (const f of files) {
+    try {
+      const r = await fetch(f, { cache: 'no-store' });
+      const ct = (r.headers.get('content-type') || '').split(';')[0];
+      lines.push(`${r.ok ? 'OK  ' : 'FAIL'} ${String(r.status).padEnd(4)} ${f}${r.ok ? '  ' + ct : ''}`);
+    } catch(e) {
+      lines.push(`FAIL  --  ${f}  (network)`);
+    }
+  }
+  const bad = lines.filter(l => l.startsWith('FAIL')).length;
+  el.textContent = lines.join('\n') + '\n\n' +
+    (bad ? `>> ${bad} FILE(S) MISSING — upload them next to index.html`
+         : '>> all assets present — icon issue is iOS cache, not deployment');
 }
 
 function renderDiag() {
@@ -1434,6 +1461,7 @@ function renderDiag() {
   const gap    = Math.round(ih - navR.bottom);
 
   document.getElementById('diagBuild').textContent = BUILD_ID;
+  checkIcons();
   document.getElementById('diagBody').textContent = [
     'standalone      ' + (window.navigator.standalone === true),
     'displayMode     ' + (window.matchMedia('(display-mode: standalone)').matches ? 'standalone' : 'browser'),
@@ -2181,19 +2209,46 @@ function scheduleAutosave() {
 async function flushScores() {
   clearTimeout(autosaveTimer);
   if (isDirty && currentTeam && currentShowId) await submitScores(true);
+  // If a save was already running, wait for the follow-up too, so callers that
+  // navigate away don't leave the last taps unwritten.
+  if (savePromise) { try { await savePromise; } catch(e) {} }
 }
+
+// ── single-flight save queue ────────────────────────────────────────────
+// Apps Script silently drops concurrent writes from one client. Autosave,
+// tab switches, backgrounding and team/show changes could all fire a save at
+// once, so overlapping requests were killing each other — that's the
+// "save failed" you see mid-show. Only one save runs at a time now; anything
+// requested while one is in flight is coalesced into a single follow-up.
+let savePromise = null;
+let savePending = false;
+let saveRetries = 0;
 
 async function submitScores(auto = false) {
   if (!currentTeam || !currentShowId) return;
-  const btn = document.getElementById('submitBtn');
-  const st  = document.getElementById('saveState');
   clearTimeout(autosaveTimer);
 
+  if (savePromise) {           // a save is already running — fold into it
+    savePending = true;
+    return savePromise;
+  }
+  savePromise = _runSave(auto);
+  try { await savePromise; }
+  finally {
+    savePromise = null;
+    if (savePending) { savePending = false; submitScores(true); }
+  }
+}
+
+async function _runSave(auto) {
+  const btn = document.getElementById('submitBtn');
+  const st  = document.getElementById('saveState');
   if (!auto && btn) { btn.disabled = true; btn.innerHTML = '<span class="loading-spinner"></span> Saving'; }
   if (st) { st.textContent = 'Saving…'; st.className = 'save-state saving'; }
 
-  // Commit the working set into app state.
-  if (!state.scores[currentTeam]) state.scores[currentTeam] = {};
+  // Snapshot at send time so taps during the request aren't silently included
+  // or lost — anything newer triggers the coalesced follow-up above.
+  const team = currentTeam, showId = currentShowId;
   const committed = {};
   for (const l of LETTERS) {
     const row = {};
@@ -2203,17 +2258,25 @@ async function submitScores(auto = false) {
     }
     committed[l] = row;
   }
-  state.scores[currentTeam][currentShowId] = committed;
+  if (!state.scores[team]) state.scores[team] = {};
+  state.scores[team][showId] = committed;
 
   try {
-    await sheetSet(`aew_score_${currentTeam}_${currentShowId}`, committed);
+    await sheetSet(`aew_score_${team}_${showId}`, committed);
+    saveRetries = 0;
     setDirty(false);
     if (st) { st.textContent = 'Saved'; st.className = 'save-state saved'; }
     renderStandings(); renderShowChart(); renderWrestlerList();
   } catch(e) {
-    if (st) { st.textContent = 'Save failed — retrying'; st.className = 'save-state failed'; }
-    // Keep the edits and try again shortly rather than dropping them.
-    autosaveTimer = setTimeout(() => submitScores(true), 6000);
+    // Back off rather than hammering a struggling connection.
+    saveRetries = Math.min(saveRetries + 1, 5);
+    const wait = Math.min(2000 * Math.pow(2, saveRetries - 1), 30000);
+    if (st) {
+      st.textContent = `Retrying in ${Math.round(wait/1000)}s`;
+      st.className = 'save-state failed';
+    }
+    clearTimeout(autosaveTimer);
+    autosaveTimer = setTimeout(() => submitScores(true), wait);
   }
   if (!auto && btn) { btn.disabled = false; btn.innerHTML = '💾 Save'; }
 }
