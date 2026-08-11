@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="18%" r="88%">
+      <stop offset="0%" stop-color="#281E0A"/>
+      <stop offset="56%" stop-color="#0D0A11"/>
+      <stop offset="100%" stop-color="#08070A"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#FFF0B8"/>
+      <stop offset="16%" stop-color="#FFDA79"/>
+      <stop offset="46%" stop-color="#F5C242"/>
+      <stop offset="74%" stop-color="#BE8A1A"/>
+      <stop offset="100%" stop-color="#845C0E"/>
+    </linearGradient>
+    <linearGradient id="strap" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2A1E11"/>
+      <stop offset="50%" stop-color="#160F09"/>
+      <stop offset="100%" stop-color="#0C0806"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" fill="url(#bg)"/>
+
+  <!-- strap bands, thick enough to still register at 60px -->
+  <rect x="0" y="78"  width="512" height="76" fill="url(#strap)"/>
+  <rect x="0" y="358" width="512" height="76" fill="url(#strap)"/>
+  <g fill="#F5C242" opacity="0.3">
+    <rect x="0" y="78"  width="512" height="3"/><rect x="0" y="151" width="512" height="3"/>
+    <rect x="0" y="358" width="512" height="3"/><rect x="0" y="431" width="512" height="3"/>
+  </g>
+  <g fill="#F5C242" opacity="0.55">
+    <circle cx="44" cy="116" r="9"/><circle cx="468" cy="116" r="9"/>
+    <circle cx="44" cy="396" r="9"/><circle cx="468" cy="396" r="9"/>
+  </g>
+
+  <!-- centre plate -->
+  <path d="M76 172 Q76 124 124 124 L388 124 Q436 124 436 172 L436 276 Q436 348 256 412 Q76 348 76 276 Z" fill="url(#gold)"/>
+  <path d="M76 172 Q76 124 124 124 L388 124 Q436 124 436 172 L436 276 Q436 348 256 412 Q76 348 76 276 Z" fill="none" stroke="#66450A" stroke-width="5"/>
+  <path d="M100 176 Q100 148 126 148 L386 148 Q412 148 412 176 L412 272 Q412 332 256 388 Q100 332 100 272 Z" fill="none" stroke="#8A6110" stroke-width="3" opacity="0.6"/>
+
+  <!-- AEW engraved -->
+  <g fill="none" stroke="#130D05" stroke-width="29"
+     stroke-linejoin="miter" stroke-linecap="butt" stroke-miterlimit="3.5">
+    <path d="M118 300 L156 202 L194 300"/>
+    <path d="M135 274 L177 274"/>
+    <path d="M286 202 L222 202 L222 300 L286 300"/>
+    <path d="M222 249 L274 249"/>
+    <path d="M304 202 L327 300 L350 236 L373 300 L396 202"/>
+  </g>
+</svg>
