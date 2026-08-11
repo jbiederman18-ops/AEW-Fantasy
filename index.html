@@ -47,12 +47,18 @@
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
   html { height: 100%; }
-  /* App shell. Fixing the body to the visual viewport removes every
-     assumption about document height — which is what iOS standalone gets
-     wrong, leaving a gap the size of the Safari toolbar that isn't there. */
+  /* iOS standalone resolves `position: fixed` against a layout viewport that
+     doesn't match what you can actually see, which left a band of dead space
+     where the Safari toolbar used to be. So the shell is a box of *measured*
+     height (--app-h, set from window.innerHeight) and every piece of chrome is
+     absolutely positioned inside it. Nothing depends on a viewport unit. */
   body {
     position: fixed;
-    inset: 0;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    height: 100dvh;
+    height: var(--app-h, 100dvh);
     overflow: hidden;
     overscroll-behavior: none;
     background: var(--bg);
@@ -72,7 +78,7 @@
 
   /* ── HEADER ── */
   header {
-    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    position: absolute; top: 0; left: 0; right: 0; z-index: 100;
     height: calc(var(--header-h) + var(--safe-top));
     background: rgba(8,7,10,0.94);
     backdrop-filter: blur(20px);
@@ -102,7 +108,7 @@
      Two postures from one markup: a thumb-reachable bottom bar on phones,
      a persistent side rail on pointer devices. */
   nav {
-    position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+    position: absolute; bottom: 0; left: 0; right: 0; z-index: 100;
     height: calc(var(--nav-h) + var(--safe-bottom));
     padding-bottom: var(--safe-bottom);
     background: rgba(8,7,10,0.97);
@@ -110,7 +116,7 @@
     display: flex; align-items: stretch;
   }
   nav::after {
-    content: ''; position: fixed; bottom: 0; left: 0; right: 0;
+    content: ''; position: absolute; bottom: 0; left: 0; right: 0;
     height: var(--safe-bottom); background: var(--bg); z-index: 99; pointer-events: none;
   }
   .nav-brand { display: none; }
@@ -137,13 +143,13 @@
 
   /* ── MORE SHEET (phones only) ── */
   .sheet-backdrop {
-    position: fixed; inset: 0; z-index: 140;
+    position: absolute; inset: 0; z-index: 140;
     background: rgba(0,0,0,0.55);
     opacity: 0; pointer-events: none; transition: opacity 0.2s;
   }
   .sheet-backdrop.open { opacity: 1; pointer-events: auto; }
   .more-sheet {
-    position: fixed; left: 0; right: 0; z-index: 150;
+    position: absolute; left: 0; right: 0; z-index: 150;
     bottom: 0; transform: translateY(100%);
     background: var(--surface);
     border-top: 1px solid var(--border);
@@ -169,7 +175,7 @@
 
   /* ── MAIN SCROLL AREA ── */
   main {
-    position: fixed; z-index: 5;
+    position: absolute; z-index: 5;
     top: calc(var(--header-h) + var(--safe-top));
     bottom: calc(var(--nav-h) + var(--safe-bottom));
     left: 0; right: 0;
@@ -381,7 +387,7 @@
 
   /* floating save bar */
   .save-bar {
-    position: fixed; bottom: calc(var(--nav-h) + var(--safe-bottom)); left: 0; right: 0; z-index: 90;
+    position: absolute; bottom: calc(var(--nav-h) + var(--safe-bottom)); left: 0; right: 0; z-index: 90;
     background: rgba(8,7,10,0.94); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
     border-top: 1px solid var(--border);
     padding: 10px calc(16px + var(--safe-right)) 10px calc(16px + var(--safe-left));
@@ -834,7 +840,7 @@
 
     nav {
       top: 0; bottom: 0; right: auto; width: var(--rail-w);
-      height: 100vh; padding: 18px 12px calc(18px + var(--safe-bottom));
+      height: auto; padding: 18px 12px calc(18px + var(--safe-bottom));
       flex-direction: column; align-items: stretch; gap: 3px;
       border-top: none; border-right: 1px solid var(--border);
       background: rgba(8,7,10,0.99);
@@ -1345,6 +1351,23 @@ function isKeyHeld(key) {
 // ─────────────────────────────────────────────
 // INIT
 // ─────────────────────────────────────────────
+// The one number the whole shell hangs off. window.innerHeight is the actual
+// visible height in iOS standalone, where 100vh is not.
+function syncViewportHeight() {
+  const vv = window.visualViewport;
+  const h = Math.round(vv ? vv.height : window.innerHeight);
+  if (h > 0) document.documentElement.style.setProperty('--app-h', h + 'px');
+}
+syncViewportHeight();
+window.addEventListener('resize', syncViewportHeight);
+window.addEventListener('orientationchange', () => setTimeout(syncViewportHeight, 120));
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', syncViewportHeight);
+}
+// iOS reports stale values immediately after launch/restore; re-measure once settled.
+window.addEventListener('pageshow', () => setTimeout(syncViewportHeight, 60));
+document.addEventListener('DOMContentLoaded', syncViewportHeight);
+
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') flushScores();
 });
