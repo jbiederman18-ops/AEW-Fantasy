@@ -6,7 +6,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="AEW Fantasy">
-<meta name="theme-color" content="#08070A">
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta name="theme-color" content="#2A0F33">
 <title>AEW Fantasy</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
@@ -988,13 +990,13 @@
   <button data-tab="rosters" onclick="switchTab('rosters')">
     <span class="nav-icon">🤼</span><span class="nav-label">Roster</span>
   </button>
-  <button data-tab="draft" onclick="switchTab('draft')">
+  <button data-tab="draft" data-secondary onclick="switchTab('draft')">
     <span class="nav-icon">🎯</span><span class="nav-label">Draft</span>
   </button>
   <button data-tab="swaps" data-secondary onclick="switchTab('swaps')">
     <span class="nav-icon">🔄</span><span class="nav-label">Swaps</span>
   </button>
-  <button data-tab="archive" data-secondary onclick="switchTab('archive')">
+  <button data-tab="archive" onclick="switchTab('archive')">
     <span class="nav-icon">🏛️</span><span class="nav-label">Archive</span>
   </button>
   <button data-tab="settings" data-secondary onclick="switchTab('settings')">
@@ -1018,8 +1020,8 @@
 <div class="sheet-backdrop" id="moreBackdrop" onclick="closeMore()"></div>
 <div class="more-sheet" id="moreSheet" role="dialog" aria-modal="true" aria-label="More sections">
   <div class="sheet-grip"></div>
+  <button class="sheet-item" onclick="switchTab('draft'); closeMore();"><span class="sheet-icon">🎯</span>Draft</button>
   <button class="sheet-item" onclick="switchTab('swaps'); closeMore();"><span class="sheet-icon">🔄</span>Swaps</button>
-  <button class="sheet-item" onclick="switchTab('archive'); closeMore();"><span class="sheet-icon">🏛️</span>Archive</button>
   <button class="sheet-item" onclick="switchTab('settings'); closeMore();"><span class="sheet-icon">⚙️</span>Settings</button>
 </div>
 
@@ -1407,7 +1409,7 @@ function isKeyHeld(key) {
 // ─────────────────────────────────────────────
 // The one number the whole shell hangs off. window.innerHeight is the actual
 // visible height in iOS standalone, where 100vh is not.
-const BUILD_ID = 'b0811-0128';
+const BUILD_ID = 'b0811-1851';
 
 function toggleDiag() {
   const p = document.getElementById('diagPanel');
