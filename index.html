@@ -925,6 +925,22 @@
   .wsc-pts { white-space: nowrap; }
   .event-name { overflow-wrap: anywhere; }
 
+  /* ── ON-DEVICE DIAGNOSTIC ── */
+  .diag {
+    position: absolute; z-index: 300; left: 8px; right: 8px; top: 8px;
+    display: none; background: #0b0a10; border: 1px solid var(--gold-dim);
+    border-radius: 6px; padding: 10px 12px 8px;
+    box-shadow: 0 20px 50px -12px rgba(0,0,0,0.9);
+  }
+  .diag.open { display: block; }
+  .diag-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+  .diag-head strong { font-family:'Inter',sans-serif; font-size:12px; letter-spacing:1px; color:var(--gold); text-transform:uppercase; }
+  .diag-head button { background:none;border:1px solid var(--border);border-radius:4px;color:var(--muted);
+    font-family:'Inter',sans-serif;font-size:11px;padding:6px 10px;min-height:32px;cursor:pointer; }
+  .diag pre { margin:0; font-family:ui-monospace,Menlo,monospace; font-size:11px; line-height:1.55;
+    color:var(--text); white-space:pre-wrap; word-break:break-word; }
+  .diag-hint { margin:6px 0 0; font-family:'Inter',sans-serif; font-size:10px; color:var(--muted); }
+
   /* ── UTILS ── */
   .loading-spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; }
   @keyframes spin { to { transform: rotate(360deg); } }
@@ -949,9 +965,9 @@
 
 <!-- HEADER -->
 <header>
-  <div class="logo">
+  <div class="logo" onclick="toggleDiag()" style="cursor:pointer">
     <div class="logo-aew">AEW</div>
-    <div class="logo-sub">Fantasy · <span id="seasonNameDisplay">Road Chip</span></div>
+    <div class="logo-sub">Fantasy · <span id="seasonNameDisplay">Road Chip</span> · <span id="buildStamp"></span></div>
   </div>
   <div class="header-right">
     <div id="syncStatus" class="sync-loading"><span class="loading-spinner"></span> Loading</div>
@@ -988,6 +1004,15 @@
 </nav>
 
 <!-- Secondary tabs live behind this sheet on phones; the sidebar shows them directly on desktop. -->
+<div class="diag" id="diagPanel">
+  <div class="diag-head">
+    <strong>Build <span id="diagBuild"></span></strong>
+    <button onclick="toggleDiag()">close</button>
+  </div>
+  <pre id="diagBody"></pre>
+  <p class="diag-hint">Tap the AEW logo to hide. Screenshot this and send it over.</p>
+</div>
+
 <div class="sheet-backdrop" id="moreBackdrop" onclick="closeMore()"></div>
 <div class="more-sheet" id="moreSheet" role="dialog" aria-modal="true" aria-label="More sections">
   <div class="sheet-grip"></div>
@@ -1353,6 +1378,57 @@ function isKeyHeld(key) {
 // ─────────────────────────────────────────────
 // The one number the whole shell hangs off. window.innerHeight is the actual
 // visible height in iOS standalone, where 100vh is not.
+const BUILD_ID = 'b0811-0128';
+
+function toggleDiag() {
+  const p = document.getElementById('diagPanel');
+  p.classList.toggle('open');
+  if (p.classList.contains('open')) renderDiag();
+}
+
+function renderDiag() {
+  const cs = getComputedStyle(document.body);
+  const probe = document.createElement('div');
+  probe.style.cssText = 'position:absolute;top:env(safe-area-inset-top,0px);'
+    + 'bottom:env(safe-area-inset-bottom,0px);left:0;width:1px;visibility:hidden;';
+  document.body.appendChild(probe);
+  const pr = probe.getBoundingClientRect();
+  document.body.removeChild(probe);
+
+  const navEl  = document.querySelector('nav');
+  const navR   = navEl ? navEl.getBoundingClientRect() : {bottom:0, top:0, height:0};
+  const bodyR  = document.body.getBoundingClientRect();
+  const vv     = window.visualViewport;
+  const ih     = window.innerHeight;
+  const gap    = Math.round(ih - navR.bottom);
+
+  document.getElementById('diagBuild').textContent = BUILD_ID;
+  document.getElementById('diagBody').textContent = [
+    'standalone      ' + (window.navigator.standalone === true),
+    'displayMode     ' + (window.matchMedia('(display-mode: standalone)').matches ? 'standalone' : 'browser'),
+    '',
+    'innerHeight     ' + ih,
+    'visualViewport  ' + (vv ? Math.round(vv.height) : 'n/a'),
+    'screen.height   ' + screen.height,
+    'docEl.client    ' + document.documentElement.clientHeight,
+    'body height     ' + cs.height,
+    '--app-h         ' + (document.documentElement.style.getPropertyValue('--app-h') || 'unset'),
+    '',
+    'safe top        ' + Math.round(pr.top) + 'px',
+    'safe bottom     ' + Math.round(ih - pr.bottom) + 'px',
+    '',
+    'nav top         ' + Math.round(navR.top),
+    'nav height      ' + Math.round(navR.height),
+    'nav bottom      ' + Math.round(navR.bottom),
+    'body bottom     ' + Math.round(bodyR.bottom),
+    '',
+    '>> GAP BELOW NAV  ' + gap + 'px',
+    gap > 2
+      ? '   layout is short of the window'
+      : '   layout fills the window'
+  ].join('\n');
+}
+
 function syncViewportHeight() {
   const vv = window.visualViewport;
   const h = Math.round(vv ? vv.height : window.innerHeight);
@@ -1419,6 +1495,7 @@ function updateSeasonNameDisplay() {
   const name = state.seasonName || 'Fantasy';
   document.getElementById('seasonNameDisplay').textContent = name;
   document.title = `AEW ${name} — Fantasy League`;
+  const bs=document.getElementById('buildStamp'); if (bs) bs.textContent = BUILD_ID;
 }
 
 // ─────────────────────────────────────────────
