@@ -1164,6 +1164,7 @@
         <input type="url" id="scriptUrlInput" placeholder="https://script.google.com/macros/s/.../exec">
         <button class="btn-primary" onclick="saveScriptUrl()">Connect</button>
       </div>
+      <div id="scriptUrlSource" style="margin-top:6px;font-size:11px;font-family:'Inter',sans-serif;letter-spacing:0.5px;color:var(--muted);"></div>
       <div id="connectionMsg"></div>
     </div>
 
@@ -1303,7 +1304,33 @@ function output(text) {
 // ─────────────────────────────────────────────
 // STATE
 // ─────────────────────────────────────────────
-let scriptUrl = localStorage.getItem('aew_script_url') || HARDCODED_URL;
+// Where the sheet URL comes from, in priority order:
+//   1. config.json deployed next to index.html  (one place, every device agrees)
+//   2. an explicit override saved on this device
+//   3. the built-in fallback
+// localStorage alone was the bug: connecting a new sheet on desktop taught only
+// that browser, so phones silently fell through to the stale built-in URL.
+let scriptUrl = HARDCODED_URL;
+let scriptUrlSource = 'built-in fallback';
+
+async function loadConfig() {
+  try {
+    const r = await fetch('config.json', { cache: 'no-store' });
+    if (r.ok) {
+      const cfg = await r.json();
+      if (cfg && typeof cfg.scriptUrl === 'string'
+          && /^https:\/\/script\.google\.com\//.test(cfg.scriptUrl)) {
+        scriptUrl = cfg.scriptUrl;
+        scriptUrlSource = 'config.json';
+        return;
+      }
+    }
+  } catch(e) { /* no config deployed — fall through */ }
+  const stored = localStorage.getItem('aew_script_url');
+  if (stored) { scriptUrl = stored; scriptUrlSource = 'this device only'; return; }
+  scriptUrl = HARDCODED_URL;
+  scriptUrlSource = 'built-in fallback';
+}
 let state = {
   rosters: {
     erik:  { a:'Jon Moxley', b:'Swerve Strickland', c:'Willow Nightingale', d:'Cash Wheeler', e:'Mistico', f:'Orange Cassidy', g:'Jungle Boy', h:'Kris Statlander', i:'David Finlay', j:'Ricochet', k:'Nick Buck', l:'Alex Windsor' },
@@ -1456,9 +1483,12 @@ document.addEventListener('visibilitychange', () => {
 });
 window.addEventListener('pagehide', () => { flushScores(); });
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('appsScriptCode').textContent = APPS_SCRIPT_CODE;
+  await loadConfig();
   document.getElementById('scriptUrlInput').value = scriptUrl;
+  const srcEl = document.getElementById('scriptUrlSource');
+  if (srcEl) srcEl.textContent = 'in use, from: ' + scriptUrlSource;
   initFromSheet();
   // Load archive seasons in background
   loadArchiveSeasons().then(() => {
@@ -1478,7 +1508,10 @@ async function initFromSheet() {
   setSyncStatus('Loading…', 'loading');
   try {
     await loadFromSheet();
-    if (!window._rostersInSheet) {
+    // Only seed rosters into a genuinely empty sheet. Previously any sheet
+    // without roster keys got the hardcoded defaults written into it — which
+    // meant a phone pointed at the wrong sheet would scribble into it on launch.
+    if (!window._rostersInSheet && window._sheetLooksEmpty) {
       setSyncStatus('Saving rosters…', 'loading');
       await saveRosters();
     }
@@ -1603,6 +1636,11 @@ async function saveToSheet() {
 
 async function loadFromSheet() {
   const all = await sheetGetAll();
+  // Remember the raw payload so other loaders can reuse it instead of re-fetching.
+  window._sheetPayload = all;
+  // A sheet with nothing in it is a fresh season; a sheet with content that just
+  // lacks rosters is someone else's, and must not be written into.
+  window._sheetLooksEmpty = Object.keys(all).length === 0;
   // Skip any key we've written locally — our state is newer than the sheet
   if (!isKeyHeld('aew_schedule') && all['aew_schedule'] && typeof all['aew_schedule'] === 'object') state.schedule = all['aew_schedule'];
   if (!isKeyHeld('aew_seasonname') && all['aew_seasonname']) state.seasonName = String(all['aew_seasonname']);
@@ -2941,16 +2979,23 @@ async function loadArchiveSeasons() {
 async function loadHistoricalData() {
   if (!scriptUrl) return;
   try {
-    const indexRaw = await sheetGet('aew_hist_index');
-    if (!indexRaw) return;
-    const index = Array.isArray(indexRaw) ? indexRaw : JSON.parse(indexRaw);
+    // sheetGetAll already returned every aew_hist_* row. The old version threw
+    // that away and re-requested the index plus one call per season — 13 extra
+    // Apps Script round trips on every launch, which is where the lag came from.
+    let all = window._sheetPayload;
+    if (!all) all = await sheetGetAll();
+
+    const idx = all['aew_hist_index'];
+    const index = Array.isArray(idx) ? idx
+                : (typeof idx === 'string' ? JSON.parse(idx) : null);
+    if (!index) return;
+
     for (const name of index) {
       const key = 'aew_hist_' + name.replace(/\s+/g, '_').toLowerCase();
-      const data = await sheetGet(key);
-      if (data) {
-        // Convert to archive format
-        histData[name] = typeof data === 'string' ? JSON.parse(data) : data;
-      }
+      let data = all[key];
+      if (data === undefined) data = await sheetGet(key);   // only if genuinely absent
+      if (!data) continue;
+      histData[name] = typeof data === 'string' ? JSON.parse(data) : data;
     }
   } catch(e) { console.warn('Historical data load failed:', e); }
 }
