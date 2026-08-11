@@ -1,0 +1,5 @@
+{
+  "_comment": "The one place the current season's sheet is defined. Every device reads this on launch, so changing seasons means editing this file only — no app changes, no per-device setup.",
+  "scriptUrl": "PASTE_CURRENT_SEASON_APPS_SCRIPT_URL_HERE",
+  "seasonLabel": "Road Chip"
+}
