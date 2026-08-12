@@ -767,6 +767,14 @@
 
 
 
+  /* Elements that always behaved as buttons are now marked up as buttons.
+     Strip the UA defaults so the rules above keep their exact appearance. */
+  .team-btn, .wsc-header, .event-header, .logo { font: inherit; color: inherit; }
+  .team-btn { width: 100%; display: block; }
+  .team-btn-label, .team-btn-name { display: block; }
+  .wsc-header, .event-header { width: 100%; border: 0; text-align: left; }
+  .logo { background: none; border: 0; padding: 0; cursor: pointer; }
+
   /* ══════════════════════════════════════════════════════════════════
      TOUCH BASELINE — every interactive element reaches 44px, and taps
      resolve immediately instead of waiting on double-tap detection.
@@ -970,10 +978,10 @@
 
 <!-- HEADER -->
 <header>
-  <div class="logo" onclick="toggleDiag()" style="cursor:pointer">
+  <button class="logo" type="button" onclick="toggleDiag()" aria-expanded="false" aria-controls="diagPanel" aria-label="Toggle diagnostics panel">
     <div class="logo-aew">AEW</div>
     <div class="logo-sub">Fantasy · <span id="seasonNameDisplay">Road Chip</span> · <span id="buildStamp"></span></div>
-  </div>
+  </button>
   <div class="header-right">
     <div id="syncStatus" class="sync-loading"><span class="loading-spinner"></span> Loading</div>
   </div>
@@ -982,29 +990,29 @@
 <!-- BOTTOM NAV -->
 <nav id="mainNav">
   <div class="nav-brand"><span class="nav-brand-mark">AEW</span><span class="nav-brand-sub">Fantasy</span></div>
-  <button class="active" data-tab="leaderboard" onclick="switchTab('leaderboard')">
-    <span class="nav-icon">🏆</span><span class="nav-label">Standings</span>
+  <button class="active" data-tab="leaderboard" aria-current="page" onclick="switchTab('leaderboard')">
+    <span class="nav-icon" aria-hidden="true">🏆</span><span class="nav-label">Standings</span>
   </button>
   <button data-tab="score" onclick="switchTab('score')">
-    <span class="nav-icon">✏️</span><span class="nav-label">Scores</span>
+    <span class="nav-icon" aria-hidden="true">✏️</span><span class="nav-label">Scores</span>
   </button>
   <button data-tab="rosters" onclick="switchTab('rosters')">
-    <span class="nav-icon">🤼</span><span class="nav-label">Roster</span>
+    <span class="nav-icon" aria-hidden="true">🤼</span><span class="nav-label">Roster</span>
   </button>
   <button data-tab="draft" data-secondary onclick="switchTab('draft')">
-    <span class="nav-icon">🎯</span><span class="nav-label">Draft</span>
+    <span class="nav-icon" aria-hidden="true">🎯</span><span class="nav-label">Draft</span>
   </button>
   <button data-tab="swaps" data-secondary onclick="switchTab('swaps')">
-    <span class="nav-icon">🔄</span><span class="nav-label">Swaps</span>
+    <span class="nav-icon" aria-hidden="true">🔄</span><span class="nav-label">Swaps</span>
   </button>
   <button data-tab="archive" onclick="switchTab('archive')">
-    <span class="nav-icon">🏛️</span><span class="nav-label">Archive</span>
+    <span class="nav-icon" aria-hidden="true">🏛️</span><span class="nav-label">Archive</span>
   </button>
   <button data-tab="settings" data-secondary onclick="switchTab('settings')">
-    <span class="nav-icon">⚙️</span><span class="nav-label">Settings</span>
+    <span class="nav-icon" aria-hidden="true">⚙️</span><span class="nav-label">Settings</span>
   </button>
-  <button data-more onclick="openMore()" aria-haspopup="dialog">
-    <span class="nav-icon">⋯</span><span class="nav-label">More</span>
+  <button data-more onclick="openMore()" aria-haspopup="dialog" aria-expanded="false">
+    <span class="nav-icon" aria-hidden="true">⋯</span><span class="nav-label">More</span>
   </button>
 </nav>
 
@@ -1075,23 +1083,23 @@
   <div id="tab-score" class="tab-panel">
     <div class="section-title"><span>Enter</span> Scores</div>
     <div class="team-grid">
-      <div class="team-btn maria" data-team="maria" onclick="selectTeam('maria')">
-        <div class="team-btn-label">Team</div><div class="team-btn-name">Maria</div>
-      </div>
-      <div class="team-btn ryan" data-team="ryan" onclick="selectTeam('ryan')">
-        <div class="team-btn-label">Team</div><div class="team-btn-name">Ryan</div>
-      </div>
-      <div class="team-btn josh" data-team="josh" onclick="selectTeam('josh')">
-        <div class="team-btn-label">Team</div><div class="team-btn-name">Josh</div>
-      </div>
-      <div class="team-btn erik" data-team="erik" onclick="selectTeam('erik')">
-        <div class="team-btn-label">Team</div><div class="team-btn-name">Erik</div>
-      </div>
+      <button class="team-btn maria" type="button" data-team="maria" aria-pressed="false" onclick="selectTeam('maria')">
+        <span class="team-btn-label">Team</span><span class="team-btn-name">Maria</span>
+      </button>
+      <button class="team-btn ryan" type="button" data-team="ryan" aria-pressed="false" onclick="selectTeam('ryan')">
+        <span class="team-btn-label">Team</span><span class="team-btn-name">Ryan</span>
+      </button>
+      <button class="team-btn josh" type="button" data-team="josh" aria-pressed="false" onclick="selectTeam('josh')">
+        <span class="team-btn-label">Team</span><span class="team-btn-name">Josh</span>
+      </button>
+      <button class="team-btn erik" type="button" data-team="erik" aria-pressed="false" onclick="selectTeam('erik')">
+        <span class="team-btn-label">Team</span><span class="team-btn-name">Erik</span>
+      </button>
     </div>
     <div class="score-panel" id="scorePanel">
       <div class="show-select-wrap">
         <button class="show-nav" id="showPrev" aria-label="Previous show" onclick="stepShow(-1)">‹</button>
-        <select id="showSelect" onchange="changeShow()"></select>
+        <select id="showSelect" aria-label="Select show to score" onchange="changeShow()"></select>
         <button class="show-nav" id="showNext" aria-label="Next show" onclick="stepShow(1)">›</button>
       </div>
       <div class="show-meta">
@@ -1099,8 +1107,8 @@
         <button class="jump-btn" onclick="jumpToNextUnscored()">Next unscored →</button>
       </div>
       <div class="mode-toggle" id="scoreModeToggle" role="tablist" aria-label="Scoring mode">
-        <button class="mode-btn active" role="tab" onclick="setScoreMode('wrestler', this)">By wrestler</button>
-        <button class="mode-btn" role="tab" onclick="setScoreMode('event', this)">By event</button>
+        <button class="mode-btn active" type="button" role="tab" aria-selected="true" onclick="setScoreMode('wrestler', this)">By wrestler</button>
+        <button class="mode-btn" type="button" role="tab" aria-selected="false" onclick="setScoreMode('event', this)">By event</button>
       </div>
       <div class="scoring-list" id="scoringList"></div>
       <div class="gap-sm"></div>
@@ -1159,6 +1167,7 @@
           <li>Execute as: <b>Me</b> · Who has access: <b>Anyone</b></li>
           <li>Deploy, authorize, copy URL, paste below</li>
         </ol>
+        <p style="font-size:12px;color:var(--muted);margin-top:8px;">Already set up? Re-paste this script and redeploy (Deploy → Manage deployments → edit → New version) to pick up the concurrent-write fix. The URL stays the same.</p>
       </div>
       <div class="script-box">
         <pre id="appsScriptCode"></pre>
@@ -1266,6 +1275,7 @@ const QUICK_KEYS = ['win','loss','main','promoLive'];
 const ACC_BY_KEY = Object.fromEntries(ACCOMPLISHMENTS.map(a => [a.key, a]));
 
 const APPS_SCRIPT_CODE = `const SHEET_NAME = 'AEWData';
+
 function doGet(e) {
   const action = e.parameter.action;
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -1287,20 +1297,36 @@ function doGet(e) {
       return output(JSON.stringify({ok:true,value:result}));
     }
     if (action === 'set') {
-      const key = e.parameter.key; const value = e.parameter.value;
-      const data = sheet.getDataRange().getValues();
-      for (let i = 1; i < data.length; i++) {
-        if (data[i][0] === key) { sheet.getRange(i+1,2).setValue(value); return output(JSON.stringify({ok:true})); }
+      // Two phones saving at once both read the sheet, both decide the key is
+      // missing, and both appendRow — leaving duplicate rows where the stale one
+      // may win the next read. The lock makes read-then-write atomic.
+      const lock = LockService.getScriptLock();
+      if (!lock.tryLock(20000)) {
+        return output(JSON.stringify({ok:false,error:'Busy — another write in progress'}));
       }
-      sheet.appendRow([key,value]);
-      return output(JSON.stringify({ok:true}));
+      try {
+        const key = e.parameter.key;
+        const value = e.parameter.value;
+        if (!key) return output(JSON.stringify({ok:false,error:'Missing key'}));
+        const data = sheet.getDataRange().getValues();
+        for (let i = 1; i < data.length; i++) {
+          if (data[i][0] === key) {
+            sheet.getRange(i+1,2).setValue(value);
+            SpreadsheetApp.flush();
+            return output(JSON.stringify({ok:true}));
+          }
+        }
+        sheet.appendRow([key,value]);
+        SpreadsheetApp.flush();
+        return output(JSON.stringify({ok:true}));
+      } finally {
+        lock.releaseLock();
+      }
     }
 
     return output(JSON.stringify({ok:false,error:'Unknown action'}));
   } catch(err) { return output(JSON.stringify({ok:false,error:err.toString()})); }
 }
-
-
 
 function output(text) {
   return ContentService.createTextOutput(text).setMimeType(ContentService.MimeType.JSON);
@@ -1367,7 +1393,25 @@ function esc(s) {
 function prefersReducedMotion() {
   return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
-let editingTeam = 'maria';
+// Safe to drop inside a quoted HTML attribute, including an inline handler.
+function escAttr(s) { return esc(s).replace(/\r?\n/g, '&#10;'); }
+// Local calendar date. `new Date().toISOString()` is UTC: west of Greenwich it
+// rolls to tomorrow during prime time — which is exactly when scores get entered,
+// so "today" would skip the show you're actually watching.
+function toISODate(d) {
+  return d.getFullYear() + '-' +
+    String(d.getMonth() + 1).padStart(2, '0') + '-' +
+    String(d.getDate()).padStart(2, '0');
+}
+function todayISO() { return toISODate(new Date()); }
+// Every roster read assumes a team object exists. A sheet that returns a partial
+// or legacy roster payload used to throw on the first render and blank the tab.
+function normalizeRosters() {
+  if (!state.rosters || typeof state.rosters !== 'object') state.rosters = {};
+  for (const t of TEAMS) {
+    if (!state.rosters[t] || typeof state.rosters[t] !== 'object') state.rosters[t] = {};
+  }
+}
 let wrestlerFilter = 'all';
 let pendingSchedule = [];
 let settingsLoaded = false;
@@ -1382,7 +1426,6 @@ let draftState = {
 // archiveSeasons stored in localStorage: [{name, url}]
 let archiveSeasons = JSON.parse(localStorage.getItem('aew_archive_seasons') || '[]');
 let archiveData = {}; // { [seasonName]: { rosters, scores, schedule, seasonName } }
-let histData = {}; // { [seasonName]: { seasonName, champion, wrestlers: [{name, pts}] } }
 let activeArchiveVault = null;
 let activeArchiveSub = 'trophy';
 // Keys with an in-flight (or just-completed) local write. A key is protected from
@@ -1391,6 +1434,10 @@ let activeArchiveSub = 'trophy';
 // to a shared key like aew_swaps or aew_draft, and would clobber them on next write.
 const pendingWrites = new Map(); // key -> release timestamp (ms)
 const WRITE_GRACE_MS = 4000;     // covers read-after-write lag on the Sheets side
+// Every tab switch used to trigger a full getAll of the entire sheet. Six taps
+// around the app was six full-sheet reads; on a phone that is the lag.
+let lastSyncAt = 0;
+const SYNC_MIN_MS = 8000;
 
 function holdKey(key) {
   pendingWrites.set(key, Infinity); // held until the write resolves
@@ -1412,12 +1459,15 @@ function isKeyHeld(key) {
 // ─────────────────────────────────────────────
 // The one number the whole shell hangs off. window.innerHeight is the actual
 // visible height in iOS standalone, where 100vh is not.
-const BUILD_ID = 'b0811-2344';
+const BUILD_ID = 'b0812-polish';
 
 function toggleDiag() {
   const p = document.getElementById('diagPanel');
   p.classList.toggle('open');
-  if (p.classList.contains('open')) renderDiag();
+  const open = p.classList.contains('open');
+  const trigger = document.querySelector('header .logo');
+  if (trigger) trigger.setAttribute('aria-expanded', String(open));
+  if (open) renderDiag();
 }
 
 // Fetch each icon the page asks for and report what the server actually returns.
@@ -1527,6 +1577,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function initFromSheet() {
+  normalizeRosters();
   // Render immediately with defaults so app is never blocked
   renderAll();
 
@@ -1585,16 +1636,36 @@ function parseRaw(raw) {
   } catch(e) { return raw; }
 }
 
+// One door for every Apps Script call.
+//  * cache:'no-store'  — a GET-based API is cacheable, and a cached read served
+//    stale scores straight back into state on the next tab switch.
+//  * AbortController    — without a timeout a dead connection left the status
+//    pill stuck on "Syncing…" forever with no way back to Offline.
+//  * keepalive on writes — lets an autosave finish after the app is backgrounded.
+const SHEET_TIMEOUT_MS = 20000;
+async function sheetFetch(url, opts) {
+  const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timer = ctl ? setTimeout(() => ctl.abort(), SHEET_TIMEOUT_MS) : null;
+  try {
+    const r = await fetch(url, Object.assign(
+      { cache: 'no-store' }, opts, ctl ? { signal: ctl.signal } : {}));
+    if (!r.ok) throw new Error(`Sheet HTTP ${r.status}`);
+    return await r.json();
+  } finally { if (timer) clearTimeout(timer); }
+}
+
+// How many __chunk rows each key currently occupies on the sheet. Tracked so a
+// value that shrinks back under the URL limit can retire its leftovers.
+const chunkCounts = new Map();
+
 async function sheetGet(key) {
-  const r = await fetch(`${scriptUrl}?action=get&key=${encodeURIComponent(key)}`);
-  const j = await r.json();
+  const j = await sheetFetch(`${scriptUrl}?action=get&key=${encodeURIComponent(key)}`);
   if (j.ok && j.value !== null) return parseRaw(j.value);
   return null;
 }
 
 async function sheetGetAll() {
-  const r = await fetch(`${scriptUrl}?action=getAll`);
-  const j = await r.json();
+  const j = await sheetFetch(`${scriptUrl}?action=getAll`);
   if (!j.ok) return {};
   const raw = j.value;
   const out = {};
@@ -1607,6 +1678,7 @@ async function sheetGetAll() {
     if (k.endsWith('__chunks')) {
       const base = k.replace('__chunks', '');
       const count = parseInt(v) || 0;
+      chunkCounts.set(base, count);
       let assembled = '';
       for (let i = 0; i < count; i++) assembled += (raw[`${base}__chunk${i}`] || '');
       if (assembled) out[base] = parseRaw(assembled);
@@ -1627,27 +1699,50 @@ async function sheetSet(key, value) {
 async function _sheetSetInner(key, value) {
   const json = JSON.stringify(value);
   const encoded = encodeURIComponent(json);
-  // Google Apps Script GET URL limit is ~8000 chars — stay well under it
-  // Keep URL under ~1800 total (GAS limit is ~2000)
+  // Keep the whole URL under ~1800 chars (Apps Script starts dropping past ~2000)
   const baseUrlLen = scriptUrl.length + 30 + encodeURIComponent(key).length;
   if (baseUrlLen + encoded.length <= 1700) {
-    const r = await fetch(`${scriptUrl}?action=set&key=${encodeURIComponent(key)}&value=${encoded}`);
-    const j = await r.json();
+    const j = await sheetFetch(
+      `${scriptUrl}?action=set&key=${encodeURIComponent(key)}&value=${encoded}`,
+      { keepalive: true });
     if (!j.ok) throw new Error(`Sheet set failed for key: ${key}`);
+    // Retire any __chunk rows this key left behind when it was larger. Without
+    // this, sheetGetAll's reassembly pass rebuilds the OLD value and overwrites
+    // the fresh one — a schedule or score set that shrinks silently reverts.
+    if ((chunkCounts.get(key) || 0) > 0) {
+      await _setRaw(`${key}__chunks`, '0');
+      chunkCounts.set(key, 0);
+    }
     return true;
   }
-  // Only chunk very large payloads (scores data)
-  const CHUNK = 3000;
+  // Split on ENCODED length. Percent-encoding roughly triples JSON punctuation,
+  // so the old 3000-char raw slices produced ~9000-char URLs — over the limit the
+  // line above exists to respect, which is why big schedules failed to save.
+  const budget = 1700 - baseUrlLen - 12; // 12 ≈ the "__chunkNN" key suffix
   const chunks = [];
-  for (let i = 0; i < json.length; i += CHUNK) chunks.push(json.slice(i, i + CHUNK));
-  await _setRaw(`${key}__chunks`, String(chunks.length));
+  let buf = '', cost = 0;
+  for (const ch of json) {
+    const c = encodeURIComponent(ch).length;
+    if (cost + c > budget && buf) { chunks.push(buf); buf = ''; cost = 0; }
+    buf += ch; cost += c;
+  }
+  if (buf) chunks.push(buf);
+  // Bodies first, count last: the count row is the commit point, so a write that
+  // dies halfway leaves the previous value readable instead of a torn one.
   for (let i = 0; i < chunks.length; i++) await _setRaw(`${key}__chunk${i}`, chunks[i]);
+  await _setRaw(`${key}__chunks`, String(chunks.length));
+  chunkCounts.set(key, chunks.length);
   return true;
 }
 
 async function _setRaw(key, value) {
-  const r = await fetch(`${scriptUrl}?action=set&key=${encodeURIComponent(key)}&value=${encodeURIComponent(value)}`);
-  return r.ok;
+  const j = await sheetFetch(
+    `${scriptUrl}?action=set&key=${encodeURIComponent(key)}&value=${encodeURIComponent(value)}`,
+    { keepalive: true });
+  // Apps Script answers HTTP 200 with {ok:false} on failure, so the old r.ok
+  // check treated every failed chunk write as a success.
+  if (!j.ok) throw new Error(`Sheet set failed for key: ${key}`);
+  return true;
 }
 
 async function saveRosters() {
@@ -1717,6 +1812,8 @@ async function loadFromSheet() {
     const swaps = all['aew_swaps'];
     if (swaps && typeof swaps === 'object') state.swaps = swaps;
   }
+  normalizeRosters();
+  lastSyncAt = Date.now();
   // legacy aew_all key intentionally ignored — data now stored in separate keys
 }
 
@@ -1854,7 +1951,9 @@ function renderWrestlerList() {
 
 function filterWrestlers(team, btn) {
   wrestlerFilter = team;
-  document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+  // Scoped to this row. `.filter-tab` is also used by the Archive sub-tabs and the
+  // Season Vault tabs, so the global query silently un-highlighted those too.
+  document.querySelectorAll('.wrestler-wrap-header .filter-tab').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   renderWrestlerList();
 }
@@ -1864,6 +1963,7 @@ function filterWrestlers(team, btn) {
 // ─────────────────────────────────────────────
 function populateShowSelect() {
   const sel = document.getElementById('showSelect');
+  const prevValue = sel.value;
   sel.innerHTML = '';
   if (!state.schedule.length) {
     sel.innerHTML = '<option>No season configured — go to Settings</option>';
@@ -1888,10 +1988,19 @@ function populateShowSelect() {
     opt.textContent = `${done ? '✓ ' : ''}${showLabel(show.type).replace(/.*? /,'')} — ${fmtDate(show.date)}`;
     sel.lastChild.appendChild(opt);
   });
-  const today = new Date().toISOString().slice(0,10);
-  const last = getLastShow();
-  if (last) sel.value = showId(last);
-  else { const p = [...state.schedule].filter(s => s.date <= today).pop(); if (p) sel.value = showId(p); }
+  // Keep the show you were on. This function re-runs on every team switch and
+  // every background sync, and it used to snap the dropdown back to the default
+  // each time — so glancing at Standings and returning lost your place, and the
+  // scores that then loaded were for a different show than the one on screen.
+  const today = todayISO();
+  const keep = currentShowId || prevValue;
+  if (keep && state.schedule.some(s => showId(s) === keep)) {
+    sel.value = keep;
+  } else {
+    const last = getLastShow();
+    if (last) sel.value = showId(last);
+    else { const p = [...state.schedule].filter(s => s.date <= today).pop(); if (p) sel.value = showId(p); }
+  }
   updateShowPill();
 }
 
@@ -1906,8 +2015,12 @@ async function selectTeam(team) {
   await flushScores();          // don't lose taps when switching teams
   currentTeam = team;
   openCards.clear(); openEvents.clear();
-  document.querySelectorAll('.team-btn').forEach(b => b.classList.remove('selected'));
-  document.querySelector(`.team-btn[data-team="${team}"]`).classList.add('selected');
+  document.querySelectorAll('.team-btn').forEach(b => {
+    b.classList.remove('selected');
+    b.setAttribute('aria-pressed', 'false');
+  });
+  const teamBtn = document.querySelector(`.team-btn[data-team="${team}"]`);
+  if (teamBtn) { teamBtn.classList.add('selected'); teamBtn.setAttribute('aria-pressed', 'true'); }
   document.getElementById('scorePanel').classList.add('visible');
   document.getElementById('saveBar').classList.add('visible');
   document.body.classList.add('has-savebar');
@@ -1928,7 +2041,7 @@ async function stepShow(delta) {
 function jumpToNextUnscored() {
   if (!currentTeam) return;
   const sel = document.getElementById('showSelect');
-  const today = new Date().toISOString().slice(0,10);
+  const today = todayISO();
   // First unscored show that has already aired; otherwise the first unscored at all.
   const aired = state.schedule.filter(s => s.date <= today);
   const pool = aired.length ? aired : state.schedule;
@@ -1980,6 +2093,7 @@ function loadShowScores() {
       if (n > 0) liveCounts[l][a.key] = n;
     }
   }
+  saveRetries = 0;   // backoff belongs to the show you just left, not this one
   setDirty(false);
   renderScoringList();
 }
@@ -2046,16 +2160,16 @@ function wrestlerModeHTML() {
     `).join('');
 
     return `<div class="wrestler-score-card${pts>0?' scored':''}" id="card_${letter}">
-      <div class="wsc-header" onclick="toggleCard('${letter}')">
-        <div class="wsc-left">
+      <button class="wsc-header" type="button" id="wsch_${letter}" aria-expanded="${open}" aria-controls="accs_${letter}" onclick="toggleCard('${letter}')">
+        <span class="wsc-left">
           <span class="wsc-letter">${letter.toUpperCase()}</span>
           <span class="wsc-name">${esc(name)}</span>
-        </div>
-        <div class="wsc-right">
+        </span>
+        <span class="wsc-right">
           <span class="wsc-pts" id="prev_${letter}">${pts>0?'+'+pts+' pts':''}</span>
-          <span class="wsc-chevron${open?' open':''}" id="chev_${letter}">▼</span>
-        </div>
-      </div>
+          <span class="wsc-chevron${open?' open':''}" id="chev_${letter}" aria-hidden="true">▼</span>
+        </span>
+      </button>
       <div class="acc-list${open?' open':''}" id="accs_${letter}">
         <div class="quick-row">${quick}</div>
         ${groups}
@@ -2074,12 +2188,12 @@ function eventModeHTML() {
       let tally = 0;
       for (const l of LETTERS) tally += countOf(l, k);
       return `<div class="event-card${tally>0?' scored':''}" id="evt_${k}">
-        <div class="event-header" onclick="toggleEvent('${k}')">
+        <button class="event-header" type="button" id="evth_${k}" aria-expanded="${open}" aria-controls="evtbody_${k}" onclick="toggleEvent('${k}')">
           <span class="event-name">${esc(a.label)}</span>
           <span class="event-badge">+${a.pts}</span>
           <span class="event-tally" id="evttally_${k}">${tally>0?tally:''}</span>
-          <span class="wsc-chevron${open?' open':''}" id="evtchev_${k}">▼</span>
-        </div>
+          <span class="wsc-chevron${open?' open':''}" id="evtchev_${k}" aria-hidden="true">▼</span>
+        </button>
         <div class="chip-grid${open?' open':''}" id="evtbody_${k}">
           ${LETTERS.map(l => {
             const name = state.rosters[currentTeam][l];
@@ -2101,7 +2215,18 @@ function toggleCard(l) {
   const wasOpen = openCards.has(l);
   openCards.clear();                 // accordion: one open at a time
   if (!wasOpen) openCards.add(l);
-  renderScoringList();
+  // Flip classes instead of re-rendering. The old renderScoringList() call rebuilt
+  // 12 cards × 19 rows of HTML on every open/close, which is the stutter you feel
+  // opening a wrestler mid-show.
+  LETTERS.forEach(x => {
+    const on = openCards.has(x);
+    const body = document.getElementById(`accs_${x}`);
+    const chev = document.getElementById(`chev_${x}`);
+    const head = document.getElementById(`wsch_${x}`);
+    if (body) body.classList.toggle('open', on);
+    if (chev) chev.classList.toggle('open', on);
+    if (head) head.setAttribute('aria-expanded', String(on));
+  });
   if (!wasOpen) {
     const card = document.getElementById(`card_${l}`);
     if (card && card.scrollIntoView) card.scrollIntoView({ block:'start', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
@@ -2112,7 +2237,15 @@ function toggleEvent(k) {
   const wasOpen = openEvents.has(k);
   openEvents.clear();
   if (!wasOpen) openEvents.add(k);
-  renderScoringList();
+  ACCOMPLISHMENTS.forEach(a => {
+    const on = openEvents.has(a.key);
+    const body = document.getElementById(`evtbody_${a.key}`);
+    const chev = document.getElementById(`evtchev_${a.key}`);
+    const head = document.getElementById(`evth_${a.key}`);
+    if (body) body.classList.toggle('open', on);
+    if (chev) chev.classList.toggle('open', on);
+    if (head) head.setAttribute('aria-expanded', String(on));
+  });
   if (!wasOpen) {
     const card = document.getElementById(`evt_${k}`);
     if (card && card.scrollIntoView) card.scrollIntoView({ block:'start', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
@@ -2121,8 +2254,11 @@ function toggleEvent(k) {
 
 function setScoreMode(mode, btn) {
   scoreMode = mode;
-  document.querySelectorAll('#scoreModeToggle .mode-btn').forEach(b => b.classList.remove('active'));
-  if (btn) btn.classList.add('active');
+  document.querySelectorAll('#scoreModeToggle .mode-btn').forEach(b => {
+    b.classList.remove('active');
+    b.setAttribute('aria-selected', 'false');
+  });
+  if (btn) { btn.classList.add('active'); btn.setAttribute('aria-selected', 'true'); }
   renderScoringList();
 }
 
@@ -2186,8 +2322,6 @@ function updateTotals(changedLetter) {
   if (totalEl) totalEl.textContent = showTotalLive();
 }
 
-function recalcTotal() { updateTotals(); }   // kept for any older call sites
-
 function setDirty(v) {
   isDirty = v;
   const bar = document.getElementById('saveBar');
@@ -2195,6 +2329,9 @@ function setDirty(v) {
   const st = document.getElementById('saveState');
   if (!st) return;
   if (v) { st.textContent = 'Unsaved'; st.className = 'save-state unsaved'; }
+  // The false branch was missing, so a "Retrying in 8s" or "Unsaved" label from
+  // the previous show survived into a freshly loaded, clean one.
+  else { st.textContent = 'Saved'; st.className = 'save-state saved'; }
 }
 
 function scheduleAutosave() {
@@ -2248,7 +2385,9 @@ async function _runSave(auto) {
 
   // Snapshot at send time so taps during the request aren't silently included
   // or lost — anything newer triggers the coalesced follow-up above.
-  const team = currentTeam, showId = currentShowId;
+  // NB: named `sid`, not `showId` — a local called showId shadows the global
+  // showId() helper for the whole function body.
+  const team = currentTeam, sid = currentShowId;
   const committed = {};
   for (const l of LETTERS) {
     const row = {};
@@ -2259,10 +2398,10 @@ async function _runSave(auto) {
     committed[l] = row;
   }
   if (!state.scores[team]) state.scores[team] = {};
-  state.scores[team][showId] = committed;
+  state.scores[team][sid] = committed;
 
   try {
-    await sheetSet(`aew_score_${team}_${showId}`, committed);
+    await sheetSet(`aew_score_${team}_${sid}`, committed);
     saveRetries = 0;
     setDirty(false);
     if (st) { st.textContent = 'Saved'; st.className = 'save-state saved'; }
@@ -2343,13 +2482,14 @@ function toggleRosterEdit(team) {
 }
 
 async function saveRosterTeam(team) {
+  normalizeRosters();
   const snapshot = {};
+  const previous = {};
   LETTERS.forEach(l => {
     const inp = document.getElementById(`rinput_${team}_${l}`);
-    snapshot[l] = inp ? inp.value.trim() : (state.rosters[team][l] || '');
+    previous[l] = state.rosters[team][l] || '';
+    snapshot[l] = inp ? inp.value.trim() : previous[l];
   });
-
-
 
   const msg = document.getElementById(`rsavemsg_${team}`);
   const btn = document.getElementById(`redit_${team}`);
@@ -2372,7 +2512,11 @@ async function saveRosterTeam(team) {
     console.error('[ROSTER SAVE] ERROR:', e);
     msg.textContent = '✗ Error — try again';
     msg.style.color = 'var(--red)';
-    LETTERS.forEach(l => { state.rosters[team][l] = snapshot[l]; });
+    // Revert to what was there before, not to the edit that just failed to save.
+    // Re-applying the snapshot left local state claiming a change the sheet never
+    // took, and the next sync would quietly overwrite it.
+    LETTERS.forEach(l => { state.rosters[team][l] = previous[l]; });
+    renderRosters();
   }
 
   btn.disabled = false;
@@ -2394,7 +2538,7 @@ function generateSchedule() {
   const end = new Date(endVal + 'T12:00:00');
   while (d <= end) {
     const day = d.getDay();
-    const iso = d.toISOString().slice(0,10);
+    const iso = toISODate(d);
     if (day === 3) shows.push({ date:iso, type: oldPPVs.has(iso) ? 'ppv' : 'dynamite' });
     else if (day === 6) shows.push({ date:iso, type: oldPPVs.has(iso) ? 'ppv' : 'collision' });
     else if (day === 0 && oldPPVs.has(iso)) shows.push({ date:iso, type:'ppv' });
@@ -2515,7 +2659,7 @@ function renderDraftSetup(el) {
         <h3>Rounds</h3>
         <div class="form-row">
           <span class="form-label">Rounds</span>
-          <input type="number" id="draftRounds" min="1" max="20" value="${draftState.rounds}" style="width:80px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:15px;">
+          <input type="number" id="draftRounds" min="1" max="${LETTERS.length}" value="${draftState.rounds}" style="width:80px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:15px;">
           <span style="font-size:13px;color:var(--muted);font-family:'Inter',sans-serif;letter-spacing:1px;">${draftState.order.length} teams × rounds = ${totalPicks} total picks</span>
         </div>
       </div>
@@ -2555,8 +2699,10 @@ function moveDraftOrder(idx, dir) {
 }
 
 function startDraft() {
-  const rounds = parseInt(document.getElementById('draftRounds').value) || 12;
-  draftState.rounds = rounds;
+  // A roster has exactly LETTERS.length slots. Allowing 20 rounds meant pick 13
+  // silently overwrote slot A, because getNextSlotForTeam fell back to 'a'.
+  const raw = parseInt(document.getElementById('draftRounds').value);
+  draftState.rounds = Math.min(Math.max(Number.isFinite(raw) ? raw : 12, 1), LETTERS.length);
   draftState.picks = [];
   draftState.active = true;
   saveDraftState();
@@ -2655,6 +2801,12 @@ function makePick() {
 
   const { team, round } = getCurrentPicker();
   const slot = getNextSlotForTeam(team);
+  if (!slot) {
+    const el = document.getElementById('draftSaveStatus');
+    if (el) { el.textContent = `⚠ ${TEAM_LABELS[team]} already has ${LETTERS.length} wrestlers`; el.style.color = 'var(--red)'; }
+    return;
+  }
+  normalizeRosters();
 
   // Record pick and update roster immediately
   draftState.picks.push({ team, wrestler, round, slot });
@@ -2665,19 +2817,20 @@ function makePick() {
   renderDraftLive(document.getElementById('draftContent'));
 
   // Save to sheet in the background — don't block the draft
-  saveDraftState().catch(() => {
-    // Show a subtle warning if save fails but don't interrupt
-    const el = document.getElementById('draftSaveStatus');
-    if (el) { el.textContent = '⚠ Save failed — check connection'; el.style.color = 'var(--red)'; }
-  }).then(() => {
+  // .catch().then() ran the success branch after a failure too, so a dropped
+  // pick flashed "Save failed" and then immediately claimed "✓ Saved".
+  saveDraftState().then(() => {
     const el = document.getElementById('draftSaveStatus');
     if (el) { el.textContent = '✓ Saved'; el.style.color = 'var(--teal)'; setTimeout(() => { el.textContent = ''; }, 2000); }
+  }).catch(() => {
+    const el = document.getElementById('draftSaveStatus');
+    if (el) { el.textContent = '⚠ Save failed — check connection'; el.style.color = 'var(--red)'; }
   });
 }
 
 function getNextSlotForTeam(team) {
   const used = new Set(draftState.picks.filter(p => p.team === team).map(p => p.slot));
-  return LETTERS.find(l => !used.has(l)) || 'a';
+  return LETTERS.find(l => !used.has(l)) || null;   // null = roster is full
 }
 
 function undoLastPick() {
@@ -2837,7 +2990,7 @@ function renderSwaps() {
 }
 
 function getNextShow() {
-  const today = new Date().toISOString().slice(0,10);
+  const today = todayISO();
   return state.schedule.find(s => s.date >= today) || null;
 }
 
@@ -2873,7 +3026,7 @@ function updateSwapPreview() {
   if (!preview) return;
   if (team && slot && newName) {
     const oldName = state.rosters[team][slot] || '—';
-    preview.innerHTML = `<b>${TEAM_LABELS[team]}</b> · Slot ${slot.toUpperCase()}: <b>${oldName}</b><span class="arrow">→</span><b>${newName}</b>`;
+    preview.innerHTML = `<b>${TEAM_LABELS[team]}</b> · Slot ${esc(slot).toUpperCase()}: <b>${esc(oldName)}</b><span class="arrow">→</span><b>${esc(newName)}</b>`;
     preview.classList.add('visible');
   } else {
     preview.classList.remove('visible');
@@ -2892,7 +3045,7 @@ async function executeSwap() {
   if ((sw.tokens[team] || 0) < 1) { alert('No tokens available for this team.'); return; }
 
   const oldName = state.rosters[team][slot] || '';
-  const today = new Date().toISOString().slice(0,10);
+  const today = todayISO();
   const nextShow = getNextShow();
 
   // Record history
@@ -2955,19 +3108,12 @@ function renderArchiveSub(sub) {
   else if (sub === 'seasons') renderArchiveSeasons();
 }
 
-function archiveParseRaw(raw) {
-  if (raw === null || raw === undefined) return null;
-  if (typeof raw !== 'string') return raw;
-  try {
-    const first = JSON.parse(raw);
-    if (typeof first === 'string') { try { return JSON.parse(first); } catch(e) { return first; } }
-    return first;
-  } catch(e) { return raw; }
-}
+// Was a byte-for-byte duplicate of parseRaw. Kept as an alias so call sites read
+// the same, without a second copy to keep in step.
+const archiveParseRaw = parseRaw;
 
 async function fetchArchiveSeason(url) {
-  const r = await fetch(`${url}?action=getAll`);
-  const j = await r.json();
+  const j = await sheetFetch(`${url}?action=getAll`);
   if (!j.ok) throw new Error('Sheet returned not-ok');
   const raw = j.value;
   const all = {};
@@ -3037,33 +3183,12 @@ async function loadArchiveSeasons() {
       }
     } catch(e) { console.warn('Archive load failed:', s.name); }
   }
-  // Load historical data from current sheet
-  await loadHistoricalData();
 }
 
-async function loadHistoricalData() {
-  if (!scriptUrl) return;
-  try {
-    // sheetGetAll already returned every aew_hist_* row. The old version threw
-    // that away and re-requested the index plus one call per season — 13 extra
-    // Apps Script round trips on every launch, which is where the lag came from.
-    let all = window._sheetPayload;
-    if (!all) all = await sheetGetAll();
-
-    const idx = all['aew_hist_index'];
-    const index = Array.isArray(idx) ? idx
-                : (typeof idx === 'string' ? JSON.parse(idx) : null);
-    if (!index) return;
-
-    for (const name of index) {
-      const key = 'aew_hist_' + name.replace(/\s+/g, '_').toLowerCase();
-      let data = all[key];
-      if (data === undefined) data = await sheetGet(key);   // only if genuinely absent
-      if (!data) continue;
-      histData[name] = typeof data === 'string' ? JSON.parse(data) : data;
-    }
-  } catch(e) { console.warn('Historical data load failed:', e); }
-}
+// Historical (pre-app) seasons are read by fetchArchiveSeason via the
+// aew_hist_index key and land straight in archiveData. The old loadHistoricalData()
+// filled a parallel `histData` object that nothing ever read, at the cost of an
+// extra sheetGet per season on launch — removed.
 
 function archiveGetTeamTotal(data, team) {
   if (data.isHistorical || !data.schedule || !Array.isArray(data.schedule)) return 0;
@@ -3088,13 +3213,6 @@ function archiveGetWrestlerPts(data, team, letter) {
   }, 0);
 }
 
-// Get total pts for a wrestler by name across historical data
-function archiveGetWrestlerPtsByName(data, name) {
-  if (!data.isHistorical || !data.wrestlers) return 0;
-  const w = data.wrestlers.find(w => w.name === name);
-  return w ? w.pts : 0;
-}
-
 function renderArchiveTrophy() {
   const el = document.getElementById('archiveTrophy');
   if (!Object.keys(archiveData).length) {
@@ -3112,7 +3230,7 @@ function renderArchiveTrophy() {
       const champ = top3[0];
       return `<div class="archive-card">
         <div class="archive-trophy-icon">🏆</div>
-        <div class="archive-season-label">${data.seasonName||name} · Top Scorer</div>
+        <div class="archive-season-label">${esc(data.seasonName||name)} · Top Scorer</div>
         <div class="archive-champ-name" style="color:var(--gold-light)">${esc(champ?.name||'Unknown')}</div>
         <div class="archive-champ-pts">${champ?.pts||0} <span style="font-family:'Inter',sans-serif;font-size:14px;color:var(--muted);letter-spacing:2px;">PTS</span></div>
         ${top3.slice(1).map((w,i)=>`<div class="archive-runner-up">
@@ -3126,7 +3244,7 @@ function renderArchiveTrophy() {
     const champ = totals[0];
     return `<div class="archive-card">
       <div class="archive-trophy-icon">🏆</div>
-      <div class="archive-season-label">${data.seasonName||name} · Season Champion</div>
+      <div class="archive-season-label">${esc(data.seasonName||name)} · Season Champion</div>
       <div class="archive-champ-name" style="color:${TEAM_COLORS[champ.team]}">${TEAM_LABELS[champ.team]}</div>
       <div class="archive-champ-pts">${champ.pts} <span style="font-family:'Inter',sans-serif;font-size:14px;color:var(--muted);letter-spacing:2px;">PTS</span></div>
       ${totals.slice(1).map((item,i)=>`<div class="archive-runner-up">
@@ -3197,7 +3315,9 @@ function renderArchiveVault() {
   });
 
   if (!activeArchiveVault || !archiveData[activeArchiveVault]) activeArchiveVault = sortedNames[0];
-  const tabs = sortedNames.map(name => `<button class="filter-tab ${name===activeArchiveVault?'active':''}" style="white-space:nowrap;" onclick="selectArchiveVault('${name}',this)">${archiveData[name].seasonName||name}</button>`).join('');
+  // Season name goes in a data attribute, not spliced into the handler string —
+  // a name containing an apostrophe ("Road Chip '25") broke the onclick outright.
+  const tabs = sortedNames.map(name => `<button class="filter-tab ${name===activeArchiveVault?'active':''}" style="white-space:nowrap;" data-season="${escAttr(name)}" onclick="selectArchiveVault(this.dataset.season, this)">${esc(archiveData[name].seasonName||name)}</button>`).join('');
   const data = archiveData[activeArchiveVault];
 
   if (data.isHistorical) {
@@ -3321,8 +3441,8 @@ function renderArchiveSeasons() {
       <div style="font-family:'Inter',sans-serif;font-size:12px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:14px;">Connected Seasons</div>
       <div id="archiveSeasonList">${archiveSeasons.length ? archiveSeasons.map((s,i)=>`
         <div class="archive-season-url-row">
-          <span class="archive-season-url-name">${s.name}</span>
-          <span class="archive-season-url-val">${s.url}</span>
+          <span class="archive-season-url-name">${esc(s.name)}</span>
+          <span class="archive-season-url-val">${esc(s.url)}</span>
           <button class="archive-del-btn" onclick="removeArchiveSeason(${i})">✕</button>
         </div>`).join('') : '<div class="empty" style="padding:12px;">No seasons yet</div>'}</div>
     </div>
@@ -3343,6 +3463,11 @@ async function addArchiveSeason() {
   const url  = document.getElementById('archiveNewUrl').value.trim();
   const msg  = document.getElementById('archiveAddMsg');
   if (!url) { msg.textContent='Please enter a URL'; msg.style.color='var(--red)'; msg.style.display='block'; return; }
+  if (archiveSeasons.some(s => s.url === url)) {
+    msg.textContent='That sheet is already connected'; msg.style.color='var(--red)'; msg.style.display='block';
+    setTimeout(()=>{ msg.style.display='none'; }, 4000);
+    return;
+  }
   msg.textContent='Testing…'; msg.style.color='var(--gold)'; msg.style.display='block';
   try {
     const data = await fetchArchiveSeason(url);
@@ -3370,10 +3495,17 @@ async function addArchiveSeason() {
 }
 
 async function removeArchiveSeason(idx) {
-  const name = archiveSeasons[idx].name;
+  const entry = archiveSeasons[idx];
+  if (!entry) return;
   archiveSeasons.splice(idx,1);
   localStorage.setItem('aew_archive_seasons', JSON.stringify(archiveSeasons));
-  delete archiveData[name];
+  // A multi-season sheet contributes one archiveData entry PER season under its
+  // own name, so deleting by the connection's label left every one of them behind.
+  // Rebuild from what's still connected instead of guessing which keys it owned.
+  archiveData = {};
+  activeArchiveVault = null;
+  renderArchive();
+  await loadArchiveSeasons();
   renderArchive();
 }
 
@@ -3392,8 +3524,7 @@ async function startNewSeason() {
 
   try {
     // Test the new URL works
-    const testR = await fetch(`${url}?action=getAll`);
-    const testJ = await testR.json();
+    const testJ = await sheetFetch(`${url}?action=getAll`);
     if (!testJ.ok) throw new Error('Sheet not responding');
 
     // Save new URL
@@ -3411,6 +3542,7 @@ async function startNewSeason() {
     state.swaps = { tokens: { maria:0, ryan:0, josh:0, erik:0 }, history: [] };
     state.draft = null;
     draftState = { active:false, order:['maria','ryan','josh','erik'], rounds:12, picks:[] };
+    chunkCounts.clear();   // the new sheet's chunk layout has nothing to do with the old one
     window._rostersInSheet = false;
 
     // Load from new sheet
@@ -3427,17 +3559,18 @@ async function startNewSeason() {
   }
 }
 
-function switchTab(name) {
-  // Commit pending score taps before navigating away — losing a live entry
-  // because someone glanced at the standings is not acceptable.
-  if (isDirty) flushScores();
-
+async function switchTab(name) {
+  // Paint the new tab first so the tap feels instant, then do the slow work.
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => {
+    b.classList.remove('active');
+    b.removeAttribute('aria-current');
+  });
   document.getElementById(`tab-${name}`).classList.add('active');
   const navBtn = document.querySelector(`nav button[data-tab="${name}"]`);
   if (navBtn) {
     navBtn.classList.add('active');
+    navBtn.setAttribute('aria-current', 'page');
     // On phones the secondary tabs sit behind More — light that up instead.
     if (navBtn.hasAttribute('data-secondary')) {
       const moreBtn = document.querySelector('nav button[data-more]');
@@ -3452,27 +3585,36 @@ function switchTab(name) {
     document.getElementById('saveBar').classList.add('visible');
     document.body.classList.add('has-savebar');
   }
-  // re-fetch on tab switch — skip settings, dirty keys are protected in loadFromSheet
-  if (scriptUrl && name !== 'settings') {
-    settingsLoaded = false;
-    setSyncStatus('Syncing…', 'loading');
-    loadFromSheet()
-      .then(() => {
-        setSyncStatus('Live', 'ok');
-        const anyEditing = TEAMS.some(t => {
-          const btn = document.getElementById(`redit_${t}`);
-          return btn && btn.classList.contains('editing');
-        });
-        if (!anyEditing) renderAll();
-        else { renderStandings(); renderShowChart(); renderWrestlerList(); }
-        if (name === 'score' && currentTeam) loadShowScores();
-      })
-      .catch(() => setSyncStatus('Offline', 'err'));
-  }
+
   if (name === 'settings') _applySettingsTab();
   if (name === 'draft') renderDraft();
   if (name === 'swaps') renderSwaps();
   if (name === 'archive') renderArchive();
+
+  // Commit pending score taps BEFORE pulling fresh data. This used to be a
+  // fire-and-forget call, so the sync could start — and finish — before the save
+  // had even registered its key hold, letting the sheet's older copy win.
+  if (isDirty) await flushScores();
+
+  // Only sync if the data could plausibly have moved. Previously every single
+  // tab tap read the entire sheet.
+  if (scriptUrl && name !== 'settings' && Date.now() - lastSyncAt > SYNC_MIN_MS) {
+    settingsLoaded = false;
+    setSyncStatus('Syncing…', 'loading');
+    try {
+      await loadFromSheet();
+      setSyncStatus('Live', 'ok');
+      const anyEditing = TEAMS.some(t => {
+        const btn = document.getElementById(`redit_${t}`);
+        return btn && btn.classList.contains('editing');
+      });
+      if (!anyEditing) renderAll();
+      else { renderStandings(); renderShowChart(); renderWrestlerList(); }
+      if (name === 'score' && currentTeam) loadShowScores();
+    } catch (e) {
+      setSyncStatus('Offline', 'err');
+    }
+  }
 }
 
 function _applySettingsTab() {
@@ -3522,13 +3664,27 @@ async function saveScriptUrl() {
   }
 }
 
+let moreOpener = null;
 function openMore() {
+  moreOpener = document.activeElement;
   document.getElementById('moreSheet').classList.add('open');
   document.getElementById('moreBackdrop').classList.add('open');
+  const moreBtn = document.querySelector('nav button[data-more]');
+  if (moreBtn) moreBtn.setAttribute('aria-expanded', 'true');
+  // Move focus into the sheet, otherwise a keyboard or screen-reader user is
+  // still parked on the nav bar behind an aria-modal dialog.
+  const first = document.querySelector('#moreSheet .sheet-item');
+  if (first) first.focus();
 }
 function closeMore() {
-  document.getElementById('moreSheet').classList.remove('open');
+  const sheet = document.getElementById('moreSheet');
+  const wasOpen = sheet.classList.contains('open');
+  sheet.classList.remove('open');
   document.getElementById('moreBackdrop').classList.remove('open');
+  const moreBtn = document.querySelector('nav button[data-more]');
+  if (moreBtn) moreBtn.setAttribute('aria-expanded', 'false');
+  if (wasOpen && moreOpener && moreOpener.focus) moreOpener.focus();
+  moreOpener = null;
 }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMore(); });
 
