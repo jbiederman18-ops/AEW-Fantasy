@@ -383,11 +383,17 @@
   .acc-item {
     display: flex; align-items: center; gap: 10px; padding: 10px 14px;
     border-top: 1px solid rgba(255,255,255,0.04); min-height: 48px;
+    min-width: 0;   /* grid items default to min-content; without this the row
+                       refuses to shrink and overflows the card's hidden edge */
   }
   .acc-item.has-count { background: rgba(240,180,41,0.05); }
   .acc-item.has-count .acc-label { color: var(--gold); }
   .acc-item.has-count .acc-badge { color: var(--gold); border-color: rgba(240,180,41,0.3); }
-  .acc-label { flex: 1; font-size: 13px; color: var(--text); line-height: 1.4; }
+  .acc-label {
+    flex: 1; font-size: 13px; color: var(--text); line-height: 1.4;
+    min-width: 0; overflow-wrap: anywhere;   /* wrap long names instead of
+                                                pushing the stepper out of view */
+  }
   .acc-badge { font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 700; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 2px 7px; flex-shrink: 0; }
   .stepper { display: flex; align-items: center; gap: 0; flex-shrink: 0; }
   .stepper-btn { width: 32px; height: 32px; background: var(--surface); border: 1px solid var(--border); color: var(--text); font-size: 18px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; -webkit-tap-highlight-color: transparent; transition: background 0.1s; user-select: none; }
@@ -465,6 +471,7 @@
     font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 700;
     letter-spacing: 1.6px; text-transform: uppercase; color: var(--muted);
     padding: 12px 14px 5px; opacity: 0.75;
+    grid-column: 1 / -1;   /* a heading spans its group, it isn't a cell */
   }
   .acc-group-label.standalone { padding: 16px 2px 7px; opacity: 1; grid-column: 1 / -1; }
 
@@ -472,6 +479,7 @@
   .quick-row {
     display: flex; flex-wrap: wrap; gap: 6px;
     padding: 12px 14px 4px;
+    grid-column: 1 / -1;   /* full width when .acc-list is a grid */
   }
   .quick-btn {
     flex: 1 1 auto; min-width: 72px;
@@ -866,6 +874,17 @@
      POINTER POSTURE — at 900px the bottom bar becomes a side rail and
      the content stops pretending it's on a phone. Nothing is removed.
      ══════════════════════════════════════════════════════════════════ */
+  /* Breakpoints must run smallest → largest. This block used to sit at the very
+     end of the stylesheet, after the 900px and 1280px blocks, so it won every
+     conflict at desktop widths and quietly reverted them. */
+  @media (min-width: 640px) {
+    main { padding-left: 24px; padding-right: 24px; }
+    .team-grid { grid-template-columns: repeat(4, 1fr); }
+    .roster-grid { grid-template-columns: repeat(3, 1fr); }
+    .acc-list { display: none; }
+    .acc-list.open { display: grid; grid-template-columns: 1fr 1fr; }
+  }
+
   @media (min-width: 900px) {
     :root { --rail-w: 216px; }
 
@@ -983,13 +1002,6 @@
   .no-season p { font-size: 13px; color: var(--muted); }
   .gap-sm { height: 12px; }
 
-  @media (min-width: 640px) {
-    main { padding-left: 24px; padding-right: 24px; }
-    .team-grid { grid-template-columns: repeat(4, 1fr); }
-    .roster-grid { grid-template-columns: repeat(3, 1fr); }
-    .acc-list { display: none; }
-    .acc-list.open { display: grid; grid-template-columns: 1fr 1fr; }
-  }
 </style>
 </head>
 <body>
@@ -1494,7 +1506,7 @@ function isKeyHeld(key) {
 // ─────────────────────────────────────────────
 // The one number the whole shell hangs off. window.innerHeight is the actual
 // visible height in iOS standalone, where 100vh is not.
-const BUILD_ID = 'b0812-sync';
+const BUILD_ID = 'b0812-desktop';
 
 function toggleDiag() {
   const p = document.getElementById('diagPanel');
