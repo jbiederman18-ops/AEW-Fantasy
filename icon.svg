@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="AEW Fantasy">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1A1526"/>
+      <stop offset="1" stop-color="#08070A"/>
+    </linearGradient>
+    <radialGradient id="key" cx="0.5" cy="-0.08" r="0.62">
+      <stop offset="0" stop-color="#F5C242" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#F5C242" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="plate" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFDE7A"/>
+      <stop offset="0.46" stop-color="#F5C242"/>
+      <stop offset="1" stop-color="#8A6A1F"/>
+    </linearGradient>
+    <filter id="halo" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="14.3" result="b"/>
+      <feComponentTransfer in="b" result="d"><feFuncA type="linear" slope="0.30"/></feComponentTransfer>
+      <feMerge><feMergeNode in="d"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <rect width="512" height="512" fill="url(#key)"/>
+  <g filter="url(#halo)">
+    <g transform="translate(107.52 312.27) scale(0.090124 -0.090124)" fill="url(#plate)">
+      <path transform="translate(0 0)" d="M30 0 200 1760H797L964 0H631L606 284H394L372 0ZM419 565H579L502 1460H486Z"/><path transform="translate(994 0)" d="M78 0V1760H782V1420H436V1077H768V746H436V343H805V0Z"/><path transform="translate(1837 0)" d="M216 0 27 1760H371L468 649L567 1760H895L989 649L1083 1760H1431L1239 0H817L729 847L645 0Z"/>
+    </g>
+  </g>
+  <rect x="158.00" y="350.67" width="195.99" height="8.19" rx="4.10" fill="#8A6A1F"/>
+</svg>
