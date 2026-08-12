@@ -774,6 +774,10 @@
 
 
 
+  /* The pill is a retry control now; strip the UA button chrome so it looks
+     exactly as it did as a div. */
+  #syncStatus { font: inherit; border: none; cursor: pointer; -webkit-appearance: none; appearance: none; }
+
   .newseason-opts { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
   .newseason-opts label {
     display: flex; align-items: flex-start; gap: 9px; cursor: pointer;
@@ -997,7 +1001,7 @@
     <div class="logo-sub">Fantasy · <span id="seasonNameDisplay">Road Chip</span> · <span id="buildStamp"></span></div>
   </button>
   <div class="header-right">
-    <div id="syncStatus" class="sync-loading"><span class="loading-spinner"></span> Loading</div>
+    <button id="syncStatus" type="button" class="sync-loading" onclick="resync()" title="Tap to retry now"><span class="loading-spinner"></span> Loading</button>
   </div>
 </header>
 
@@ -1039,6 +1043,9 @@
   <pre id="diagBody"></pre>
   <div style="border-top:1px solid var(--border);margin:8px 0 6px"></div>
   <pre id="diagIcons"></pre>
+  <div style="border-top:1px solid var(--border);margin:8px 0 6px"></div>
+  <button type="button" onclick="checkSheet()" style="font:inherit;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;">Test sheet connection</button>
+  <pre id="diagSheet"></pre>
   <p class="diag-hint">Tap the AEW logo to hide. Screenshot this and send it over.</p>
 </div>
 
@@ -1487,7 +1494,7 @@ function isKeyHeld(key) {
 // ─────────────────────────────────────────────
 // The one number the whole shell hangs off. window.innerHeight is the actual
 // visible height in iOS standalone, where 100vh is not.
-const BUILD_ID = 'b0812-polish';
+const BUILD_ID = 'b0812-net';
 
 function toggleDiag() {
   const p = document.getElementById('diagPanel');
@@ -1514,6 +1521,52 @@ function pngInfo(buf) {
   const hasAlpha = colourType === 4 || colourType === 6;
   const name = {0:'grey',2:'RGB',3:'palette',4:'grey+alpha',6:'RGBA'}[colourType] || ('type'+colourType);
   return { ok:true, w, h, hasAlpha, name };
+}
+
+// Round-trips the Apps Script deployment and reports exactly where it breaks:
+// unreachable, wrong permissions, HTML instead of JSON, or read-only.
+async function checkSheet() {
+  const el = document.getElementById('diagSheet');
+  if (!el) return;
+  if (!scriptUrl) { el.textContent = 'No script URL configured.'; return; }
+  el.textContent = 'testing…';
+  const lines = ['url source  ' + scriptUrlSource,
+                 'url         ' + scriptUrl.slice(0, 60) + '…', ''];
+  let t0 = Date.now();
+  try {
+    const j = await sheetFetch(`${scriptUrl}?action=getAll`);
+    const ms = Date.now() - t0;
+    if (!j || j.ok !== true) {
+      lines.push(`READ   FAIL  ${ms}ms  ${(j && j.error) || 'ok:false'}`);
+    } else {
+      const keys = Object.keys(j.value || {});
+      lines.push(`READ   OK    ${ms}ms  ${keys.length} rows`);
+      const chunked = keys.filter(k => k.includes('__chunk')).length;
+      if (chunked) lines.push(`              ${chunked} chunk rows`);
+    }
+  } catch (e) {
+    lines.push(`READ   FAIL  ${Date.now() - t0}ms  ${e.message}`);
+    el.textContent = lines.join('\n') + '\n\n>> cannot reach the sheet — check the '
+      + 'deployment is set to "Anyone" and the URL ends in /exec';
+    return;
+  }
+  const probe = 'aew_diag_ping';
+  const stamp = String(Date.now());
+  t0 = Date.now();
+  try {
+    await _setRaw(probe, stamp);
+    const back = await sheetFetch(`${scriptUrl}?action=get&key=${probe}`);
+    const ms = Date.now() - t0;
+    const got = back && back.value != null ? String(back.value).replace(/"/g, '') : null;
+    lines.push(got === stamp
+      ? `WRITE  OK    ${ms}ms  round-tripped`
+      : `WRITE  FAIL  ${ms}ms  wrote ${stamp}, read back ${got}`);
+  } catch (e) {
+    lines.push(`WRITE  FAIL  ${Date.now() - t0}ms  ${e.message}`);
+    lines.push('              reads work, writes do not — usually means the');
+    lines.push('              deployment needs a new version published');
+  }
+  el.textContent = lines.join('\n');
 }
 
 async function checkIcons() {
@@ -1632,10 +1685,54 @@ if (window.visualViewport) {
 window.addEventListener('pageshow', () => setTimeout(syncViewportHeight, 60));
 document.addEventListener('DOMContentLoaded', syncViewportHeight);
 
+// iOS suspends a backgrounded tab or home-screen app and kills whatever request
+// was in flight. That left the pill on "Offline" with nothing scheduled to clear
+// it — the only route back was switching tabs, and even that waited out the 8s
+// throttle first. These handlers are the recovery path.
+let reconnectTimer = null, reconnectDelay = 0;
+
+function clearReconnect() {
+  if (reconnectTimer) clearTimeout(reconnectTimer);
+  reconnectTimer = null; reconnectDelay = 0;
+}
+
+// Backs off 15s → 30s → 60s so a phone that regains signal without firing an
+// 'online' event still finds its way back on its own.
+function scheduleReconnect() {
+  if (reconnectTimer) return;
+  reconnectDelay = Math.min(reconnectDelay ? reconnectDelay * 2 : 15000, 60000);
+  reconnectTimer = setTimeout(() => { reconnectTimer = null; resync(); }, reconnectDelay);
+}
+
+async function resync() {
+  if (!scriptUrl || window._syncing) return;
+  window._syncing = true;
+  setSyncStatus('Syncing…', 'loading');
+  try {
+    if (isDirty) await flushScores();
+    await loadFromSheet();
+    clearReconnect();
+    setSyncStatus('Live', 'ok');
+    const anyEditing = TEAMS.some(t => {
+      const btn = document.getElementById(`redit_${t}`);
+      return btn && btn.classList.contains('editing');
+    });
+    if (!anyEditing) renderAll();
+  } catch (e) {
+    setSyncStatus('Offline', 'err');
+    scheduleReconnect();
+  } finally { window._syncing = false; }
+}
+
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') flushScores();
+  if (document.visibilityState === 'hidden') { unloadFlush = true; flushScores(); }
+  else { unloadFlush = false; resync(); }
 });
-window.addEventListener('pagehide', () => { flushScores(); });
+window.addEventListener('pagehide', () => { unloadFlush = true; flushScores(); });
+window.addEventListener('online', () => { clearReconnect(); resync(); });
+// Restored from the back/forward cache — the page is live again but every timer
+// and request from before was discarded.
+window.addEventListener('pageshow', (e) => { if (e.persisted) resync(); });
 
 document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('appsScriptCode').textContent = APPS_SCRIPT_CODE;
@@ -1672,15 +1769,21 @@ async function initFromSheet() {
       setSyncStatus('Saving rosters…', 'loading');
       await saveRosters();
     }
-    // One-time lift: publish this device's localStorage list to the sheet so the
-    // archive stops being per-device from here on.
-    if (window._archiveSeasonsInSheet === false && archiveSeasons.length) {
-      try { await saveArchiveSeasons(); } catch(e) { /* offline — retry next launch */ }
-    }
+    clearReconnect();
     setSyncStatus('Live', 'ok');
     renderAll(); // re-render with live data
+
+    // The archive migration is a WRITE, and it was being awaited before the status
+    // pill could reach "Live". A slow or failing write therefore held the whole app
+    // on "Loading…" for the full request timeout — and because a failed write never
+    // sets the flag that stops it retrying, it did that on every single launch.
+    // Nothing on screen depends on it, so it belongs in the background.
+    if (window._archiveSeasonsInSheet === false && archiveSeasons.length) {
+      saveArchiveSeasons().catch(() => { /* retried next launch */ });
+    }
   } catch(e) {
     setSyncStatus('Offline', 'err');
+    scheduleReconnect();
   }
 }
 
@@ -1723,16 +1826,52 @@ function parseRaw(raw) {
 //  * AbortController    — without a timeout a dead connection left the status
 //    pill stuck on "Syncing…" forever with no way back to Offline.
 //  * keepalive on writes — lets an autosave finish after the app is backgrounded.
-const SHEET_TIMEOUT_MS = 20000;
+const SHEET_TIMEOUT_MS = 12000;   // 20s was long enough to feel like a hang on a phone
+const SHEET_RETRIES = 2;
+
+// keepalive lets a write survive the page being backgrounded, but it was being
+// applied to EVERY write. Safari enforces a hard in-flight quota on keepalive
+// requests and Apps Script's /exec always answers with a cross-origin 302 — the
+// combination made ordinary saves fail intermittently on iOS. Only the flush that
+// runs as the app is being suspended actually needs it.
+let unloadFlush = false;
+
+// Every Apps Script action is a plain overwrite (set key = value) or a read, so
+// retrying is safe: a repeat of a request that actually succeeded is a no-op.
 async function sheetFetch(url, opts) {
-  const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
-  const timer = ctl ? setTimeout(() => ctl.abort(), SHEET_TIMEOUT_MS) : null;
-  try {
-    const r = await fetch(url, Object.assign(
-      { cache: 'no-store' }, opts, ctl ? { signal: ctl.signal } : {}));
-    if (!r.ok) throw new Error(`Sheet HTTP ${r.status}`);
-    return await r.json();
-  } finally { if (timer) clearTimeout(timer); }
+  let lastErr;
+  for (let attempt = 0; attempt <= SHEET_RETRIES; attempt++) {
+    if (attempt) await new Promise(r => setTimeout(r, 500 * attempt));
+    const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timer = ctl ? setTimeout(() => ctl.abort(), SHEET_TIMEOUT_MS) : null;
+    try {
+      const r = await fetch(url, Object.assign(
+        { cache: 'no-store' },
+        unloadFlush ? { keepalive: true } : {},
+        opts, ctl ? { signal: ctl.signal } : {}));
+      if (!r.ok) throw new Error(`HTTP ${r.status} from Apps Script`);
+      const text = await r.text();
+      let body;
+      try { body = JSON.parse(text); }
+      catch (e) {
+        // A sign-in page or an Apps Script error page — HTML, not JSON. The old
+        // code surfaced this as an opaque SyntaxError.
+        throw new Error('Apps Script returned a page, not data — the deployment '
+          + 'may need re-authorising or "Who has access" may not be set to Anyone');
+      }
+      // LockService answers ok:false while another device holds the lock. That is
+      // transient by definition, so it should cost a retry rather than a sync.
+      if (body && body.ok === false && /busy|lock|timeout/i.test(String(body.error || ''))) {
+        throw new Error('Sheet busy');
+      }
+      return body;
+    } catch (e) {
+      lastErr = (e && e.name === 'AbortError')
+        ? new Error(`No response in ${SHEET_TIMEOUT_MS / 1000}s`)
+        : e;
+    } finally { if (timer) clearTimeout(timer); }
+  }
+  throw lastErr;
 }
 
 // How many __chunk rows each key currently occupies on the sheet. Tracked so a
@@ -1784,8 +1923,7 @@ async function _sheetSetInner(key, value) {
   const baseUrlLen = scriptUrl.length + 30 + encodeURIComponent(key).length;
   if (baseUrlLen + encoded.length <= 1700) {
     const j = await sheetFetch(
-      `${scriptUrl}?action=set&key=${encodeURIComponent(key)}&value=${encoded}`,
-      { keepalive: true });
+      `${scriptUrl}?action=set&key=${encodeURIComponent(key)}&value=${encoded}`);
     if (!j.ok) throw new Error(`Sheet set failed for key: ${key}`);
     // Retire any __chunk rows this key left behind when it was larger. Without
     // this, sheetGetAll's reassembly pass rebuilds the OLD value and overwrites
@@ -1818,8 +1956,7 @@ async function _sheetSetInner(key, value) {
 
 async function _setRaw(key, value) {
   const j = await sheetFetch(
-    `${scriptUrl}?action=set&key=${encodeURIComponent(key)}&value=${encodeURIComponent(value)}`,
-    { keepalive: true });
+    `${scriptUrl}?action=set&key=${encodeURIComponent(key)}&value=${encodeURIComponent(value)}`);
   // Apps Script answers HTTP 200 with {ok:false} on failure, so the old r.ok
   // check treated every failed chunk write as a success.
   if (!j.ok) throw new Error(`Sheet set failed for key: ${key}`);
@@ -3732,6 +3869,7 @@ async function switchTab(name) {
     setSyncStatus('Syncing…', 'loading');
     try {
       await loadFromSheet();
+      clearReconnect();
       setSyncStatus('Live', 'ok');
       const anyEditing = TEAMS.some(t => {
         const btn = document.getElementById(`redit_${t}`);
@@ -3742,6 +3880,7 @@ async function switchTab(name) {
       if (name === 'score' && currentTeam) loadShowScores();
     } catch (e) {
       setSyncStatus('Offline', 'err');
+      scheduleReconnect();
     }
   }
 }
