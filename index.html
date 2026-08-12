@@ -10,11 +10,18 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta name="theme-color" content="#2A0F33">
 <title>AEW Fantasy</title>
-<link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
-<link rel="apple-touch-icon-precomposed" sizes="180x180" href="apple-touch-icon-precomposed.png">
-<link rel="icon" type="image/svg+xml" href="icon.svg">
-<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json?v=2">
+<!-- iOS caches the touch icon per URL and keeps a failed fetch for a long time.
+     The ?v= is what lets a fixed icon actually reach a phone that already cached
+     a miss — bump it whenever the artwork changes.
+     The unsized link is the fallback older iOS versions look for first. -->
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=2">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=2">
+<link rel="apple-touch-icon-precomposed" sizes="180x180" href="apple-touch-icon-precomposed.png?v=2">
+<link rel="icon" type="image/svg+xml" href="icon.svg?v=2">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=2">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png?v=2">
 
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -767,6 +774,13 @@
 
 
 
+  .newseason-opts { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+  .newseason-opts label {
+    display: flex; align-items: flex-start; gap: 9px; cursor: pointer;
+    font-size: 13px; line-height: 1.35; color: var(--muted);
+  }
+  .newseason-opts input[type=checkbox] { width: 17px; height: 17px; margin-top: 1px; flex-shrink: 0; accent-color: var(--teal); }
+
   /* Elements that always behaved as buttons are now marked up as buttons.
      Strip the UA defaults so the rules above keep their exact appearance. */
   .team-btn, .wsc-header, .event-header, .logo { font: inherit; color: inherit; }
@@ -1221,6 +1235,10 @@
         <input type="url" id="newSeasonUrl" placeholder="New season Apps Script URL" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:13px;">
         <input type="text" id="newSeasonNameInput" placeholder="Season name (e.g. Road Chip 2)" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:13px;">
       </div>
+      <div class="newseason-opts">
+        <label><input type="checkbox" id="newSeasonArchiveCurrent" checked> Archive the current season first (adds this sheet to the Trophy Room)</label>
+        <label><input type="checkbox" id="newSeasonKeepRosters"> Keep current rosters (leave off if you're drafting fresh)</label>
+      </div>
       <button class="btn-primary" style="background:var(--teal);color:#000;" onclick="startNewSeason()">🆕 Start New Season</button>
       <span id="newSeasonMsg" style="margin-left:10px;font-size:12px;font-family:'Inter',sans-serif;display:none;"></span>
     </div>
@@ -1423,8 +1441,18 @@ let draftState = {
   picks: [],
 };
 // swapState stored in state.swaps
-// archiveSeasons stored in localStorage: [{name, url}]
+// Connected archive seasons live on the SHEET (key: aew_archive_seasons) so every
+// device sees the same archive — the same reason the script URL moved to
+// config.json. localStorage is now only a warm-start cache for the first paint
+// and an offline fallback; the sheet is authoritative once the key exists.
 let archiveSeasons = JSON.parse(localStorage.getItem('aew_archive_seasons') || '[]');
+
+async function saveArchiveSeasons() {
+  localStorage.setItem('aew_archive_seasons', JSON.stringify(archiveSeasons));
+  if (!scriptUrl) return;
+  await sheetSet('aew_archive_seasons', archiveSeasons);
+  window._archiveSeasonsInSheet = true;
+}
 let archiveData = {}; // { [seasonName]: { rosters, scores, schedule, seasonName } }
 let activeArchiveVault = null;
 let activeArchiveSub = 'trophy';
@@ -1472,26 +1500,72 @@ function toggleDiag() {
 
 // Fetch each icon the page asks for and report what the server actually returns.
 // A 404 here means the files were never deployed; 200 means it's iOS icon cache.
+// Reads the IHDR chunk of a PNG. iOS composites any alpha channel against black,
+// so a technically-fine PNG saved with transparency shows up as a dark square —
+// that failure looks identical to "file missing" from the home screen, which is
+// why this reports colour type rather than just HTTP status.
+function pngInfo(buf) {
+  const b = new Uint8Array(buf);
+  const sig = [137,80,78,71,13,10,26,10];
+  if (b.length < 33 || !sig.every((v,i) => b[i] === v)) return { ok:false, why:'not a PNG' };
+  const dv = new DataView(buf);
+  const w = dv.getUint32(16), h = dv.getUint32(20);
+  const colourType = b[25];
+  const hasAlpha = colourType === 4 || colourType === 6;
+  const name = {0:'grey',2:'RGB',3:'palette',4:'grey+alpha',6:'RGBA'}[colourType] || ('type'+colourType);
+  return { ok:true, w, h, hasAlpha, name };
+}
+
 async function checkIcons() {
   const files = ['apple-touch-icon.png','apple-touch-icon-precomposed.png',
                  'icon-192.png','icon-512.png','icon.svg','manifest.json','config.json'];
   const el = document.getElementById('diagIcons');
   if (!el) return;
   el.textContent = 'checking…';
-  const lines = [];
+  const lines = ['base URL  ' + location.href.replace(/[?#].*$/, ''), ''];
+  const problems = [];
   for (const f of files) {
     try {
       const r = await fetch(f, { cache: 'no-store' });
       const ct = (r.headers.get('content-type') || '').split(';')[0];
-      lines.push(`${r.ok ? 'OK  ' : 'FAIL'} ${String(r.status).padEnd(4)} ${f}${r.ok ? '  ' + ct : ''}`);
+      if (!r.ok) {
+        lines.push(`FAIL ${String(r.status).padEnd(4)} ${f}`);
+        problems.push(`${f} → HTTP ${r.status}`);
+        continue;
+      }
+      let extra = ct;
+      if (f.endsWith('.png')) {
+        const info = pngInfo(await r.arrayBuffer());
+        if (!info.ok) {
+          extra += `  ✗ ${info.why}`;
+          problems.push(`${f} is not really a PNG`);
+        } else {
+          extra += `  ${info.w}×${info.h} ${info.name}`;
+          if (info.hasAlpha) {
+            extra += ' ✗ ALPHA';
+            problems.push(`${f} has an alpha channel — iOS will render it on black`);
+          }
+          if (f.startsWith('apple-touch-icon') && (info.w !== 180 || info.h !== 180)) {
+            problems.push(`${f} is ${info.w}×${info.h}, iOS wants 180×180`);
+          }
+        }
+        if (ct && ct !== 'image/png') problems.push(`${f} served as ${ct}, not image/png`);
+      } else if (f === 'manifest.json') {
+        try {
+          const m = JSON.parse(await r.text());
+          extra += `  ${(m.icons || []).length} icons, start_url ${m.start_url || '(none)'}`;
+        } catch(e) { extra += '  ✗ invalid JSON'; problems.push('manifest.json is not valid JSON'); }
+      }
+      lines.push(`OK   ${String(r.status).padEnd(4)} ${f}  ${extra}`);
     } catch(e) {
       lines.push(`FAIL  --  ${f}  (network)`);
+      problems.push(`${f} → request failed`);
     }
   }
-  const bad = lines.filter(l => l.startsWith('FAIL')).length;
   el.textContent = lines.join('\n') + '\n\n' +
-    (bad ? `>> ${bad} FILE(S) MISSING — upload them next to index.html`
-         : '>> all assets present — icon issue is iOS cache, not deployment');
+    (problems.length
+      ? '>> ' + problems.length + ' PROBLEM(S)\n   ' + problems.join('\n   ')
+      : '>> all assets present and well-formed\n   a wrong icon now means iOS cached the old one:\n   delete from home screen, then Settings > Safari >\n   Advanced > Website Data > remove this site, re-add');
 }
 
 function renderDiag() {
@@ -1569,11 +1643,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('scriptUrlInput').value = scriptUrl;
   const srcEl = document.getElementById('scriptUrlSource');
   if (srcEl) srcEl.textContent = 'in use, from: ' + scriptUrlSource;
-  initFromSheet();
-  // Load archive seasons in background
-  loadArchiveSeasons().then(() => {
-    if (document.getElementById('tab-archive').classList.contains('active')) renderArchive();
-  });
+  // Archive seasons now come from the sheet, so wait for the first load before
+  // fetching them — otherwise this raced initFromSheet and used a stale list.
+  initFromSheet()
+    .then(() => loadArchiveSeasons())
+    .then(() => {
+      if (document.getElementById('tab-archive').classList.contains('active')) renderArchive();
+    });
 });
 
 async function initFromSheet() {
@@ -1595,6 +1671,11 @@ async function initFromSheet() {
     if (!window._rostersInSheet && window._sheetLooksEmpty) {
       setSyncStatus('Saving rosters…', 'loading');
       await saveRosters();
+    }
+    // One-time lift: publish this device's localStorage list to the sheet so the
+    // archive stops being per-device from here on.
+    if (window._archiveSeasonsInSheet === false && archiveSeasons.length) {
+      try { await saveArchiveSeasons(); } catch(e) { /* offline — retry next launch */ }
     }
     setSyncStatus('Live', 'ok');
     renderAll(); // re-render with live data
@@ -1811,6 +1892,15 @@ async function loadFromSheet() {
   if (!isKeyHeld('aew_swaps')) {
     const swaps = all['aew_swaps'];
     if (swaps && typeof swaps === 'object') state.swaps = swaps;
+  }
+  // Once the sheet holds the list it wins outright. Merging with this device's
+  // old localStorage copy would resurrect seasons someone else just removed.
+  if (!isKeyHeld('aew_archive_seasons') && Array.isArray(all['aew_archive_seasons'])) {
+    window._archiveSeasonsInSheet = true;
+    archiveSeasons = all['aew_archive_seasons'].filter(s => s && s.url);
+    localStorage.setItem('aew_archive_seasons', JSON.stringify(archiveSeasons));
+  } else if (all['aew_archive_seasons'] === undefined) {
+    window._archiveSeasonsInSheet = false;
   }
   normalizeRosters();
   lastSyncAt = Date.now();
@@ -3448,7 +3538,7 @@ function renderArchiveSeasons() {
     </div>
     <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;">
       <div style="font-family:'Inter',sans-serif;font-size:12px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:14px;">Add a Past Season</div>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Each past season needs its Google Sheet URL. The same Apps Script you used for this season works fine.</p>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Each past season needs its Google Sheet URL. The same Apps Script you used for this season works fine. Seasons added here are saved to the league sheet, so everyone's app sees them.</p>
       <div style="display:flex;flex-direction:column;gap:8px;">
         <input type="text" id="archiveNewName" placeholder="Season name (e.g. Road Chip)" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;">
         <input type="url" id="archiveNewUrl" placeholder="Apps Script URL" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;">
@@ -3474,7 +3564,7 @@ async function addArchiveSeason() {
     if (data.isMultiSeason) {
       // Sheet contains multiple historical seasons — add them all
       archiveSeasons.push({ name: name || 'Historical Archive', url, isMultiSeason: true });
-      localStorage.setItem('aew_archive_seasons', JSON.stringify(archiveSeasons));
+      await saveArchiveSeasons();
       for (const [sName, sData] of Object.entries(data.seasons)) {
         archiveData[sName] = sData;
       }
@@ -3483,7 +3573,7 @@ async function addArchiveSeason() {
     } else {
       const label = name || data.seasonName || 'Unknown Season';
       archiveSeasons.push({ name: label, url });
-      localStorage.setItem('aew_archive_seasons', JSON.stringify(archiveSeasons));
+      await saveArchiveSeasons();
       archiveData[label] = data;
       msg.textContent=`✓ "${label}" added!`; msg.style.color='var(--teal)';
     }
@@ -3498,7 +3588,8 @@ async function removeArchiveSeason(idx) {
   const entry = archiveSeasons[idx];
   if (!entry) return;
   archiveSeasons.splice(idx,1);
-  localStorage.setItem('aew_archive_seasons', JSON.stringify(archiveSeasons));
+  try { await saveArchiveSeasons(); }
+  catch(e) { console.warn('Archive list save failed — removed locally only'); }
   // A multi-season sheet contributes one archiveData entry PER season under its
   // own name, so deleting by the connection's label left every one of them behind.
   // Rebuild from what's still connected instead of guessing which keys it owned.
@@ -3518,7 +3609,19 @@ async function startNewSeason() {
     msg.textContent = 'Fill in both fields'; msg.style.color = 'var(--red)'; msg.style.display = 'inline'; 
     setTimeout(() => msg.style.display = 'none', 3000); return;
   }
-  if (!confirm(`Start new season "${name}"? This will clear all current season data locally and connect to the new sheet.`)) return;
+  const keepRosters   = !!document.getElementById('newSeasonKeepRosters')?.checked;
+  const archiveFirst  = !!document.getElementById('newSeasonArchiveCurrent')?.checked;
+  const oldUrl  = scriptUrl;
+  const oldName = state.seasonName || 'Previous Season';
+
+  const summary = [
+    `Start new season "${name}"?`,
+    '',
+    archiveFirst ? `• "${oldName}" will be added to the Archive` : '• Current season will NOT be archived',
+    keepRosters ? '• Current rosters carry over' : '• Rosters will be cleared for a fresh draft',
+    '• Scores and schedule are cleared locally and reloaded from the new sheet',
+  ].join('\n');
+  if (!confirm(summary)) return;
 
   msg.textContent = 'Testing connection…'; msg.style.color = 'var(--gold)'; msg.style.display = 'inline';
 
@@ -3526,6 +3629,13 @@ async function startNewSeason() {
     // Test the new URL works
     const testJ = await sheetFetch(`${url}?action=getAll`);
     if (!testJ.ok) throw new Error('Sheet not responding');
+
+    // Capture the outgoing season for the archive before we point anywhere else.
+    // The old copy said "make sure you've archived first" and then offered no way
+    // to do it — the URL you'd need is the one about to be overwritten.
+    if (archiveFirst && oldUrl && !archiveSeasons.some(s => s.url === oldUrl)) {
+      archiveSeasons.push({ name: oldName, url: oldUrl });
+    }
 
     // Save new URL
     scriptUrl = url;
@@ -3539,6 +3649,15 @@ async function startNewSeason() {
     state.scores = {};
     state.schedule = [];
     state.seasonName = name;
+    if (!keepRosters) {
+      // A new season used to inherit last season's roster until a draft happened
+      // to overwrite each slot, so the Rosters tab and every points total showed
+      // last year's names against this year's empty scores.
+      for (const t of TEAMS) {
+        state.rosters[t] = {};
+        LETTERS.forEach(l => { state.rosters[t][l] = ''; });
+      }
+    }
     state.swaps = { tokens: { maria:0, ryan:0, josh:0, erik:0 }, history: [] };
     state.draft = null;
     draftState = { active:false, order:['maria','ryan','josh','erik'], rounds:12, picks:[] };
@@ -3547,11 +3666,21 @@ async function startNewSeason() {
 
     // Load from new sheet
     await loadFromSheet();
+
+    // A brand-new sheet has no rosters of its own; publish whatever we're starting
+    // with so the other players' devices agree instead of each seeding their own.
+    if (!window._rostersInSheet) await saveRosters();
+    // Carries the archive list (now including the season just closed) onto the
+    // new sheet, since the archive lives with the league, not with the device.
+    await saveArchiveSeasons();
     setSyncStatus('Live', 'ok');
 
     msg.textContent = `✓ Season "${name}" started!`; msg.style.color = 'var(--teal)';
     settingsLoaded = false;
+    archiveData = {};
+    activeArchiveVault = null;
     renderAll();
+    loadArchiveSeasons().then(() => renderArchive()).catch(() => {});
     setTimeout(() => msg.style.display = 'none', 4000);
   } catch(e) {
     msg.textContent = '✗ Connection failed — check URL'; msg.style.color = 'var(--red)';
