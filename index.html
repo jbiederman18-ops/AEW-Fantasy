@@ -1494,7 +1494,7 @@ function isKeyHeld(key) {
 // ─────────────────────────────────────────────
 // The one number the whole shell hangs off. window.innerHeight is the actual
 // visible height in iOS standalone, where 100vh is not.
-const BUILD_ID = 'b0812-net';
+const BUILD_ID = 'b0812-sync';
 
 function toggleDiag() {
   const p = document.getElementById('diagPanel');
@@ -1529,6 +1529,9 @@ async function checkSheet() {
   const el = document.getElementById('diagSheet');
   if (!el) return;
   if (!scriptUrl) { el.textContent = 'No script URL configured.'; return; }
+  // Racing a sync makes both contend for the sheet lock and reports a failure that
+  // is really just contention.
+  if (syncPromise) { el.textContent = 'a sync is running — waiting for it…'; await syncPromise; }
   el.textContent = 'testing…';
   const lines = ['url source  ' + scriptUrlSource,
                  'url         ' + scriptUrl.slice(0, 60) + '…', ''];
@@ -1699,29 +1702,68 @@ function clearReconnect() {
 // Backs off 15s → 30s → 60s so a phone that regains signal without firing an
 // 'online' event still finds its way back on its own.
 function scheduleReconnect() {
-  if (reconnectTimer) return;
+  if (reconnectTimer || syncPromise) return;
   reconnectDelay = Math.min(reconnectDelay ? reconnectDelay * 2 : 15000, 60000);
   reconnectTimer = setTimeout(() => { reconnectTimer = null; resync(); }, reconnectDelay);
 }
 
-async function resync() {
-  if (!scriptUrl || window._syncing) return;
-  window._syncing = true;
-  setSyncStatus('Syncing…', 'loading');
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ── single-flight sync ──────────────────────────────────────────────────
+// Round 1 gave writes a queue because Apps Script drops concurrent writes from one
+// client. Reads never got the same treatment — and then three more read triggers
+// were added (returning to the app, regaining network, backoff retry) on top of
+// tab switches. With LockService in play those overlap, each one's retry collides
+// with the other's, and the pill sits on "Syncing…" while they fight. Every read
+// now goes through here, and a second caller folds into the first.
+let syncPromise = null;
+const SYNC_HARD_MS = 25000;   // a sync ALWAYS reaches Live or Offline by here
+const FLUSH_MAX_MS = 6000;    // a struggling save must not hold a sync hostage
+
+function syncNow(opts) {
+  if (syncPromise) return syncPromise;
+  syncPromise = _runSync(opts || {});
+  return syncPromise;
+}
+
+async function _runSync({ flush = true, label = 'Syncing…' } = {}) {
+  if (!scriptUrl) { setSyncStatus('Not connected', 'err'); syncPromise = null; return false; }
+  setSyncStatus(label, 'loading');
   try {
-    if (isDirty) await flushScores();
-    await loadFromSheet();
+    // The save has its own retry schedule, and its key hold already stops this
+    // read from overwriting it — so waiting past a few seconds buys nothing.
+    if (flush && isDirty) await Promise.race([flushScores(), sleep(FLUSH_MAX_MS)]);
+    // Hard ceiling. Without it, retries inside a chunked read could outlast any
+    // reasonable patience and leave no terminal state on screen.
+    await Promise.race([
+      loadFromSheet(),
+      sleep(SYNC_HARD_MS).then(() => { throw new Error(`Gave up after ${SYNC_HARD_MS / 1000}s`); }),
+    ]);
     clearReconnect();
     setSyncStatus('Live', 'ok');
-    const anyEditing = TEAMS.some(t => {
-      const btn = document.getElementById(`redit_${t}`);
-      return btn && btn.classList.contains('editing');
-    });
-    if (!anyEditing) renderAll();
+    return true;
   } catch (e) {
     setSyncStatus('Offline', 'err');
     scheduleReconnect();
-  } finally { window._syncing = false; }
+    return false;
+  } finally {
+    syncPromise = null;
+  }
+}
+
+// Re-render whatever the current tab needs after a successful sync.
+function renderAfterSync(name) {
+  const anyEditing = TEAMS.some(t => {
+    const btn = document.getElementById(`redit_${t}`);
+    return btn && btn.classList.contains('editing');
+  });
+  if (!anyEditing) renderAll();
+  else { renderStandings(); renderShowChart(); renderWrestlerList(); }
+  if (name === 'score' && currentTeam) loadShowScores();
+}
+
+async function resync() {
+  if (await syncNow()) renderAfterSync(currentTabName);
 }
 
 document.addEventListener('visibilitychange', () => {
@@ -1759,31 +1801,26 @@ async function initFromSheet() {
     return;
   }
 
-  setSyncStatus('Loading…', 'loading');
-  try {
-    await loadFromSheet();
-    // Only seed rosters into a genuinely empty sheet. Previously any sheet
-    // without roster keys got the hardcoded defaults written into it — which
-    // meant a phone pointed at the wrong sheet would scribble into it on launch.
-    if (!window._rostersInSheet && window._sheetLooksEmpty) {
-      setSyncStatus('Saving rosters…', 'loading');
-      await saveRosters();
-    }
-    clearReconnect();
-    setSyncStatus('Live', 'ok');
-    renderAll(); // re-render with live data
+  // No flush on boot — there is nothing pending yet.
+  if (!await syncNow({ flush: false, label: 'Loading…' })) return;
 
-    // The archive migration is a WRITE, and it was being awaited before the status
-    // pill could reach "Live". A slow or failing write therefore held the whole app
-    // on "Loading…" for the full request timeout — and because a failed write never
-    // sets the flag that stops it retrying, it did that on every single launch.
-    // Nothing on screen depends on it, so it belongs in the background.
-    if (window._archiveSeasonsInSheet === false && archiveSeasons.length) {
-      saveArchiveSeasons().catch(() => { /* retried next launch */ });
-    }
-  } catch(e) {
-    setSyncStatus('Offline', 'err');
-    scheduleReconnect();
+  // Only seed rosters into a genuinely empty sheet. Previously any sheet
+  // without roster keys got the hardcoded defaults written into it — which
+  // meant a phone pointed at the wrong sheet would scribble into it on launch.
+  if (!window._rostersInSheet && window._sheetLooksEmpty) {
+    setSyncStatus('Saving rosters…', 'loading');
+    try { await saveRosters(); setSyncStatus('Live', 'ok'); }
+    catch(e) { setSyncStatus('Offline', 'err'); scheduleReconnect(); return; }
+  }
+  renderAll(); // re-render with live data
+
+  // The archive migration is a WRITE, and it was being awaited before the status
+  // pill could reach "Live". A slow or failing write therefore held the whole app
+  // on "Loading…" for the full request timeout — and because a failed write never
+  // sets the flag that stops it retrying, it did that on every single launch.
+  // Nothing on screen depends on it, so it belongs in the background.
+  if (window._archiveSeasonsInSheet === false && archiveSeasons.length) {
+    saveArchiveSeasons().catch(() => { /* retried next launch */ });
   }
 }
 
@@ -1826,8 +1863,11 @@ function parseRaw(raw) {
 //  * AbortController    — without a timeout a dead connection left the status
 //    pill stuck on "Syncing…" forever with no way back to Offline.
 //  * keepalive on writes — lets an autosave finish after the app is backgrounded.
-const SHEET_TIMEOUT_MS = 12000;   // 20s was long enough to feel like a hang on a phone
+const SHEET_TIMEOUT_MS = 10000;   // 20s was long enough to feel like a hang on a phone
 const SHEET_RETRIES = 2;
+// Someone is watching the pill while a read runs, so a read gets one retry, not
+// two: 2 × 10s fits inside the 25s sync ceiling with room for the backoff pause.
+const READ_RETRIES = 1;
 
 // keepalive lets a write survive the page being backgrounded, but it was being
 // applied to EVERY write. Safari enforces a hard in-flight quota on keepalive
@@ -1838,9 +1878,10 @@ let unloadFlush = false;
 
 // Every Apps Script action is a plain overwrite (set key = value) or a read, so
 // retrying is safe: a repeat of a request that actually succeeded is a no-op.
-async function sheetFetch(url, opts) {
+async function sheetFetch(url, opts, retries) {
+  const budget = retries === undefined ? SHEET_RETRIES : retries;
   let lastErr;
-  for (let attempt = 0; attempt <= SHEET_RETRIES; attempt++) {
+  for (let attempt = 0; attempt <= budget; attempt++) {
     if (attempt) await new Promise(r => setTimeout(r, 500 * attempt));
     const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
     const timer = ctl ? setTimeout(() => ctl.abort(), SHEET_TIMEOUT_MS) : null;
@@ -1879,13 +1920,13 @@ async function sheetFetch(url, opts) {
 const chunkCounts = new Map();
 
 async function sheetGet(key) {
-  const j = await sheetFetch(`${scriptUrl}?action=get&key=${encodeURIComponent(key)}`);
+  const j = await sheetFetch(`${scriptUrl}?action=get&key=${encodeURIComponent(key)}`, null, READ_RETRIES);
   if (j.ok && j.value !== null) return parseRaw(j.value);
   return null;
 }
 
 async function sheetGetAll() {
-  const j = await sheetFetch(`${scriptUrl}?action=getAll`);
+  const j = await sheetFetch(`${scriptUrl}?action=getAll`, null, READ_RETRIES);
   if (!j.ok) return {};
   const raw = j.value;
   const out = {};
@@ -3825,7 +3866,10 @@ async function startNewSeason() {
   }
 }
 
+let currentTabName = 'leaderboard';
+
 async function switchTab(name) {
+  currentTabName = name;
   // Paint the new tab first so the tap feels instant, then do the slow work.
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(b => {
@@ -3857,31 +3901,15 @@ async function switchTab(name) {
   if (name === 'swaps') renderSwaps();
   if (name === 'archive') renderArchive();
 
-  // Commit pending score taps BEFORE pulling fresh data. This used to be a
-  // fire-and-forget call, so the sync could start — and finish — before the save
-  // had even registered its key hold, letting the sheet's older copy win.
-  if (isDirty) await flushScores();
-
   // Only sync if the data could plausibly have moved. Previously every single
-  // tab tap read the entire sheet.
+  // tab tap read the entire sheet. syncNow commits pending taps first — a sync
+  // that started before the save registered its key hold let the sheet's older
+  // copy win.
   if (scriptUrl && name !== 'settings' && Date.now() - lastSyncAt > SYNC_MIN_MS) {
     settingsLoaded = false;
-    setSyncStatus('Syncing…', 'loading');
-    try {
-      await loadFromSheet();
-      clearReconnect();
-      setSyncStatus('Live', 'ok');
-      const anyEditing = TEAMS.some(t => {
-        const btn = document.getElementById(`redit_${t}`);
-        return btn && btn.classList.contains('editing');
-      });
-      if (!anyEditing) renderAll();
-      else { renderStandings(); renderShowChart(); renderWrestlerList(); }
-      if (name === 'score' && currentTeam) loadShowScores();
-    } catch (e) {
-      setSyncStatus('Offline', 'err');
-      scheduleReconnect();
-    }
+    if (await syncNow()) renderAfterSync(name);
+  } else if (isDirty) {
+    await Promise.race([flushScores(), sleep(FLUSH_MAX_MS)]);
   }
 }
 
