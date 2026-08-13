@@ -1312,48 +1312,67 @@ const QUICK_KEYS = ['win','loss','main','promoLive'];
 const ACC_BY_KEY = Object.fromEntries(ACCOMPLISHMENTS.map(a => [a.key, a]));
 
 const APPS_SCRIPT_CODE = `const SHEET_NAME = 'AEWData';
+const BACKEND_VERSION = 2;
 
-function doGet(e) {
-  const action = e.parameter.action;
+// Must stay BELOW the client's write timeout. If the server is willing to queue
+// for longer than the client is willing to wait, the client abandons a request
+// the server still runs, then retries — so every timeout under contention adds
+// another queued execution instead of replacing one. That is what turns "two
+// people scoring at once" into "nobody can connect".
+const LOCK_WAIT_MS = 6000;
+
+function sheetRef() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = ss.getSheetByName(SHEET_NAME);
   if (!sheet) { sheet = ss.insertSheet(SHEET_NAME); sheet.appendRow(['key','value']); }
+  return sheet;
+}
+
+// Locates a key without pulling the whole sheet into memory. The old code ran
+// getDataRange().getValues() on every request — and for writes it did that INSIDE
+// the lock, so all four players serialised behind a full sheet scan that grows
+// every week of the season.
+function findRow(sheet, key) {
+  const last = Math.max(sheet.getLastRow(), 1);
+  const hit = sheet.getRange(1, 1, last, 1)
+    .createTextFinder(key).matchEntireCell(true).matchCase(true).findNext();
+  return hit ? hit.getRow() : 0;
+}
+
+function doGet(e) {
+  const action = e.parameter.action;
   try {
+    if (action === 'ping') {
+      return output(JSON.stringify({ok:true, version: BACKEND_VERSION}));
+    }
+    const sheet = sheetRef();
     if (action === 'get') {
-      const key = e.parameter.key;
-      const data = sheet.getDataRange().getValues();
-      for (let i = 1; i < data.length; i++) {
-        if (data[i][0] === key) return output(JSON.stringify({ok:true,value:data[i][1]}));
-      }
-      return output(JSON.stringify({ok:true,value:null}));
+      const row = findRow(sheet, e.parameter.key);
+      return output(JSON.stringify({ok:true, value: row ? sheet.getRange(row,2).getValue() : null}));
     }
     if (action === 'getAll') {
+      // Reads take no lock — they never needed one, and holding writers behind
+      // readers is what made a busy evening feel like an outage.
       const data = sheet.getDataRange().getValues();
       const result = {};
       for (let i = 1; i < data.length; i++) { if (data[i][0]) result[data[i][0]] = data[i][1]; }
-      return output(JSON.stringify({ok:true,value:result}));
+      return output(JSON.stringify({ok:true, value: result}));
     }
     if (action === 'set') {
-      // Two phones saving at once both read the sheet, both decide the key is
-      // missing, and both appendRow — leaving duplicate rows where the stale one
-      // may win the next read. The lock makes read-then-write atomic.
+      const key = e.parameter.key;
+      if (!key) return output(JSON.stringify({ok:false,error:'Missing key'}));
+      // Two phones saving at once both decide the key is missing and both
+      // appendRow, leaving duplicate rows where the stale one may win the next
+      // read. The lock makes find-then-write atomic — but it now wraps only the
+      // write, not a full sheet scan.
       const lock = LockService.getScriptLock();
-      if (!lock.tryLock(20000)) {
-        return output(JSON.stringify({ok:false,error:'Busy — another write in progress'}));
+      if (!lock.tryLock(LOCK_WAIT_MS)) {
+        return output(JSON.stringify({ok:false,error:'Busy'}));
       }
       try {
-        const key = e.parameter.key;
-        const value = e.parameter.value;
-        if (!key) return output(JSON.stringify({ok:false,error:'Missing key'}));
-        const data = sheet.getDataRange().getValues();
-        for (let i = 1; i < data.length; i++) {
-          if (data[i][0] === key) {
-            sheet.getRange(i+1,2).setValue(value);
-            SpreadsheetApp.flush();
-            return output(JSON.stringify({ok:true}));
-          }
-        }
-        sheet.appendRow([key,value]);
+        const row = findRow(sheet, key);
+        if (row) sheet.getRange(row,2).setValue(e.parameter.value);
+        else sheet.appendRow([key, e.parameter.value]);
         SpreadsheetApp.flush();
         return output(JSON.stringify({ok:true}));
       } finally {
@@ -1506,7 +1525,7 @@ function isKeyHeld(key) {
 // ─────────────────────────────────────────────
 // The one number the whole shell hangs off. window.innerHeight is the actual
 // visible height in iOS standalone, where 100vh is not.
-const BUILD_ID = 'b0812-desktop';
+const BUILD_ID = 'b0812-multi';
 
 function toggleDiag() {
   const p = document.getElementById('diagPanel');
@@ -1547,6 +1566,19 @@ async function checkSheet() {
   el.textContent = 'testing…';
   const lines = ['url source  ' + scriptUrlSource,
                  'url         ' + scriptUrl.slice(0, 60) + '…', ''];
+  // An older deployment answers 'Unknown action' here, which is exactly what we
+  // want to know: the sheet works but is running the slow, lock-heavy backend.
+  try {
+    const pong = await sheetFetch(`${scriptUrl}?action=ping`, null, 0);
+    lines.push(pong && pong.ok && pong.version
+      ? `BACKEND      v${pong.version} — current`
+      : 'BACKEND      OLD — redeploy the Apps Script (Deploy > Manage\n'
+        + '             deployments > edit > New version). Until you do,\n'
+        + '             concurrent scoring will be slow and error-prone.');
+  } catch (e) {
+    lines.push('BACKEND      could not determine version');
+  }
+  lines.push('');
   let t0 = Date.now();
   try {
     const j = await sheetFetch(`${scriptUrl}?action=getAll`);
@@ -1875,7 +1907,13 @@ function parseRaw(raw) {
 //  * AbortController    — without a timeout a dead connection left the status
 //    pill stuck on "Syncing…" forever with no way back to Offline.
 //  * keepalive on writes — lets an autosave finish after the app is backgrounded.
-const SHEET_TIMEOUT_MS = 10000;   // 20s was long enough to feel like a hang on a phone
+// A read is something a person is waiting on, so it fails fast. A write is queued
+// behind a server-side lock, so its ceiling must exceed how long the server is
+// willing to queue (LOCK_WAIT_MS, 6s) plus the write itself — otherwise the client
+// gives up on work the server still completes and the retry piles on rather than
+// replaces.
+const SHEET_TIMEOUT_MS = 10000;   // reads
+const WRITE_TIMEOUT_MS = 15000;   // writes: > server LOCK_WAIT_MS + execution
 const SHEET_RETRIES = 2;
 // Someone is watching the pill while a read runs, so a read gets one retry, not
 // two: 2 × 10s fits inside the 25s sync ceiling with room for the backoff pause.
@@ -1890,13 +1928,20 @@ let unloadFlush = false;
 
 // Every Apps Script action is a plain overwrite (set key = value) or a read, so
 // retrying is safe: a repeat of a request that actually succeeded is a no-op.
-async function sheetFetch(url, opts, retries) {
+async function sheetFetch(url, opts, retries, timeoutMs) {
   const budget = retries === undefined ? SHEET_RETRIES : retries;
-  let lastErr;
+  const limit = timeoutMs || SHEET_TIMEOUT_MS;
+  let lastErr, wasBusy = false;
   for (let attempt = 0; attempt <= budget; attempt++) {
-    if (attempt) await new Promise(r => setTimeout(r, 500 * attempt));
+    if (attempt) {
+      // Jittered. Four clients that collide once will otherwise retry in lockstep
+      // and collide again — a contention problem that re-creates itself.
+      const base = wasBusy ? 1200 : 400;
+      const back = base * Math.pow(2, attempt - 1);
+      await new Promise(r => setTimeout(r, Math.round(back * (0.5 + Math.random()))));
+    }
     const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
-    const timer = ctl ? setTimeout(() => ctl.abort(), SHEET_TIMEOUT_MS) : null;
+    const timer = ctl ? setTimeout(() => ctl.abort(), limit) : null;
     try {
       const r = await fetch(url, Object.assign(
         { cache: 'no-store' },
@@ -1915,12 +1960,13 @@ async function sheetFetch(url, opts, retries) {
       // LockService answers ok:false while another device holds the lock. That is
       // transient by definition, so it should cost a retry rather than a sync.
       if (body && body.ok === false && /busy|lock|timeout/i.test(String(body.error || ''))) {
+        wasBusy = true;   // back off harder: someone else is mid-save
         throw new Error('Sheet busy');
       }
       return body;
     } catch (e) {
       lastErr = (e && e.name === 'AbortError')
-        ? new Error(`No response in ${SHEET_TIMEOUT_MS / 1000}s`)
+        ? new Error(`No response in ${limit / 1000}s`)
         : e;
     } finally { if (timer) clearTimeout(timer); }
   }
@@ -1976,7 +2022,8 @@ async function _sheetSetInner(key, value) {
   const baseUrlLen = scriptUrl.length + 30 + encodeURIComponent(key).length;
   if (baseUrlLen + encoded.length <= 1700) {
     const j = await sheetFetch(
-      `${scriptUrl}?action=set&key=${encodeURIComponent(key)}&value=${encoded}`);
+      `${scriptUrl}?action=set&key=${encodeURIComponent(key)}&value=${encoded}`,
+      null, SHEET_RETRIES, WRITE_TIMEOUT_MS);
     if (!j.ok) throw new Error(`Sheet set failed for key: ${key}`);
     // Retire any __chunk rows this key left behind when it was larger. Without
     // this, sheetGetAll's reassembly pass rebuilds the OLD value and overwrites
@@ -2009,7 +2056,8 @@ async function _sheetSetInner(key, value) {
 
 async function _setRaw(key, value) {
   const j = await sheetFetch(
-    `${scriptUrl}?action=set&key=${encodeURIComponent(key)}&value=${encodeURIComponent(value)}`);
+    `${scriptUrl}?action=set&key=${encodeURIComponent(key)}&value=${encodeURIComponent(value)}`,
+    null, SHEET_RETRIES, WRITE_TIMEOUT_MS);
   // Apps Script answers HTTP 200 with {ok:false} on failure, so the old r.ok
   // check treated every failed chunk write as a success.
   if (!j.ok) throw new Error(`Sheet set failed for key: ${key}`);
