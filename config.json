@@ -1,5 +1,13 @@
 {
-  "_comment": "The one place the current season's sheet is defined. Every device reads this on launch, so changing seasons means editing this file only — no app changes, no per-device setup.",
-  "scriptUrl": "PASTE_CURRENT_SEASON_APPS_SCRIPT_URL_HERE",
-  "seasonLabel": "Road Chip"
+  "_comment": "Deploy this next to index.html so every device reads the same config. Replace the placeholder values with the ones from Firebase console > Project settings > Your apps > Web. The apiKey is not a secret; it identifies the project and grants nothing on its own. Access is controlled by firebase-rules.json plus anonymous auth.",
+  "leagueId": "road-chip",
+  "firebase": {
+    "apiKey": "PASTE_API_KEY",
+    "authDomain": "PASTE_PROJECT.firebaseapp.com",
+    "databaseURL": "https://PASTE_PROJECT-default-rtdb.firebaseio.com",
+    "projectId": "PASTE_PROJECT",
+    "storageBucket": "PASTE_PROJECT.appspot.com",
+    "messagingSenderId": "PASTE_SENDER_ID",
+    "appId": "PASTE_APP_ID"
+  }
 }
