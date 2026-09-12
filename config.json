@@ -2,12 +2,12 @@
   "_comment": "Deploy this next to index.html so every device reads the same config. Replace the placeholder values with the ones from Firebase console > Project settings > Your apps > Web. The apiKey is not a secret; it identifies the project and grants nothing on its own. Access is controlled by firebase-rules.json plus anonymous auth.",
   "leagueId": "road-chip",
   "firebase": {
-    "apiKey": "PASTE_API_KEY",
-    "authDomain": "PASTE_PROJECT.firebaseapp.com",
-    "databaseURL": "https://PASTE_PROJECT-default-rtdb.firebaseio.com",
-    "projectId": "PASTE_PROJECT",
-    "storageBucket": "PASTE_PROJECT.appspot.com",
-    "messagingSenderId": "PASTE_SENDER_ID",
-    "appId": "PASTE_APP_ID"
+    "apiKey": "AIzaSyAvz4xg5sFkcAbmVAJ4JYAlC0HG-Sq5F_8",
+    "authDomain": "aewfantasy-47424.firebaseapp.com",
+    "databaseURL": "https://aewfantasy-47424-default-rtdb.firebaseio.com",
+    "projectId": "aewfantasy-47424",
+    "storageBucket": "aewfantasy-47424.firebasestorage.app",
+    "messagingSenderId": "972702463847",
+    "appId": "1:972702463847:web:03ba6393078c25fd95e1c2"
   }
 }
