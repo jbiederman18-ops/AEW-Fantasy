@@ -1057,6 +1057,8 @@
   <pre id="diagIcons"></pre>
   <div style="border-top:1px solid var(--border);margin:8px 0 6px"></div>
   <button type="button" onclick="checkBackend()" style="font:inherit;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;">Test connection</button>
+      <button onclick="runBackupNow()" style="font:inherit;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;margin-left:6px;">Back up now</button>
+      <pre id="diagBackup" style="margin:8px 0 0;white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;line-height:1.5;color:var(--muted);"></pre>
   <pre id="diagSheet"></pre>
   <p class="diag-hint">Tap the AEW logo to hide. Screenshot this and send it over.</p>
 </div>
@@ -1298,6 +1300,11 @@ const FIREBASE_CONFIG_DEFAULT = {
 // distribute. That is the part the old one-sheet-per-season setup made hard.
 const LEAGUE_DEFAULT = 'road-chip';
 
+// The sheet the league used to live on. It keeps its pre-migration contents and
+// now also receives a dated backup sheet each day, so it stays a complete
+// recovery path rather than a dead artifact.
+const BACKUP_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbyr0zdJF7zxbELK46TxWXVOCddLsM2upRf5IR_juNSG3NYQR9T_ABgJ8PqSHbqy4o0A9Q/exec';
+
 const TEAMS = ['maria','ryan','josh','erik'];
 const TEAM_LABELS = { maria:'Maria', ryan:'Ryan', josh:'Josh', erik:'Erik' };
 const TEAM_COLORS = { maria:'#e84393', ryan:'#4a90e2', josh:'#1dd3b0', erik:'#f0b429' };
@@ -1365,6 +1372,7 @@ const FIREBASE_RULES = `{
 let firebaseConfig = Object.assign({}, FIREBASE_CONFIG_DEFAULT);
 let leagueId = LEAGUE_DEFAULT;
 let configSource = 'built-in fallback';
+let backupUrl = BACKUP_URL_DEFAULT;
 
 async function loadConfig() {
   try {
@@ -1375,6 +1383,7 @@ async function loadConfig() {
           && cfg.firebase.databaseURL) {
         firebaseConfig = cfg.firebase;
         if (cfg.leagueId) leagueId = slugLeague(cfg.leagueId);
+        if (typeof cfg.backupUrl === 'string') backupUrl = cfg.backupUrl;
         configSource = 'config.json';
         return;
       }
@@ -1387,6 +1396,7 @@ async function loadConfig() {
       if (cfg && cfg.firebase && cfg.firebase.databaseURL) {
         firebaseConfig = cfg.firebase;
         if (cfg.leagueId) leagueId = slugLeague(cfg.leagueId);
+        if (typeof cfg.backupUrl === 'string') backupUrl = cfg.backupUrl;
         configSource = 'this device only';
         return;
       }
@@ -1602,6 +1612,14 @@ async function checkBackend() {
   lines.push('AUTH   ' + (user ? 'OK    anonymous, uid ' + user.uid.slice(0, 8) + '…'
                                : 'FAIL  not signed in'));
   lines.push('SOCKET ' + (fbConnected ? 'OK    connected' : 'FAIL  not connected'));
+  lines.push('');
+
+  try {
+    const snap = await fbDb.ref('leagues/' + leagueId + '/meta/lastBackup').once('value');
+    const last = snap.val();
+    lines.push('BACKUP ' + (last === localDateStamp() ? 'OK    done today (' + last + ')'
+              : last ? 'last run ' + last : 'none recorded yet'));
+  } catch (e) { lines.push('BACKUP ?     could not read the marker'); }
   lines.push('');
 
   let t0 = Date.now();
@@ -1926,6 +1944,10 @@ async function initFromBackend() {
   if (window._archiveSeasonsInSheet === false && archiveSeasons.length) {
     saveArchiveSeasons().catch(() => { /* retried next launch */ });
   }
+
+  // Last, in the background, and only once the full payload is in hand — never
+  // from the cached snapshot.
+  maybeDailyBackup().catch(() => { /* never worth interrupting anyone over */ });
 }
 
 function renderAll() {
@@ -2331,6 +2353,107 @@ function flushLiveRender() {
     else loadShowScores();
   }
   announceLive(keys);
+}
+
+// ─────────────────────────────────────────────
+// DAILY BACKUP
+// ─────────────────────────────────────────────
+// Once a day the first device to open the app pushes the whole league to the
+// old Google Sheet, which stores it as a dated sheet and keeps the last two
+// weeks. This is the answer to the fact that anyone who reads config.json can
+// sign in anonymously and therefore write: it does not stop that, it makes it
+// recoverable. Restoring is reading one dated sheet back — the same {key: value}
+// shape the app already parses.
+
+function localDateStamp(d) {
+  d = d || new Date();
+  // The device's date, not UTC. The sheet names its tab in the spreadsheet's
+  // timezone, so these agree as long as everyone is in roughly one region —
+  // and a disagreement costs a duplicate backup, not a missing one.
+  return d.getFullYear() + '-'
+    + String(d.getMonth() + 1).padStart(2, '0') + '-'
+    + String(d.getDate()).padStart(2, '0');
+}
+
+function backupPayload() {
+  const srcData = window._sheetPayload || {};
+  const out = {};
+  // Re-encode as JSON strings so the backup sheet matches the format the
+  // original sheet used. That is what makes the old app and the export tool
+  // able to read a backup with no special case.
+  for (const k in srcData) out[k] = JSON.stringify(srcData[k]);
+  return out;
+}
+
+async function postBackup(payload) {
+  if (!backupUrl) throw new Error('No backup URL configured');
+  const r = await fetch(backupUrl, {
+    method: 'POST',
+    // text/plain keeps this a simple cross-origin request. Any other content
+    // type triggers a preflight OPTIONS, which Apps Script does not answer, so
+    // the request would fail before it was ever sent.
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action: 'backup', league: leagueId, payload }),
+  });
+  const text = await r.text();
+  let body;
+  try { body = JSON.parse(text); }
+  catch (e) { throw new Error('The script returned a page rather than data — it may need re-deploying'); }
+  if (!body.ok) throw new Error(body.error || 'the script replied ok:false');
+  return body;
+}
+
+// A transaction rather than a read-then-write: four phones opening at 8pm would
+// otherwise all see yesterday's date, all decide they are the one to do it, and
+// all push the same season over each other.
+async function claimBackupSlot(today) {
+  const ref = fbDb.ref('leagues/' + leagueId + '/meta/lastBackup');
+  const res = await ref.transaction(current => (current === today ? undefined : today));
+  return !!(res && res.committed);
+}
+
+async function maybeDailyBackup() {
+  if (!backupUrl || !fbDb) return;
+  const payload = backupPayload();
+  // Never back up something we are not confident in. A partly-loaded payload
+  // would replace a good backup with less than it had, which is the one way a
+  // backup system can leave you worse off than no backup at all.
+  if (Object.keys(payload).length < 4) return;
+  const today = localDateStamp();
+  let claimed = false;
+  try { claimed = await claimBackupSlot(today); }
+  catch (e) { return; }
+  if (!claimed) return;
+  try {
+    const res = await postBackup(payload);
+    window._lastBackupResult = res;
+  } catch (e) {
+    // Hand the slot back, so the next launch retries today rather than the
+    // claim silently costing a day's backup.
+    try { await fbDb.ref('leagues/' + leagueId + '/meta/lastBackup').set(null); } catch (e2) {}
+    console.warn('Daily backup failed:', e && e.message);
+  }
+}
+
+async function runBackupNow() {
+  const el = document.getElementById('diagBackup');
+  if (!el) return;
+  if (!fbDb) { el.textContent = 'Not connected yet'; return; }
+  const payload = backupPayload();
+  const n = Object.keys(payload).length;
+  if (!n) { el.textContent = 'Nothing loaded yet — nothing to back up'; return; }
+  el.textContent = 'backing up ' + n + ' keys…';
+  const t0 = Date.now();
+  try {
+    const res = await postBackup(payload);
+    try { await fbDb.ref('leagues/' + leagueId + '/meta/lastBackup').set(localDateStamp()); } catch (e) {}
+    el.textContent = 'OK    ' + (Date.now() - t0) + 'ms\n'
+      + 'sheet ' + res.sheet + '\n'
+      + 'keys  ' + res.keys
+      + (res.pruned ? '\nolder ' + res.pruned + ' backup(s) pruned' : '');
+  } catch (e) {
+    el.textContent = 'FAIL  ' + (Date.now() - t0) + 'ms\n' + e.message;
+  }
 }
 
 function announceLive(keys) {
