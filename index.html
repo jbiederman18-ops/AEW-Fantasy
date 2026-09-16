@@ -1254,13 +1254,13 @@
     <!-- New Season -->
     <div class="settings-block" style="border-color:rgba(29,211,176,0.2);">
       <h3 style="color:var(--teal);">Start New Season</h3>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">A new season is a new name under the same database — nothing to create first, and the URL everyone has keeps working. Pick a short id with no spaces.</p>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">A new season is a new id under the same database. Every phone switches to it automatically — nothing to redeploy or send round. Pick a short id with no spaces. Entering the id of an existing season switches everyone back to it instead.</p>
       <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
         <input type="text" id="newSeasonId" placeholder="Season id (e.g. road-chip-2)" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:13px;">
         <input type="text" id="newSeasonNameInput" placeholder="Season name (e.g. Road Chip 2)" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:13px;">
       </div>
       <div class="newseason-opts">
-        <label><input type="checkbox" id="newSeasonArchiveCurrent" checked> Archive the current season first (adds this sheet to the Trophy Room)</label>
+        <label><input type="checkbox" id="newSeasonArchiveCurrent" checked> Archive the current season first (adds it to the Trophy Room)</label>
         <label><input type="checkbox" id="newSeasonKeepRosters"> Keep current rosters (leave off if you're drafting fresh)</label>
       </div>
       <button class="btn-primary" style="background:var(--teal);color:#000;" onclick="startNewSeason()">🆕 Start New Season</button>
@@ -1345,6 +1345,16 @@ const ACC_BY_KEY = Object.fromEntries(ACCOMPLISHMENTS.map(a => [a.key, a]));
 
 const FIREBASE_RULES = `{
   "rules": {
+    "currentLeague": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length < 100"
+    },
+    "archive": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      ".validate": "newData.isString() && newData.val().length < 200000"
+    },
     "leagues": {
       "$league": {
         ".read": "auth != null",
@@ -1374,7 +1384,33 @@ let leagueId = LEAGUE_DEFAULT;
 let configSource = 'built-in fallback';
 let backupUrl = BACKUP_URL_DEFAULT;
 
+// The season being played is not device config any more. It is one value in
+// the database, /currentLeague, that every device reads at launch and listens
+// to — so starting a season on one phone moves all of them. What config.json or
+// Settings supply is only the seed used the first time a database has no
+// pointer. This device's last-seen pointer is cached so the warm-start paint
+// shows the right season before the socket is up.
+const LEAGUE_CACHE_KEY = 'aew_current_league';
+let pointerError = null;      // set when the rules predate /currentLeague
+
 async function loadConfig() {
+  await loadConfigSource();
+  try {
+    const c = JSON.parse(localStorage.getItem(LEAGUE_CACHE_KEY) || 'null');
+    if (c && c.league && c.db === firebaseConfig.databaseURL) leagueId = slugLeague(c.league);
+  } catch(e) { /* no cached pointer */ }
+}
+
+function rememberLeague() {
+  try {
+    localStorage.setItem(LEAGUE_CACHE_KEY,
+      JSON.stringify({ db: firebaseConfig.databaseURL, league: leagueId }));
+  } catch(e) { /* optional */ }
+  const idInput = document.getElementById('leagueIdInput');
+  if (idInput && document.activeElement !== idInput) idInput.value = leagueId;
+}
+
+async function loadConfigSource() {
   try {
     const r = await fetch('config.json', { cache: 'no-store' });
     if (r.ok) {
@@ -1499,25 +1535,25 @@ let wrestlerFilter = 'all';
 let pendingSchedule = [];
 let settingsLoaded = false;
 // Draft state
-let draftState = {
-  active: false,
-  order: ['maria','ryan','josh','erik'],
-  rounds: 12,
-  picks: [],
-};
-// swapState stored in state.swaps
-// Connected archive seasons live on the SHEET (key: aew_archive_seasons) so every
-// device sees the same archive — the same reason the script URL moved to
-// config.json. localStorage is now only a warm-start cache for the first paint
-// and an offline fallback; the sheet is authoritative once the key exists.
-let archiveSeasons = JSON.parse(localStorage.getItem('aew_archive_seasons') || '[]');
-
-async function saveArchiveSeasons() {
-  localStorage.setItem('aew_archive_seasons', JSON.stringify(archiveSeasons));
-  if (!dbRoot) return;
-  await dbSet('aew_archive_seasons', archiveSeasons);
-  window._archiveSeasonsInSheet = true;
+function blankDraft() { return { active: false, order: TEAMS.slice(), rounds: 12, picks: [] }; }
+function normalizeDraft(v) {
+  const d = Object.assign(blankDraft(), (v && typeof v === 'object') ? v : {});
+  if (!Array.isArray(d.picks)) d.picks = [];
+  if (!Array.isArray(d.order) || d.order.length !== TEAMS.length) d.order = TEAMS.slice();
+  d.rounds = Math.min(Math.max(parseInt(d.rounds, 10) || 12, 1), LETTERS.length);
+  d.active = !!d.active;
+  return d;
 }
+let draftState = blankDraft();
+// swapState stored in state.swaps
+// The archive list lives once, at /archive, above every season. It used to be a
+// key inside each league and was copied forward at every new season, so an edit
+// made in one league never reached the others. localStorage is a warm-start
+// cache only. The legacy per-league key is still read, once, to seed /archive.
+let archiveSeasons = [];
+try { archiveSeasons = JSON.parse(localStorage.getItem('aew_archive_seasons') || '[]') || []; }
+catch(e) { archiveSeasons = []; }
+let archiveListKnown = false;   // true once /archive itself has been read
 let archiveData = {}; // { [seasonName]: { rosters, scores, schedule, seasonName } }
 let activeArchiveVault = null;
 let activeArchiveSub = 'trophy';
@@ -1526,7 +1562,14 @@ let activeArchiveSub = 'trophy';
 // Permanent protection would mean this device never sees another player's changes
 // to a shared key like aew_swaps or aew_draft, and would clobber them on next write.
 const pendingWrites = new Map(); // key -> release timestamp (ms)
-const WRITE_GRACE_MS = 4000;     // covers read-after-write lag on the Sheets side
+// Was 4000ms, to cover the Sheets side's read-after-write lag. RTDB has no such
+// lag — it overlays a local write on its cache the instant it is made — and the
+// window was actively harmful: the live listener dropped any other device's
+// change to a held key and never re-applied it, so two draft picks made within
+// four seconds of each other lost one. Keys are now held only while the write
+// is in flight, and a change that arrives during that is re-read on release.
+const WRITE_GRACE_MS = 0;
+const deferredKeys = new Set();
 // Every tab switch used to trigger a full getAll of the entire sheet. Six taps
 // around the app was six full-sheet reads; on a phone that is the lag.
 let lastSyncAt = 0;
@@ -1536,7 +1579,14 @@ function holdKey(key) {
   pendingWrites.set(key, Infinity); // held until the write resolves
 }
 function releaseKey(key) {
-  pendingWrites.set(key, Date.now() + WRITE_GRACE_MS);
+  if (WRITE_GRACE_MS > 0) pendingWrites.set(key, Date.now() + WRITE_GRACE_MS);
+  else pendingWrites.delete(key);
+  if (deferredKeys.delete(key) && dbRoot && liveBound) {
+    const ref = dbRoot;
+    ref.child(key).once('value')
+      .then(snap => { if (ref === dbRoot) applyLiveSnap(snap, { deferred: true }); })
+      .catch(() => {});
+  }
 }
 function isKeyHeld(key) {
   const until = pendingWrites.get(key);
@@ -1552,7 +1602,7 @@ function isKeyHeld(key) {
 // ─────────────────────────────────────────────
 // The one number the whole shell hangs off. window.innerHeight is the actual
 // visible height in iOS standalone, where 100vh is not.
-const BUILD_ID = 'b0912-firebase';
+const BUILD_ID = 'b0916-seasons';
 
 function toggleDiag() {
   const p = document.getElementById('diagPanel');
@@ -1612,6 +1662,13 @@ async function checkBackend() {
   lines.push('AUTH   ' + (user ? 'OK    anonymous, uid ' + user.uid.slice(0, 8) + '…'
                                : 'FAIL  not signed in'));
   lines.push('SOCKET ' + (fbConnected ? 'OK    connected' : 'FAIL  not connected'));
+  lines.push('SEASON ' + (pointerError
+    ? 'FAIL  ' + pointerError + '\n             publish the updated rules from Settings'
+    : 'OK    live season ' + leagueId + ' (shared by every device)'));
+  lines.push('ARCHV  ' + (window._archiveError
+    ? 'FAIL  ' + window._archiveError
+    : 'OK    ' + archiveSeasons.length + ' connected'
+      + (archiveFailed.length ? ', ' + archiveFailed.length + ' failed to load' : '')));
   lines.push('');
 
   try {
@@ -1835,6 +1892,9 @@ async function _runSync({ flush = true, label = 'Syncing…' } = {}) {
     clearReconnect();
     initialLoadDone = true;
     bindLiveListener();
+    // A launch that started offline never bound these.
+    bindLeaguePointer();
+    bindArchiveList();
     setSyncStatus('Live', 'ok');
     return true;
   } catch (e) {
@@ -1882,15 +1942,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const idInput = document.getElementById('leagueIdInput');
   if (idInput) idInput.value = leagueId;
   const srcEl = document.getElementById('configSourceLine');
-  if (srcEl) srcEl.textContent = 'in use, from: ' + configSource;
-  // Archive seasons come from the league store, so wait for the first load
-  // before fetching them — otherwise this races the initial load and uses a
-  // stale list.
-  initFromBackend()
-    .then(() => loadArchiveSeasons())
-    .then(() => {
-      if (document.getElementById('tab-archive').classList.contains('active')) renderArchive();
-    });
+  if (srcEl) srcEl.textContent = 'config from: ' + configSource + ' · the live season is shared by every device';
+  // The archive is no longer fetched at launch. Archived seasons never change
+  // and most launches never open the tab; it loads on first visit instead.
+  initFromBackend();
 });
 
 async function initFromBackend() {
@@ -1916,6 +1971,10 @@ async function initFromBackend() {
     return;
   }
 
+  // Which season is live is decided by the database, not this device.
+  await resolveCurrentLeague();
+  bindLeaguePointer();
+
   try {
     await loadFromDb();
   } catch (e) {
@@ -1928,6 +1987,7 @@ async function initFromBackend() {
   setSyncStatus('Live', 'ok');
   renderAll();
   bindLiveListener();
+  bindArchiveList();
 
   // Only seed rosters into a genuinely empty league. Previously any store
   // without roster keys got the hardcoded defaults written into it, which meant
@@ -1936,13 +1996,6 @@ async function initFromBackend() {
     setSyncStatus('Saving rosters…', 'loading');
     try { await saveRosters(); setSyncStatus('Live', 'ok'); }
     catch(e) { setSyncStatus('Offline', 'err'); scheduleReconnect(); return; }
-  }
-
-  // A write, and nothing on screen depends on it, so it stays in the
-  // background: awaiting it used to hold the pill on "Loading…" for a full
-  // request timeout on every launch whenever it failed.
-  if (window._archiveSeasonsInSheet === false && archiveSeasons.length) {
-    saveArchiveSeasons().catch(() => { /* retried next launch */ });
   }
 
   // Last, in the background, and only once the full payload is in hand — never
@@ -2109,7 +2162,10 @@ function bindConnectionState() {
   fbDb.ref('.info/connected').on('value', snap => {
     fbConnected = snap.val() === true;
     if (!initialLoadDone) return;   // the boot sequence owns the pill until then
-    if (fbConnected) { clearReconnect(); setSyncStatus('Live', 'ok'); }
+    if (fbConnected) {
+      clearReconnect(); setSyncStatus('Live', 'ok');
+      if (archiveRequested && archiveFailed.length) refreshArchive();
+    }
     else setSyncStatus('Offline', 'err');
   });
 }
@@ -2158,14 +2214,33 @@ async function dbSet(key, value) {
     ]);
     if (failure) throw failure;
     if (window._sheetPayload) window._sheetPayload[key] = value;
-    if (acked) {
-      fbDb.ref('leagues/' + leagueId + '/meta/updatedAt')
-        .set(firebase.database.ServerValue.TIMESTAMP).catch(() => {});
-    }
+    // Unconditionally: a queued write replays later, and the stamp must replay
+    // with it. The archive cache trusts this stamp to know a season changed.
+    touchUpdatedAt();
     return acked ? 'saved' : 'queued';
   } finally {
     releaseKey(key);
   }
+}
+
+function touchUpdatedAt(league) {
+  if (!fbDb) return;
+  fbDb.ref('leagues/' + (league || leagueId) + '/meta/updatedAt')
+    .set(firebase.database.ServerValue.TIMESTAMP).catch(() => {});
+}
+
+// once() on RTDB waits for the server indefinitely when offline.
+function onceWithin(ref, ms) {
+  return Promise.race([
+    ref.once('value'),
+    sleep(ms).then(() => { throw new Error('No response in ' + ms / 1000 + 's'); }),
+  ]);
+}
+function withinMs(promise, ms) {
+  return Promise.race([
+    promise,
+    sleep(ms).then(() => { throw new Error('Not confirmed after ' + ms / 1000 + 's'); }),
+  ]);
 }
 
 async function saveRosters() {
@@ -2190,16 +2265,17 @@ function applyOneKey(key, v) {
   }
   if (key === 'aew_seasonname') { state.seasonName = String(v); return true; }
   if (key === 'aew_archive_seasons') {
+    // Legacy per-league copy. Only used to seed /archive, or as a read-only
+    // fallback while the rules predate /archive.
     if (!Array.isArray(v)) return false;
-    window._archiveSeasonsInSheet = true;
-    archiveSeasons = v.filter(s => s && (s.url || s.league));
-    try { localStorage.setItem('aew_archive_seasons', JSON.stringify(archiveSeasons)); }
-    catch(e) { /* quota; the sheet copy is authoritative anyway */ }
-    return true;
+    window._legacyArchiveList = v.filter(s => s && (s.url || s.league));
+    if (!archiveListKnown) { archiveSeasons = window._legacyArchiveList; cacheArchiveList(); }
+    return false;
   }
   if (key === 'aew_draft') {
     if (!v || typeof v !== 'object') return false;
-    draftState = Object.assign(draftState, v); state.draft = draftState; return true;
+    // Replace, not merge: Object.assign kept fields the other device had cleared.
+    draftState = overlayPendingPicks(normalizeDraft(v)); state.draft = draftState; return true;
   }
   if (key === 'aew_swaps') {
     if (!v || typeof v !== 'object') return false;
@@ -2248,7 +2324,6 @@ function applyPayload(all) {
     if (applyOneKey(k, all[k]) && k.indexOf('aew_roster_') === 0) anyRoster = true;
   }
   window._rostersInSheet = anyRoster;
-  if (all['aew_archive_seasons'] === undefined) window._archiveSeasonsInSheet = false;
   normalizeRosters();
   lastSyncAt = Date.now();
 }
@@ -2295,23 +2370,218 @@ let liveRenderTimer = null;
 function bindLiveListener() {
   if (!dbRoot || liveBound) return;
   liveBound = true;
-  const onKey = (snap) => {
-    const key = snap.key;
-    // Skip a key we are mid-write on: state already holds the newer value, and
-    // this is just Firebase echoing our own write back at us.
-    if (isKeyHeld(key)) return;
-    const parsed = parseRaw(snap.val());
-    if (!applyOneKey(key, parsed)) return;
-    if (window._sheetPayload) window._sheetPayload[key] = parsed;
-    liveKeysPending.add(key);
-    scheduleLiveRender();
-  };
+  const onKey = (snap) => applyLiveSnap(snap);
   dbRoot.on('child_changed', onKey);
   // child_added also replays every existing key on attach. Harmless — it
   // re-applies what the initial load just set — but it is why liveReady gates
   // the toast, so the first paint does not announce four phantom scorers.
   dbRoot.on('child_added', onKey);
   setTimeout(() => { liveReady = true; }, 1500);
+}
+
+function applyLiveSnap(snap, { deferred = false } = {}) {
+  const key = snap.key;
+  // Mid-write on this key: state already holds our value. But this may be
+  // another device's change, not our echo — so note it and re-read the key the
+  // moment our write settles, instead of dropping it.
+  if (isKeyHeld(key)) { deferredKeys.add(key); return; }
+  const parsed = parseRaw(snap.val());
+  if (deferred && window._sheetPayload
+      && JSON.stringify(parsed) === JSON.stringify(window._sheetPayload[key])) return;
+  if (!applyOneKey(key, parsed)) return;
+  if (window._sheetPayload) window._sheetPayload[key] = parsed;
+  liveKeysPending.add(key);
+  scheduleLiveRender();
+}
+
+// ── season pointer ────────────────────────────────────────────────────────
+function blankRosters() {
+  const r = {};
+  for (const t of TEAMS) { r[t] = {}; LETTERS.forEach(l => { r[t][l] = ''; }); }
+  return r;
+}
+function blankSwaps() { return { tokens: { maria:0, ryan:0, josh:0, erik:0 }, history: [] }; }
+
+// Everything that belongs to one season, back to empty. Needed whenever this
+// device moves league, or last season's scores sit under this season's name.
+function resetSeasonState() {
+  state.scores = {};
+  state.schedule = [];
+  state.seasonName = '';
+  state.rosters = blankRosters();
+  state.swaps = blankSwaps();
+  state.draft = null;
+  draftState = blankDraft();
+  pendingWrites.clear();
+  deferredKeys.clear();
+  window._sheetPayload = {};
+  window._rostersInSheet = false;
+  liveCounts = {};
+  isDirty = false;
+  settingsLoaded = false;
+}
+
+// Reads /currentLeague at launch. If the database has no pointer yet, this
+// device publishes the league it was configured with — in a transaction, so
+// four phones opening together agree on one.
+async function resolveCurrentLeague() {
+  if (!fbDb) return false;
+  const ref = fbDb.ref('currentLeague');
+  let live;
+  try {
+    live = (await onceWithin(ref, 6000)).val();
+    pointerError = null;
+  } catch (e) {
+    if (/permission|denied/i.test(String(e && e.message))) pointerError = e.message;
+    return false;   // offline or old rules: keep the cached id; the listener corrects it
+  }
+  if (typeof live === 'string' && live) return adoptLeague(slugLeague(live));
+  try {
+    const seed = leagueId;
+    const res = await withinMs(ref.transaction(cur => (cur ? undefined : seed)), 8000);
+    const v = res && res.snapshot && res.snapshot.val();
+    if (typeof v === 'string' && v) return adoptLeague(slugLeague(v));
+  } catch (e) { pointerError = e && e.message; }
+  return false;
+}
+
+// Before first load only: point at a league without the flush/refetch dance.
+function adoptLeague(id) {
+  if (id === leagueId) { rememberLeague(); return false; }
+  leagueId = id;
+  rememberLeague();
+  if (fbDb) dbRoot = fbDb.ref(dbPath());
+  resetSeasonState();
+  applyCachedSnapshot();
+  normalizeRosters();
+  renderAll();
+  return true;
+}
+
+let pointerBound = false;
+// While this device's own season write is in flight, the pointer listener sees
+// the optimistic local value first. Following it then would switch this phone
+// into a league the server may still refuse; the writer follows explicitly once
+// the write is confirmed.
+let ownPointerWrite = false;
+function bindLeaguePointer() {
+  if (!fbDb || pointerBound) return;
+  pointerBound = true;
+  fbDb.ref('currentLeague').on('value', snap => {
+    pointerError = null;
+    const v = snap.val();
+    if (typeof v !== 'string' || !v) return;
+    const id = slugLeague(v);
+    if (id !== leagueId && !ownPointerWrite) followLeague(id);
+  }, err => {
+    pointerBound = false;
+    pointerError = err && err.message;
+  });
+}
+
+// Another device (or this one) moved the league. Commit what is being typed
+// into the season that is ending, then load the new one in place.
+let leagueSwitching = null;
+async function followLeague(id, { announce = true } = {}) {
+  while (leagueSwitching) await leagueSwitching;
+  if (id === leagueId) return;
+  leagueSwitching = (async () => {
+    if (isDirty) { try { await Promise.race([flushScores(), sleep(FLUSH_MAX_MS)]); } catch(e) {} }
+    detachLive();
+    leagueId = id;
+    rememberLeague();
+    dbRoot = fbDb.ref(dbPath());
+    resetSeasonState();
+    applyCachedSnapshot();
+    normalizeRosters();
+    renderAll();
+    try {
+      await loadFromDb();
+      setSyncStatus('Live', 'ok');
+    } catch (e) {
+      setSyncStatus('Offline', 'err');
+      scheduleReconnect();
+    }
+    bindLiveListener();
+    normalizeRosters();
+    renderAll();
+    renderCurrentTab();
+    if (archiveRequested) refreshArchive();
+    if (announce) {
+      setSyncStatus('New season: ' + esc(state.seasonName || id), 'ok');
+      setTimeout(() => { if (fbConnected) setSyncStatus('Live', 'ok'); }, 3500);
+    }
+  })();
+  try { await leagueSwitching; } finally { leagueSwitching = null; }
+}
+
+function renderCurrentTab() {
+  if (currentTabName === 'draft') renderDraft();
+  else if (currentTabName === 'swaps') renderSwaps();
+  else if (currentTabName === 'archive') renderArchive();
+  else if (currentTabName === 'settings') _applySettingsTab();
+  else if (currentTabName === 'score' && currentTeam) loadShowScores();
+}
+
+// ── archive list ──────────────────────────────────────────────────────────
+function cacheArchiveList() {
+  try { localStorage.setItem('aew_archive_seasons', JSON.stringify(archiveSeasons)); }
+  catch(e) { /* optional */ }
+}
+function parseArchiveList(v) {
+  const p = parseRaw(v);
+  return Array.isArray(p) ? p.filter(s => s && (s.url || s.league)) : null;
+}
+
+let archiveBound = false, archiveSeeded = false;
+function bindArchiveList() {
+  if (!fbDb || archiveBound) return;
+  archiveBound = true;
+  fbDb.ref('archive').on('value', snap => {
+    window._archiveError = null;
+    const list = parseArchiveList(snap.val());
+    if (list === null) { seedArchiveList(); return; }
+    const changed = JSON.stringify(list) !== JSON.stringify(archiveSeasons);
+    archiveListKnown = true;
+    archiveSeasons = list;
+    cacheArchiveList();
+    if (changed) {
+      if (archiveRequested) refreshArchive();
+      else if (currentTabName === 'archive') renderArchive();
+    }
+  }, err => {
+    archiveBound = false;
+    window._archiveError = err && err.message;
+  });
+}
+
+// First run against the new layout: lift the list out of the league it was
+// stored in. Transaction, so it only ever happens once.
+function seedArchiveList() {
+  if (archiveSeeded || !fbDb) return;
+  archiveSeeded = true;
+  const seed = (window._legacyArchiveList && window._legacyArchiveList.length)
+    ? window._legacyArchiveList : archiveSeasons;
+  if (!seed.length) return;
+  fbDb.ref('archive')
+    .transaction(cur => (cur ? undefined : JSON.stringify(seed)))
+    .catch(e => { window._archiveError = e && e.message; });
+}
+
+// Every archive edit goes through here: read-modify-write as a transaction, so
+// two people adding seasons at once both land. fn returns the new list, or
+// null to change nothing.
+async function mutateArchive(fn) {
+  if (!fbDb) throw new Error('Not connected');
+  if (!fbConnected) throw new Error('Offline — try again once connected');
+  const res = await withinMs(fbDb.ref('archive').transaction(cur => {
+    const base = parseArchiveList(cur) || (cur == null ? archiveSeasons.slice() : []);
+    const next = fn(base.map(s => Object.assign({}, s)));
+    return next ? JSON.stringify(next) : undefined;
+  }), 10000);
+  const list = res && res.snapshot ? parseArchiveList(res.snapshot.val()) : null;
+  if (list) { archiveSeasons = list; archiveListKnown = true; cacheArchiveList(); }
+  return !!(res && res.committed);
 }
 
 function scheduleLiveRender() {
@@ -2338,7 +2608,7 @@ function flushLiveRender() {
   if (keys.indexOf('aew_schedule') !== -1) populateShowSelect();
   if (keys.indexOf('aew_seasonname') !== -1) updateSeasonNameDisplay();
   if (keys.indexOf('aew_swaps') !== -1 && currentTabName === 'swaps') renderSwaps();
-  if (keys.indexOf('aew_draft') !== -1 && currentTabName === 'draft') renderDraft();
+  if (keys.indexOf('aew_draft') !== -1 && currentTabName === 'draft') renderDraft({ fromRemote: true });
   cacheSnapshot();
 
   if (!liveReady) return;
@@ -3287,17 +3557,12 @@ async function saveSchedule() {
 // ─────────────────────────────────────────────
 // DRAFT
 // ─────────────────────────────────────────────
-function renderDraft() {
+function renderDraft(opts) {
   const el = document.getElementById('draftContent');
   if (!el) return;
-
-  // Load draft state from app state if saved
-  if (state.draft) {
-    draftState = Object.assign(draftState, state.draft);
-  }
-
+  if (state.draft && state.draft !== draftState) draftState = normalizeDraft(state.draft);
   if (draftState.active) {
-    renderDraftLive(el);
+    renderDraftLive(el, opts);
   } else {
     renderDraftSetup(el);
   }
@@ -3355,39 +3620,270 @@ function moveDraftOrder(idx, dir) {
   renderDraftOrderList();
 }
 
-function startDraft() {
+// ── committing draft changes ─────────────────────────────────────────────
+// Every change to the shared draft is a transaction against aew_draft that
+// re-checks, on the server's copy, the thing the change depends on: that the
+// pick count is still what this device saw. Two phones taking the same turn
+// used to both "succeed" and the second silently replaced the first. Now the
+// second is refused and told who got there first. applyLocally is off so a
+// refused change never flashes onto other listeners.
+const DRAFT_TXN_MS = 10000;
+let draftQueue = Promise.resolve();
+// Picks entered here but not yet committed. A server update that lands in
+// between (usually this phone's own previous pick) would otherwise briefly
+// take them off the board during a quick two-pick snake turn.
+let pendingPicks = [];
+// Bumped when a change is refused. Anything queued behind it was entered
+// against a board that turned out to be wrong, so it is dropped too.
+let draftEpoch = 0;
+function overlayPendingPicks(d) {
+  for (const pp of pendingPicks) {
+    if (pp.expected === d.picks.length && d.active && pickerAt(d, pp.expected).team === pp.pick.team) {
+      d.picks.push(pp.pick);
+    }
+  }
+  return d;
+}
+
+function draftTxn(fn) {
+  return withinMs(dbRoot.child('aew_draft').transaction(cur => {
+    const d = normalizeDraft(parseRaw(cur));
+    return fn(d, cur) === false ? undefined : JSON.stringify(d);
+  }, undefined, false), DRAFT_TXN_MS);
+}
+
+// Rosters are one JSON value per team, so a pick edits one slot through a
+// transaction rather than rewriting all four teams from this device's copy.
+// onlyIf guards an undo from clearing a slot someone has since refilled.
+function patchRoster(team, patch, onlyIf) {
+  return withinMs(dbRoot.child('aew_roster_' + team).transaction(cur => {
+    let roster = parseRaw(cur);
+    if (!roster || typeof roster !== 'object') {
+      // No server copy in hand: start from ours rather than from nothing, so a
+      // one-slot edit can never blank the other eleven.
+      roster = Object.assign({}, state.rosters[team] || {});
+    }
+    if (onlyIf) for (const s in onlyIf) if ((roster[s] || '') !== onlyIf[s]) return undefined;
+    Object.assign(roster, patch);
+    return JSON.stringify(roster);
+  }, undefined, false), DRAFT_TXN_MS);
+}
+
+function pickerAt(d, n) {
+  const k = d.order.length;
+  const round = Math.floor(n / k);             // 0-indexed
+  const pos = n % k;
+  const idx = round % 2 === 0 ? pos : (k - 1 - pos);   // snake
+  return { team: d.order[idx], round: round + 1, pick: n + 1 };
+}
+
+function getCurrentPicker() { return pickerAt(draftState, draftState.picks.length); }
+
+function nextSlotIn(d, team) {
+  const used = new Set(d.picks.filter(p => p.team === team).map(p => p.slot));
+  return LETTERS.find(l => !used.has(l)) || null;   // null = roster is full
+}
+function getNextSlotForTeam(team) { return nextSlotIn(draftState, team); }
+
+function draftConnected() { return !!dbRoot && fbConnected; }
+
+function showDraftStatus(text, colour) {
+  if (text !== undefined) {
+    showDraftStatus.last = { text, colour, until: /^✓/.test(text) ? Date.now() + 2000 : Infinity };
+    clearTimeout(showDraftStatus.t);
+    if (/^✓/.test(text)) showDraftStatus.t = setTimeout(() => showDraftStatus(''), 2000);
+  }
+  const el = document.getElementById('draftSaveStatus');
+  const s = showDraftStatus.last;
+  if (!el || !s) return;
+  el.textContent = Date.now() < s.until ? s.text : '';
+  el.style.color = s.colour || 'var(--teal)';
+}
+
+function rerenderDraft() {
+  const el = document.getElementById('draftContent');
+  if (el && currentTabName === 'draft') renderDraft({ fromRemote: true });
+}
+
+function applyDraftSnapshot(snap) {
+  if (snap) { draftState = overlayPendingPicks(normalizeDraft(parseRaw(snap.val()))); state.draft = draftState; }
+}
+
+async function reloadRoster(team) {
+  try {
+    const v = await dbGet('aew_roster_' + team);
+    if (v && typeof v === 'object') state.rosters[team] = v;
+  } catch(e) { /* the listener will bring it */ }
+}
+
+async function startDraft(force) {
   // A roster has exactly LETTERS.length slots. Allowing 20 rounds meant pick 13
   // silently overwrote slot A, because getNextSlotForTeam fell back to 'a'.
-  const raw = parseInt(document.getElementById('draftRounds').value);
-  draftState.rounds = Math.min(Math.max(Number.isFinite(raw) ? raw : 12, 1), LETTERS.length);
-  draftState.picks = [];
-  draftState.active = true;
-  saveDraftState();
+  const raw = parseInt(document.getElementById('draftRounds').value, 10);
+  const rounds = Math.min(Math.max(Number.isFinite(raw) ? raw : 12, 1), LETTERS.length);
+  const order = draftState.order.slice();
+  if (!draftConnected()) { alert('Starting a draft needs a connection, so every phone sees the same board.'); return; }
+  let res;
+  try {
+    res = await draftTxn(d => {
+      // Another device started a draft and has picks in it: do not wipe it from
+      // a setup screen that never saw it. Start Fresh passes force.
+      if (!force && d.picks.length) return false;
+      d.active = true; d.order = order; d.rounds = rounds; d.picks = [];
+    });
+  } catch (e) { alert('Could not start the draft: ' + e.message); return; }
+  applyDraftSnapshot(res.snapshot);
+  if (!res.committed) {
+    alert('Another device already has a draft with ' + draftState.picks.length
+      + ' picks. Resume it, or use Start Fresh to clear it.');
+    draftState.active = false;
+  }
   renderDraft();
 }
 
-function resumeDraft() {
-  draftState.active = true;
+async function resumeDraft() {
+  if (!draftConnected()) { draftState.active = true; renderDraft(); return; }
+  try {
+    const res = await draftTxn(d => { d.active = true; });
+    applyDraftSnapshot(res.snapshot);
+  } catch (e) { draftState.active = true; }
   renderDraft();
 }
 
 function clearAndStartDraft() {
   if (!confirm('Clear all draft picks and start fresh?')) return;
-  draftState.picks = [];
-  startDraft();
+  startDraft(true);
 }
 
-function getCurrentPicker() {
-  const totalPicks = draftState.picks.length;
-  const numTeams = draftState.order.length;
-  const round = Math.floor(totalPicks / numTeams); // 0-indexed
-  const posInRound = totalPicks % numTeams;
-  // Snake: even rounds go forward, odd rounds go backward
-  const idx = round % 2 === 0 ? posInRound : (numTeams - 1 - posInRound);
-  return { team: draftState.order[idx], round: round + 1, pick: totalPicks + 1 };
+function makePick() {
+  const inp = document.getElementById('draftPickInput');
+  const wrestler = inp ? inp.value.trim() : '';
+  if (!wrestler) return;
+
+  const { team, round } = getCurrentPicker();
+  const slot = getNextSlotForTeam(team);
+  if (!slot) {
+    showDraftStatus(`⚠ ${TEAM_LABELS[team]} already has ${LETTERS.length} wrestlers`, 'var(--red)');
+    return;
+  }
+  normalizeRosters();
+  const expected = draftState.picks.length;
+  const pick = { team, wrestler, round, slot };
+
+  // The board moves on at once; the commit catches up behind it.
+  draftState.picks.push(pick);
+  state.rosters[team][slot] = wrestler;
+  inp.value = '';
+  renderDraftLive(document.getElementById('draftContent'));
+
+  if (!draftConnected()) {
+    // No socket, so no way to check the turn against other phones. Keep the
+    // old behaviour — queue it — but say plainly what that risks.
+    showDraftStatus('⚠ Offline — pick queued on this phone. Don\'t pick on another phone until it syncs.', 'var(--gold)');
+    dbSet('aew_draft', draftState)
+      .then(() => dbSet('aew_roster_' + team, state.rosters[team]))
+      .catch(() => showDraftStatus('⚠ Save failed — check connection', 'var(--red)'));
+    return;
+  }
+  const pp = { pick, expected };
+  const epoch = draftEpoch;
+  pendingPicks.push(pp);
+  draftQueue = draftQueue
+    .then(() => commitPick(pick, expected, epoch))
+    .finally(() => { pendingPicks = pendingPicks.filter(x => x !== pp); });
 }
 
-function renderDraftLive(el) {
+async function commitPick(pick, expected, epoch) {
+  if (epoch !== draftEpoch) {
+    showDraftStatus(`⚠ The board changed — "${pick.wrestler}" was not recorded`, 'var(--red)');
+    await reloadRoster(pick.team);
+    rerenderDraft();
+    return;
+  }
+  let res;
+  try {
+    res = await draftTxn(d => {
+      if (!d.active || d.picks.length !== expected) return false;
+      const who = pickerAt(d, expected);
+      if (who.team !== pick.team) return false;
+      const slot = nextSlotIn(d, pick.team);
+      if (!slot) return false;
+      pick.slot = slot; pick.round = who.round;
+      d.picks.push(pick);
+    });
+  } catch (e) {
+    showDraftStatus('⚠ Pick not confirmed — ' + e.message, 'var(--red)');
+    return;
+  }
+  if (!res.committed) {
+    draftEpoch++;
+    pendingPicks = [];
+    applyDraftSnapshot(res.snapshot);
+    const theirs = draftState.picks[expected];
+    await reloadRoster(pick.team);
+    showDraftStatus(theirs
+      ? `⚠ ${TEAM_LABELS[theirs.team]} took ${theirs.wrestler} on that pick first — "${pick.wrestler}" was not recorded`
+      : `⚠ The draft changed on another device — "${pick.wrestler}" was not recorded`, 'var(--red)');
+    rerenderDraft();
+    return;
+  }
+  try {
+    await patchRoster(pick.team, { [pick.slot]: pick.wrestler });
+    touchUpdatedAt();
+    showDraftStatus('✓ Saved', 'var(--teal)');
+  } catch (e) {
+    showDraftStatus('⚠ Pick saved; roster not updated yet — Lock Rosters will fix it', 'var(--gold)');
+  }
+}
+
+function undoLastPick() {
+  if (!draftState.picks.length) return;
+  if (!draftConnected()) { showDraftStatus('⚠ Undo needs a connection', 'var(--red)'); return; }
+  const expected = draftState.picks.length;
+  const last = Object.assign({}, draftState.picks[expected - 1]);
+  draftState.picks.pop();
+  if (state.rosters[last.team]) state.rosters[last.team][last.slot] = '';
+  renderDraftLive(document.getElementById('draftContent'));
+  const epoch = draftEpoch;
+  draftQueue = draftQueue.then(() => epoch === draftEpoch
+    ? commitUndo(last, expected)
+    : dbRoot.child('aew_draft').once('value')
+        .then(s => { applyDraftSnapshot(s); return reloadRoster(last.team); })
+        .then(rerenderDraft, rerenderDraft));
+}
+
+async function commitUndo(last, expected) {
+  const same = (a, b) => a && b && a.team === b.team && a.slot === b.slot && a.wrestler === b.wrestler;
+  let res;
+  try {
+    res = await draftTxn(d => {
+      if (d.picks.length !== expected || !same(d.picks[expected - 1], last)) return false;
+      d.picks.pop();
+    });
+  } catch (e) { showDraftStatus('⚠ Undo not confirmed — ' + e.message, 'var(--red)'); return; }
+  if (!res.committed) {
+    draftEpoch++;
+    pendingPicks = [];
+    applyDraftSnapshot(res.snapshot);
+    await reloadRoster(last.team);
+    showDraftStatus('⚠ Someone picked in the meantime — undo not applied', 'var(--red)');
+    rerenderDraft();
+    return;
+  }
+  try {
+    await patchRoster(last.team, { [last.slot]: '' }, { [last.slot]: last.wrestler });
+    touchUpdatedAt();
+    showDraftStatus('✓ Undone', 'var(--teal)');
+  } catch (e) { showDraftStatus('⚠ Undone; roster not updated yet', 'var(--gold)'); }
+}
+
+function renderDraftLive(el, opts) {
+  opts = opts || {};
+  // A remote pick re-renders this for everyone. Without carrying these over it
+  // wiped whatever the picker was typing and popped the keyboard on every phone.
+  const prevInput = document.getElementById('draftPickInput');
+  const keepVal = prevInput ? prevInput.value : '';
+  const hadFocus = !!prevInput && document.activeElement === prevInput;
   const totalPicks = draftState.order.length * draftState.rounds;
   const isDone = draftState.picks.length >= totalPicks;
 
@@ -3432,7 +3928,7 @@ function renderDraftLive(el) {
         <div class="draft-clock-name ${team}">${TEAM_LABELS[team]}</div>
         <div class="draft-input-row">
           <input class="draft-input" id="draftPickInput" placeholder="Type wrestler name…" autocomplete="off"
-            onkeydown="if(event.key==='Enter')makePick()">
+            onkeydown="if(event.key==='Enter')makePick()" enterkeyhint="done">
           <button class="draft-pick-btn" id="draftPickBtn" onclick="makePick()">Pick</button>
         </div>
       </div>
@@ -3444,59 +3940,15 @@ function renderDraftLive(el) {
       ${boardHTML}
     </div>`;
 
-  // Auto-focus input
-  setTimeout(() => {
-    const inp = document.getElementById('draftPickInput');
-    if (inp) inp.focus();
-  }, 100);
-}
-
-function makePick() {
   const inp = document.getElementById('draftPickInput');
-  const wrestler = inp ? inp.value.trim() : '';
-  if (!wrestler) return;
-
-  const { team, round } = getCurrentPicker();
-  const slot = getNextSlotForTeam(team);
-  if (!slot) {
-    const el = document.getElementById('draftSaveStatus');
-    if (el) { el.textContent = `⚠ ${TEAM_LABELS[team]} already has ${LETTERS.length} wrestlers`; el.style.color = 'var(--red)'; }
-    return;
+  if (inp && opts.fromRemote) inp.value = keepVal;
+  showDraftStatus();
+  if (opts.fromRemote ? hadFocus : true) {
+    setTimeout(() => {
+      const i = document.getElementById('draftPickInput');
+      if (i) i.focus();
+    }, 100);
   }
-  normalizeRosters();
-
-  // Record pick and update roster immediately
-  draftState.picks.push({ team, wrestler, round, slot });
-  state.rosters[team][slot] = wrestler;
-
-  // Re-render instantly — no waiting for sheet
-  inp.value = '';
-  renderDraftLive(document.getElementById('draftContent'));
-
-  // Save to sheet in the background — don't block the draft
-  // .catch().then() ran the success branch after a failure too, so a dropped
-  // pick flashed "Save failed" and then immediately claimed "✓ Saved".
-  saveDraftState().then(() => {
-    const el = document.getElementById('draftSaveStatus');
-    if (el) { el.textContent = '✓ Saved'; el.style.color = 'var(--teal)'; setTimeout(() => { el.textContent = ''; }, 2000); }
-  }).catch(() => {
-    const el = document.getElementById('draftSaveStatus');
-    if (el) { el.textContent = '⚠ Save failed — check connection'; el.style.color = 'var(--red)'; }
-  });
-}
-
-function getNextSlotForTeam(team) {
-  const used = new Set(draftState.picks.filter(p => p.team === team).map(p => p.slot));
-  return LETTERS.find(l => !used.has(l)) || null;   // null = roster is full
-}
-
-function undoLastPick() {
-  if (!draftState.picks.length) return;
-  const last = draftState.picks.pop();
-  state.rosters[last.team][last.slot] = '';
-  // Re-render instantly, save in background
-  renderDraftLive(document.getElementById('draftContent'));
-  saveDraftState().catch(() => {});
 }
 
 function renderDraftComplete(el) {
@@ -3525,27 +3977,41 @@ function renderDraftComplete(el) {
 }
 
 async function finalizeDraft() {
-  // Rosters already written pick-by-pick, just save to sheet and close draft
-  draftState.active = false;
-  await saveDraftState();
-  await saveRosters();
+  if (!draftConnected()) { alert('Locking rosters needs a connection.'); return; }
+  await draftQueue;
+  let res;
+  try { res = await draftTxn(d => { d.active = false; }); }
+  catch (e) { alert('Could not lock rosters: ' + e.message); return; }
+  applyDraftSnapshot(res.snapshot);
+  // Rebuild every drafted slot from the pick log — the log is the record, and
+  // this repairs any roster write that failed during the draft. Slots nobody
+  // drafted are left alone.
+  const failures = [];
+  for (const t of TEAMS) {
+    const patch = {};
+    for (const p of draftState.picks) if (p.team === t && p.slot) patch[p.slot] = p.wrestler;
+    if (!Object.keys(patch).length) continue;
+    Object.assign(state.rosters[t], patch);
+    try { await patchRoster(t, patch); } catch (e) { failures.push(TEAM_LABELS[t]); }
+  }
+  touchUpdatedAt();
   renderRosters();
   renderWrestlerList();
-  alert('Rosters locked in! Head to the Roster tab to see the final teams.');
+  renderDraft();
+  alert(failures.length
+    ? 'Draft closed, but these rosters did not confirm: ' + failures.join(', ') + '. Press Lock again once connected.'
+    : 'Rosters locked in! Head to the Roster tab to see the final teams.');
 }
 
-function resetDraft() {
+async function resetDraft() {
   if (!confirm('Reset draft? This will clear all picks but keep current rosters.')) return;
-  draftState.active = false;
-  draftState.picks = [];
-  saveDraftState().then(() => renderDraft());
-}
-
-async function saveDraftState() {
-  state.draft = draftState;
-  // Save draft state first, then all four rosters sequentially (GAS throttles parallel)
-  await dbSet('aew_draft', draftState);
-  await saveRosters();
+  if (!draftConnected()) { alert('Resetting the draft needs a connection.'); return; }
+  await draftQueue;
+  try {
+    const res = await draftTxn(d => { d.active = false; d.picks = []; });
+    applyDraftSnapshot(res.snapshot);
+  } catch (e) { alert('Could not reset: ' + e.message); }
+  renderDraft();
 }
 
 // ─────────────────────────────────────────────
@@ -3758,6 +4224,12 @@ function renderArchive() {
 }
 
 function renderArchiveSub(sub) {
+  if (sub !== 'seasons' && !Object.keys(archiveData).length
+      && (archiveLoading || (!archiveRequested && archiveSeasons.length))) {
+    const panel = document.getElementById(`archive${sub.charAt(0).toUpperCase()+sub.slice(1)}`);
+    if (panel) panel.innerHTML = '<div class="empty">Loading past seasons…</div>';
+    return;
+  }
   if (sub === 'trophy') renderArchiveTrophy();
   else if (sub === 'hof') renderArchiveHof();
   else if (sub === 'vault') renderArchiveVault();
@@ -3771,7 +4243,9 @@ const archiveParseRaw = parseRaw;
 
 // An archive entry is either {name, url} — a season played on its own Google
 // Sheet, still read over Apps Script, chunk reassembly and all — or
-// {name, league}, a season sitting in this database. Both stay supported on
+// {name, league}, a season sitting in this database. A sheet season copied in
+// with "Copy to database" becomes {name, league, sourceUrl}: read from the
+// database, with the sheet kept as a fallback. Both stay supported on
 // purpose: the seasons already in the Trophy Room did not need migrating for
 // the live season to move, and migrating them would have been the one step in
 // this whole job that could actually lose something.
@@ -3853,21 +4327,113 @@ function shapeArchiveSeason(all) {
   return data;
 }
 
-async function loadArchiveSeasons() {
-  // Load connected season sheets
-  for (const s of archiveSeasons) {
+// ── loading ───────────────────────────────────────────────────────────────
+// Lazy: nothing is read until the Archive tab is first opened. Parallel: every
+// season is fetched at once (the one-at-a-time loop was for Apps Script's write
+// throttling, which never applied to reads). Cached: an archived season is
+// kept in localStorage and only re-read when its meta/updatedAt stamp moves —
+// one tiny read instead of the whole season on every visit.
+let archiveRequested = false;
+let archiveLoading = null;
+let archiveReloadQueued = false;
+let archiveFailed = [];
+const ARCH_CACHE_PREFIX = 'aew_arch_';
+const SHEET_ARCHIVE_MAX_AGE_MS = 7 * 24 * 3600 * 1000;
+
+function archiveEntryKey(e) {
+  return e.league ? 'league:' + slugLeague(e.league) : 'url:' + e.url;
+}
+function archiveCacheKey(e) {
+  const s = archiveEntryKey(e);
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return ARCH_CACHE_PREFIX + (h >>> 0).toString(36);
+}
+function readArchiveCache(e) {
+  try {
+    const c = JSON.parse(localStorage.getItem(archiveCacheKey(e)) || 'null');
+    return (c && c.key === archiveEntryKey(e) && c.data) ? c : null;
+  } catch(err) { return null; }
+}
+function writeArchiveCache(e, stamp, data) {
+  try {
+    localStorage.setItem(archiveCacheKey(e),
+      JSON.stringify({ key: archiveEntryKey(e), stamp, at: Date.now(), data }));
+  } catch(err) { /* quota — the cache is optional */ }
+}
+
+async function loadOneArchive(entry) {
+  const cached = readArchiveCache(entry);
+  if (entry.league) {
+    const league = slugLeague(entry.league);
     try {
-      const data = await fetchArchiveSeason(s);
-      if (data.isMultiSeason) {
-        // Flatten all historical seasons into archiveData directly
-        for (const [seasonName, seasonData] of Object.entries(data.seasons)) {
-          archiveData[seasonName] = seasonData;
-        }
-      } else {
-        archiveData[s.name] = data;
-      }
-    } catch(e) { console.warn('Archive load failed:', s.name); }
+      if (!fbDb) throw new Error('Not connected');
+      const stamp = (await onceWithin(fbDb.ref('leagues/' + league + '/meta/updatedAt'), 8000)).val();
+      if (cached && stamp != null && cached.stamp === stamp) return cached.data;
+      const data = shapeArchiveSeason(await fetchArchiveFromLeague(league));
+      writeArchiveCache(entry, stamp, data);
+      return data;
+    } catch (e) {
+      if (cached) return cached.data;
+      if (!entry.sourceUrl) throw e;
+      return shapeArchiveSeason(await fetchArchiveFromSheet(entry.sourceUrl));
+    }
   }
+  if (cached && Date.now() - cached.at < SHEET_ARCHIVE_MAX_AGE_MS) return cached.data;
+  try {
+    const data = shapeArchiveSeason(await fetchArchiveFromSheet(entry.url));
+    writeArchiveCache(entry, null, data);
+    return data;
+  } catch (e) {
+    if (cached) return cached.data;   // stale beats empty
+    throw e;
+  }
+}
+
+// The season being played is never shown as archived, even if listed.
+function archivedEntries() {
+  return archiveSeasons.filter(s => !(s.league && slugLeague(s.league) === leagueId));
+}
+
+function collectArchive(results) {
+  const next = {};
+  for (const r of results) {
+    if (!r.data) continue;
+    if (r.data.isMultiSeason) Object.assign(next, r.data.seasons);
+    else next[r.entry.name] = r.data;
+  }
+  return next;
+}
+
+async function loadArchiveSeasons() {
+  const entries = archivedEntries();
+  const results = await Promise.all(entries.map(entry =>
+    loadOneArchive(entry).then(data => ({ entry, data }),
+      err => { console.warn('Archive load failed:', entry.name, err && err.message); return { entry, err }; })));
+  archiveData = collectArchive(results);
+  archiveFailed = results.filter(r => r.err).map(r => r.entry);
+  if (activeArchiveVault && !archiveData[activeArchiveVault]) activeArchiveVault = null;
+}
+
+function refreshArchive() {
+  archiveRequested = true;
+  if (archiveLoading) { archiveReloadQueued = true; return archiveLoading; }
+  // Paint from cache first so the Trophy Room appears instantly on a revisit.
+  if (!Object.keys(archiveData).length) {
+    archiveData = collectArchive(archivedEntries().map(entry => {
+      const c = readArchiveCache(entry);
+      return { entry, data: c && c.data };
+    }));
+  }
+  archiveLoading = loadArchiveSeasons()
+    .catch(() => {})
+    .finally(() => {
+      archiveLoading = null;
+      if (currentTabName === 'archive') renderArchive();
+      if (archiveReloadQueued) { archiveReloadQueued = false; refreshArchive(); }
+    });
+  if (currentTabName === 'archive') renderArchive();
+  return archiveLoading;
 }
 
 // Historical (pre-app) seasons are read by fetchArchiveSeason via the
@@ -4121,22 +4687,37 @@ function renderArchiveShame() {
 
 function renderArchiveSeasons() {
   const el = document.getElementById('archiveSeasons');
+  const failedKeys = new Set(archiveFailed.map(archiveEntryKey));
+  const sheetOnly = archiveSeasons.filter(s => s.url && !s.league);
+  const row = (s) => {
+    const key = archiveEntryKey(s);
+    const live = s.league && slugLeague(s.league) === leagueId;
+    const where = s.league
+      ? 'season id · ' + s.league + (s.sourceUrl ? ' · copied from sheet' : '')
+      : 'Google Sheet · ' + s.url;
+    return `
+        <div class="archive-season-url-row" style="flex-wrap:wrap;">
+          <span class="archive-season-url-name">${esc(s.name)}</span>
+          <span class="archive-season-url-val" title="${escAttr(s.url || s.sourceUrl || s.league)}">${esc(where)}${live ? ' · being played now' : ''}${failedKeys.has(key) ? ' · <span style="color:var(--red)">could not load</span>' : ''}</span>
+          ${s.url && !s.league ? `<button class="btn-secondary" style="font-size:11px;padding:4px 10px;" data-key="${escAttr(key)}" onclick="importSheetSeason(this.dataset.key)">Copy to database</button>` : ''}
+          <button class="archive-del-btn" data-key="${escAttr(key)}" onclick="removeArchiveSeason(this.dataset.key)" aria-label="Remove ${escAttr(s.name)}">✕</button>
+        </div>`;
+  };
   el.innerHTML = `
     <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;">
       <div style="font-family:'Inter',sans-serif;font-size:12px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:14px;">Connected Seasons</div>
-      <div id="archiveSeasonList">${archiveSeasons.length ? archiveSeasons.map((s,i)=>`
-        <div class="archive-season-url-row">
-          <span class="archive-season-url-name">${esc(s.name)}</span>
-          <span class="archive-season-url-val">${esc(s.url)}</span>
-          <button class="archive-del-btn" onclick="removeArchiveSeason(${i})">✕</button>
-        </div>`).join('') : '<div class="empty" style="padding:12px;">No seasons yet</div>'}</div>
+      <div id="archiveSeasonList">${archiveSeasons.length ? archiveSeasons.map(row).join('') : '<div class="empty" style="padding:12px;">No seasons yet</div>'}</div>
+      ${sheetOnly.length ? `
+      <p style="font-size:12px;color:var(--muted);margin:12px 0 8px;">Seasons still on Google Sheets load through Apps Script, which is slow. Copying one into the database is read-only on the sheet — nothing there is changed or deleted, and the sheet stays as a fallback.</p>
+      ${sheetOnly.length > 1 ? `<button class="btn-secondary" style="font-size:12px;" onclick="importAllSheetSeasons()">Copy all ${sheetOnly.length} sheet seasons</button>` : ''}` : ''}
+      <div id="archiveImportMsg" style="font-size:12px;font-family:'Inter',sans-serif;letter-spacing:0.5px;margin-top:8px;display:none;white-space:pre-line;"></div>
     </div>
     <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;">
       <div style="font-family:'Inter',sans-serif;font-size:12px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:14px;">Add a Past Season</div>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Each past season needs its Google Sheet URL. The same Apps Script you used for this season works fine. Seasons added here are saved to the league sheet, so everyone's app sees them.</p>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Enter a season id from this database (e.g. road-chip), or the Apps Script URL of a season played on its own Google Sheet. The list is shared, so everyone's app sees it.</p>
       <div style="display:flex;flex-direction:column;gap:8px;">
         <input type="text" id="archiveNewName" placeholder="Season name (e.g. Road Chip)" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;">
-        <input type="text" id="archiveNewUrl" placeholder="Apps Script URL, or season id" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;">
+        <input type="text" id="archiveNewUrl" placeholder="Season id, or Apps Script URL" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;">
         <button class="btn-primary" onclick="addArchiveSeason()">Add Season</button>
         <div id="archiveAddMsg" style="font-size:12px;font-family:'Inter',sans-serif;letter-spacing:1px;display:none;"></div>
       </div>
@@ -4150,60 +4731,123 @@ async function addArchiveSeason() {
   const show = (text, colour) => {
     msg.textContent = text; msg.style.color = colour; msg.style.display = 'block';
   };
-  if (!input) { show('Enter a sheet URL or a season id', 'var(--red)'); return; }
-  // An Apps Script URL means a season played on its own sheet; anything else is
-  // read as a season id in this database.
+  const hideSoon = () => setTimeout(() => { msg.style.display = 'none'; }, 4000);
+  if (!input) { show('Enter a season id or a sheet URL', 'var(--red)'); return; }
   const entry = /^https?:\/\//.test(input)
     ? { url: input }
     : { league: slugLeague(input) };
-  const already = archiveSeasons.some(s =>
-    (entry.url && s.url === entry.url) || (entry.league && s.league === entry.league));
-  if (already) {
-    show('That season is already connected', 'var(--red)');
-    setTimeout(()=>{ msg.style.display='none'; }, 4000);
-    return;
-  }
+  const sameAs = s => (entry.url && (s.url === entry.url || s.sourceUrl === entry.url))
+    || (entry.league && s.league === entry.league);
+  if (archiveSeasons.some(sameAs)) { show('That season is already connected', 'var(--red)'); hideSoon(); return; }
   if (entry.league && entry.league === leagueId) {
-    show('That is the season currently being played', 'var(--red)');
-    setTimeout(()=>{ msg.style.display='none'; }, 4000);
-    return;
+    show('That is the season currently being played', 'var(--red)'); hideSoon(); return;
   }
   show('Testing…', 'var(--gold)');
+  let data;
+  try { data = await fetchArchiveSeason(entry); }
+  catch (e) { show(`✗ Could not read that season: ${e.message}`, 'var(--red)'); hideSoon(); return; }
+  if (!data.isMultiSeason && entry.league && !Object.keys(data.rosters).length && !data.schedule.length) {
+    show(`✗ There is no saved season with the id "${entry.league}"`, 'var(--red)'); hideSoon(); return;
+  }
+  const record = data.isMultiSeason
+    ? Object.assign({ name: name || 'Historical Archive', isMultiSeason: true }, entry)
+    : Object.assign({ name: name || data.seasonName || 'Unknown Season' }, entry);
   try {
-    const data = await fetchArchiveSeason(entry);
-    if (data.isMultiSeason) {
-      archiveSeasons.push(Object.assign({ name: name || 'Historical Archive', isMultiSeason: true }, entry));
-      await saveArchiveSeasons();
-      for (const [sName, sData] of Object.entries(data.seasons)) archiveData[sName] = sData;
-      show(`✓ ${Object.keys(data.seasons).length} historical seasons loaded`, 'var(--teal)');
-    } else {
-      const label = name || data.seasonName || 'Unknown Season';
-      archiveSeasons.push(Object.assign({ name: label }, entry));
-      await saveArchiveSeasons();
-      archiveData[label] = data;
-      show(`✓ "${label}" added`, 'var(--teal)');
-    }
-    document.getElementById('archiveNewName').value='';
-    document.getElementById('archiveNewUrl').value='';
-    renderArchive();
-  } catch(e) { show(`✗ Could not read that season: ${e.message}`, 'var(--red)'); }
-  setTimeout(()=>{ msg.style.display='none'; }, 4000);
+    await mutateArchive(list => list.some(sameAs) ? null : list.concat([record]));
+  } catch (e) { show(`✗ Could not save the list: ${e.message}`, 'var(--red)'); hideSoon(); return; }
+  if (entry.url) writeArchiveCache(record, null, data);
+  show(data.isMultiSeason
+    ? `✓ ${Object.keys(data.seasons).length} historical seasons loaded`
+    : `✓ "${record.name}" added`, 'var(--teal)');
+  document.getElementById('archiveNewName').value = '';
+  document.getElementById('archiveNewUrl').value = '';
+  refreshArchive();
+  hideSoon();
 }
 
-async function removeArchiveSeason(idx) {
-  const entry = archiveSeasons[idx];
+// By identity, not index: the shared list can shift under a stale screen.
+async function removeArchiveSeason(key) {
+  const entry = archiveSeasons.find(s => archiveEntryKey(s) === key);
   if (!entry) return;
-  archiveSeasons.splice(idx,1);
-  try { await saveArchiveSeasons(); }
-  catch(e) { console.warn('Archive list save failed — removed locally only'); }
-  // A multi-season sheet contributes one archiveData entry PER season under its
-  // own name, so deleting by the connection's label left every one of them behind.
-  // Rebuild from what's still connected instead of guessing which keys it owned.
+  if (!confirm(`Remove "${entry.name}" from the archive? Its data is not deleted.`)) return;
+  try { await mutateArchive(list => list.filter(s => archiveEntryKey(s) !== key)); }
+  catch (e) { alert('Could not update the archive list: ' + e.message); return; }
   archiveData = {};
   activeArchiveVault = null;
+  refreshArchive();
   renderArchive();
-  await loadArchiveSeasons();
-  renderArchive();
+}
+
+// Copies a sheet season into leagues/sheet-<name>. The sheet is only read.
+// One atomic write, verified value-for-value by reading it back, and only then
+// is the archive entry repointed — with the sheet URL kept as a fallback.
+async function importSheetSeason(key, { quiet = false } = {}) {
+  const msg = document.getElementById('archiveImportMsg');
+  const say = (text, colour) => {
+    if (!msg) return;
+    msg.textContent = text; msg.style.color = colour; msg.style.display = 'block';
+  };
+  const entry = archiveSeasons.find(s => archiveEntryKey(s) === key);
+  if (!entry || !entry.url || entry.league) return false;
+  if (!fbDb || !fbConnected) { say('✗ Offline — copying needs a connection', 'var(--red)'); return false; }
+  const label = entry.name || 'season';
+  try {
+    say(`Reading "${label}" from its sheet…`, 'var(--gold)');
+    const all = await fetchArchiveFromSheet(entry.url);
+    const keys = Object.keys(all);
+    if (!keys.length) throw new Error('the sheet returned no data');
+    const bad = keys.filter(k => !k || /[.$#\[\]\/]/.test(k));
+    if (bad.length) throw new Error('keys Firebase cannot store: ' + bad.slice(0, 3).join(', '));
+
+    const base = 'sheet-' + slugLeague(label);
+    let id = base, n = 2;
+    while ((await onceWithin(fbDb.ref('leagues/' + id + '/data'), 8000)).exists()) id = base + '-' + n++;
+
+    say(`Writing ${keys.length} keys to ${id}…`, 'var(--gold)');
+    const TS = firebase.database.ServerValue.TIMESTAMP;
+    const updates = {};
+    for (const k of keys) updates['leagues/' + id + '/data/' + k] = JSON.stringify(all[k]);
+    updates['leagues/' + id + '/meta/importedFrom'] = entry.url;
+    updates['leagues/' + id + '/meta/importedAt'] = TS;
+    updates['leagues/' + id + '/meta/updatedAt'] = TS;
+    await withinMs(fbDb.ref().update(updates), 30000);
+
+    say('Verifying…', 'var(--gold)');
+    const back = await fetchArchiveFromLeague(id);
+    const missing = keys.filter(k => JSON.stringify(back[k]) !== JSON.stringify(all[k]));
+    if (missing.length || Object.keys(back).length !== keys.length) {
+      throw new Error(`verification failed on ${missing.length || 'extra'} key(s) — the archive still reads from the sheet`);
+    }
+    if (JSON.stringify(shapeArchiveSeason(back)) !== JSON.stringify(shapeArchiveSeason(all))) {
+      throw new Error('verification failed on the assembled season — the archive still reads from the sheet');
+    }
+
+    await mutateArchive(list => list.map(s => archiveEntryKey(s) !== key ? s
+      : Object.assign({ name: s.name }, s.isMultiSeason ? { isMultiSeason: true } : {},
+                      { league: id, sourceUrl: s.url })));
+    if (!quiet) say(`✓ "${label}" copied to ${id} and verified. The sheet is untouched.`, 'var(--teal)');
+    refreshArchive();
+    return id;
+  } catch (e) {
+    say(`✗ "${label}": ${e.message}`, 'var(--red)');
+    return false;
+  }
+}
+
+async function importAllSheetSeasons() {
+  const keys = archiveSeasons.filter(s => s.url && !s.league).map(archiveEntryKey);
+  if (!confirm(`Copy ${keys.length} sheet seasons into the database? The sheets are only read.`)) return;
+  const done = [], failed = [];
+  for (const k of keys) {
+    const name = (archiveSeasons.find(s => archiveEntryKey(s) === k) || {}).name || k;
+    (await importSheetSeason(k, { quiet: true }) ? done : failed).push(name);
+  }
+  const msg = document.getElementById('archiveImportMsg');
+  if (msg) {
+    msg.style.display = 'block';
+    msg.style.color = failed.length ? 'var(--red)' : 'var(--teal)';
+    msg.textContent = `✓ ${done.length} copied and verified` + (failed.length ? `\n✗ ${failed.length} not copied: ${failed.join(', ')}` : '');
+  }
 }
 
 
@@ -4214,90 +4858,93 @@ async function startNewSeason() {
   const show = (text, colour) => {
     msg.textContent = text; msg.style.color = colour; msg.style.display = 'inline';
   };
-  if (!rawId || !name) {
-    show('Fill in both fields', 'var(--red)');
-    setTimeout(() => msg.style.display = 'none', 3000); return;
-  }
-  if (!dbRoot) { show('Not connected yet', 'var(--red)'); return; }
+  const hideSoon = (ms) => setTimeout(() => msg.style.display = 'none', ms || 4000);
+  if (!rawId) { show('Enter a season id', 'var(--red)'); hideSoon(3000); return; }
+  if (!fbDb || !dbRoot) { show('Not connected yet', 'var(--red)'); return; }
+  if (!fbConnected) { show('Offline — starting a season needs a connection', 'var(--red)'); return; }
   const newLeague = slugLeague(rawId);
   const oldLeague = leagueId;
   const oldName = state.seasonName || 'Previous Season';
-  if (newLeague === oldLeague) {
-    show('That is the current season id', 'var(--red)');
-    setTimeout(() => msg.style.display = 'none', 3000); return;
-  }
+  if (newLeague === oldLeague) { show('That is the current season id', 'var(--red)'); hideSoon(3000); return; }
 
   const keepRosters  = !!document.getElementById('newSeasonKeepRosters')?.checked;
   const archiveFirst = !!document.getElementById('newSeasonArchiveCurrent')?.checked;
 
-  if (!confirm([
-    `Start new season "${name}" as ${newLeague}?`,
-    '',
-    archiveFirst ? `• "${oldName}" moves to the Archive` : '• Current season will NOT be archived',
-    keepRosters ? '• Current rosters carry over' : '• Rosters clear for a fresh draft',
-    '• The old season stays in the database untouched',
-  ].join('\n'))) return;
+  // An id that already holds a season is never silently overwritten or resumed.
+  show('Checking…', 'var(--gold)');
+  let existing;
+  try { existing = await onceWithin(fbDb.ref('leagues/' + newLeague + '/data'), 8000); }
+  catch (e) { show('✗ Could not check that id: ' + e.message, 'var(--red)'); hideSoon(); return; }
+  const resuming = existing.exists();
+  const existingName = resuming
+    ? String(parseRaw((existing.val() || {}).aew_seasonname) || newLeague) : '';
+  if (!resuming && !name) { show('Enter a name for the new season', 'var(--red)'); hideSoon(3000); return; }
+  msg.style.display = 'none';
+
+  const lines = resuming
+    ? [`"${newLeague}" already has a saved season ("${existingName}").`,
+       '',
+       `Switch everyone back to it? Nothing in it is changed or cleared,`,
+       'and the name and roster options are ignored.',
+       archiveFirst ? `• "${oldName}" moves to the Archive` : '• Current season will NOT be archived']
+    : [`Start new season "${name}" as ${newLeague}?`,
+       '',
+       archiveFirst ? `• "${oldName}" moves to the Archive` : '• Current season will NOT be archived',
+       keepRosters ? '• Current rosters carry over' : '• Rosters clear for a fresh draft',
+       '• The old season stays in the database untouched'];
+  lines.push('• Every phone switches to it as soon as it is online');
+  if (!confirm(lines.join('\n'))) return;
 
   show('Starting…', 'var(--gold)');
-
+  const S = v => JSON.stringify(v);
+  const TS = firebase.database.ServerValue.TIMESTAMP;
+  let list = archiveSeasons.slice();
   try {
-    // Record the outgoing season in the archive list, and write that list to the
-    // OLD league before switching — otherwise the entry lands in the new season
-    // and the one just finished disappears from the Trophy Room.
-    if (archiveFirst && !archiveSeasons.some(s => s.league === oldLeague)) {
-      archiveSeasons.push({ name: oldName, league: oldLeague });
-      await saveArchiveSeasons();
-    }
+    const snap = await onceWithin(fbDb.ref('archive'), 8000);
+    list = parseArchiveList(snap.val()) || list;
+  } catch (e) { /* use this device's copy */ }
+  if (archiveFirst && !list.some(s => s.league === oldLeague)) list.push({ name: oldName, league: oldLeague });
+  list = list.filter(s => s.league !== newLeague);   // a season being played is not archived
 
-    detachLive();
-    leagueId = newLeague;
-    localStorage.setItem('aew_fb_config',
-      JSON.stringify({ firebase: firebaseConfig, leagueId }));
-    const idInput = document.getElementById('leagueIdInput');
-    if (idInput) idInput.value = leagueId;
-    dbRoot = fbDb.ref(dbPath());
-
-    pendingWrites.clear();
-    state.scores = {};
-    state.schedule = [];
-    state.seasonName = name;
-    if (!keepRosters) {
-      // A new season used to inherit last season's roster until a draft happened
-      // to overwrite each slot, so the Rosters tab showed last year's names
-      // against this year's empty scores.
-      for (const t of TEAMS) {
-        state.rosters[t] = {};
-        LETTERS.forEach(l => { state.rosters[t][l] = ''; });
-      }
-    }
-    state.swaps = { tokens: { maria:0, ryan:0, josh:0, erik:0 }, history: [] };
-    state.draft = null;
-    draftState = { active:false, order:['maria','ryan','josh','erik'], rounds:12, picks:[] };
-    window._rostersInSheet = false;
-
-    await loadFromDb();
-    await dbSet('aew_seasonname', name);
-    // A brand-new season has no rosters of its own; publish whatever we are
-    // starting with so the other players' devices agree rather than each
-    // seeding their own.
-    if (!window._rostersInSheet) await saveRosters();
-    // The archive list belongs to the league, not the device, so it follows onto
-    // the new season — including the entry for the one just closed.
-    await saveArchiveSeasons();
-    bindLiveListener();
-    setSyncStatus('Live', 'ok');
-
-    show(`✓ Season "${name}" started`, 'var(--teal)');
-    settingsLoaded = false;
-    archiveData = {};
-    activeArchiveVault = null;
-    renderAll();
-    loadArchiveSeasons().then(() => renderArchive()).catch(() => {});
-    setTimeout(() => msg.style.display = 'none', 4000);
-  } catch(e) {
-    show(`✗ Could not start: ${e.message}`, 'var(--red)');
-    setTimeout(() => msg.style.display = 'none', 4000);
+  // One atomic write: the new season's starting data, the archive list, and the
+  // pointer that moves every device. It lands whole or not at all — no device
+  // can switch to a half-built league.
+  const updates = { currentLeague: newLeague, archive: S(list) };
+  if (!resuming) {
+    const d = 'leagues/' + newLeague + '/data/';
+    const rosters = keepRosters ? state.rosters : blankRosters();
+    updates[d + 'aew_seasonname'] = S(name);
+    updates[d + 'aew_schedule'] = S([]);
+    for (const t of TEAMS) updates[d + 'aew_roster_' + t] = S(rosters[t] || {});
+    updates[d + 'aew_draft'] = S(blankDraft());
+    updates[d + 'aew_swaps'] = S(blankSwaps());
+    updates['leagues/' + newLeague + '/meta/createdAt'] = TS;
   }
+  updates['leagues/' + newLeague + '/meta/updatedAt'] = TS;
+
+  ownPointerWrite = true;
+  try {
+    await withinMs(fbDb.ref().update(updates), 15000);
+  } catch (e) {
+    ownPointerWrite = false;
+    const denied = /permission|denied/i.test(String(e && e.message));
+    show(denied
+      ? '✗ The database refused this. Publish the updated security rules (Settings → Database Connection), then try again.'
+      : '✗ ' + e.message + ' — if the connection returns it will still apply, and every phone will switch then', 'var(--red)');
+    return;
+  }
+  ownPointerWrite = false;
+  archiveSeasons = list; archiveListKnown = true; cacheArchiveList();
+  // The pointer listener has usually begun the switch already; make sure.
+  await followLeague(newLeague, { announce: false });
+
+  show(resuming ? `✓ Switched everyone to "${existingName}"` : `✓ Season "${name}" started`, 'var(--teal)');
+  document.getElementById('newSeasonId').value = '';
+  document.getElementById('newSeasonNameInput').value = '';
+  archiveData = {};
+  activeArchiveVault = null;
+  if (archiveRequested) refreshArchive();
+  hideSoon();
 }
 
 let currentTabName = 'leaderboard';
@@ -4333,7 +4980,10 @@ async function switchTab(name) {
   if (name === 'settings') _applySettingsTab();
   if (name === 'draft') renderDraft();
   if (name === 'swaps') renderSwaps();
-  if (name === 'archive') renderArchive();
+  if (name === 'archive') {
+    if (!archiveRequested) refreshArchive();
+    renderArchive();
+  }
 
   // Only sync if the data could plausibly have moved. Previously every single
   // tab tap read the entire sheet. syncNow commits pending taps first — a sync
@@ -4384,9 +5034,36 @@ async function saveBackendConfig() {
 
   const idVal = document.getElementById('leagueIdInput').value.trim();
   const nextLeague = idVal ? slugLeague(idVal) : leagueId;
+  const sameDb = !!fbDb && cfg.databaseURL === firebaseConfig.databaseURL;
+  const sameCfg = sameDb && JSON.stringify(cfg) === JSON.stringify(firebaseConfig);
+
+  // Same database, different season: that is a change for everyone, so it goes
+  // through the shared pointer — and only to a season that exists. Starting a
+  // new one is the New Season block's job.
+  if (sameDb && nextLeague !== leagueId) {
+    let snap;
+    try { snap = await onceWithin(fbDb.ref('leagues/' + nextLeague + '/data'), 8000); }
+    catch (e) { say('--red', 'Could not check that season: ' + e.message); return; }
+    if (!snap.exists()) {
+      say('--red', 'No season "' + nextLeague + '" in this database. To create one, use Start New Season below.');
+      return;
+    }
+    if (!confirm('Switch every device to season "' + nextLeague + '"?')) return;
+    ownPointerWrite = true;
+    try { await withinMs(fbDb.ref('currentLeague').set(nextLeague), 10000); ownPointerWrite = false; }
+    catch (e) {
+      ownPointerWrite = false;
+      say('--red', /permission|denied/i.test(String(e && e.message))
+        ? 'The database refused this — publish the updated security rules first.'
+        : e.message);
+      return;
+    }
+    await followLeague(nextLeague, { announce: false });
+  }
 
   localStorage.setItem('aew_fb_config',
     JSON.stringify({ firebase: cfg, leagueId: nextLeague }));
+  if (sameCfg) { say('--teal', 'Connected to season ' + leagueId); return; }
 
   // Firebase cannot be re-initialised with a different project on a live page,
   // and half-swapping it leaves listeners bound to the old database while
