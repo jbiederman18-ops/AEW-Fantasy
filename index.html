@@ -1602,7 +1602,7 @@ function isKeyHeld(key) {
 // ─────────────────────────────────────────────
 // The one number the whole shell hangs off. window.innerHeight is the actual
 // visible height in iOS standalone, where 100vh is not.
-const BUILD_ID = 'b0916-seasons';
+const BUILD_ID = 'b0916-finals';
 
 function toggleDiag() {
   const p = document.getElementById('diagPanel');
@@ -1662,6 +1662,13 @@ async function checkBackend() {
   lines.push('AUTH   ' + (user ? 'OK    anonymous, uid ' + user.uid.slice(0, 8) + '…'
                                : 'FAIL  not signed in'));
   lines.push('SOCKET ' + (fbConnected ? 'OK    connected' : 'FAIL  not connected'));
+  if (backupUrl) {
+    try {
+      const v = await backendVersion();
+      lines.push('SCRIPT ' + (v >= 4 ? 'OK    v' + v + ' (final backups enabled)'
+        : 'OLD   v' + v + ' — redeploy apps-script-v4 for final backups'));
+    } catch (e) { lines.push('SCRIPT FAIL  ' + e.message); }
+  }
   lines.push('SEASON ' + (pointerError
     ? 'FAIL  ' + pointerError + '\n             publish the updated rules from Settings'
     : 'OK    live season ' + leagueId + ' (shared by every device)'));
@@ -2655,7 +2662,28 @@ function backupPayload() {
   return out;
 }
 
-async function postBackup(payload) {
+// Above the season data, so not in backupPayload(): the archive list and the
+// live-season pointer. Sent with each daily backup; the v4 script writes them to
+// their own meta_<date> tab. A v3 script ignores the field.
+function backupMeta() {
+  const m = { currentLeague: JSON.stringify(leagueId) };
+  if (archiveListKnown) m.archive = JSON.stringify(archiveSeasons);
+  return m;
+}
+
+// The script's version, asked once per session. Final backups need v4: a v3
+// script ignores `kind` and would file the season under today's bk_ tab, where
+// it would be pruned — the exact loss a final backup exists to prevent.
+let backendVersionCache = null;
+async function backendVersion() {
+  if (backendVersionCache !== null) return backendVersionCache;
+  const body = await sheetFetch(`${backupUrl}?action=ping`, {}, READ_RETRIES);
+  if (!body || body.ok !== true) throw new Error('the backup script did not answer ping');
+  backendVersionCache = Number(body.version) || 0;
+  return backendVersionCache;
+}
+
+async function postBackup(payload, extra) {
   if (!backupUrl) throw new Error('No backup URL configured');
   const r = await fetch(backupUrl, {
     method: 'POST',
@@ -2663,7 +2691,7 @@ async function postBackup(payload) {
     // type triggers a preflight OPTIONS, which Apps Script does not answer, so
     // the request would fail before it was ever sent.
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ action: 'backup', league: leagueId, payload }),
+    body: JSON.stringify(Object.assign({ action: 'backup', league: leagueId, payload }, extra || {})),
   });
   const text = await r.text();
   let body;
@@ -2695,7 +2723,7 @@ async function maybeDailyBackup() {
   catch (e) { return; }
   if (!claimed) return;
   try {
-    const res = await postBackup(payload);
+    const res = await postBackup(payload, { meta: backupMeta() });
     window._lastBackupResult = res;
   } catch (e) {
     // Hand the slot back, so the next launch retries today rather than the
@@ -2715,14 +2743,68 @@ async function runBackupNow() {
   el.textContent = 'backing up ' + n + ' keys…';
   const t0 = Date.now();
   try {
-    const res = await postBackup(payload);
+    const res = await postBackup(payload, { meta: backupMeta() });
     try { await fbDb.ref('leagues/' + leagueId + '/meta/lastBackup').set(localDateStamp()); } catch (e) {}
     el.textContent = 'OK    ' + (Date.now() - t0) + 'ms\n'
       + 'sheet ' + res.sheet + '\n'
+      + (res.meta ? 'meta  ' + res.meta + '\n'
+                  : 'meta  not stored — the script is older than v4\n')
       + 'keys  ' + res.keys
       + (res.pruned ? '\nolder ' + res.pruned + ' backup(s) pruned' : '');
   } catch (e) {
     el.textContent = 'FAIL  ' + (Date.now() - t0) + 'ms\n' + e.message;
+  }
+}
+
+// ── final backups ─────────────────────────────────────────────────────────
+// One permanent copy of a season on the backup sheet, taken when it stops being
+// the live season (and so stops getting daily backups). Read straight from the
+// database rather than from this device's state, so it is the season as stored,
+// not as this phone last saw it.
+let archiveFinals = {};   // league id → meta.finalBackup record
+
+async function finalBackupLeague(id) {
+  if (!backupUrl) throw new Error('no backup sheet is configured');
+  if (!fbDb || !fbConnected) throw new Error('offline');
+  const v = await backendVersion();
+  if (v < 4) throw new Error('the backup script is v' + v + ' — redeploy apps-script-v4 to enable final backups');
+  const snap = await onceWithin(fbDb.ref('leagues/' + id + '/data'), 10000);
+  const raw = snap.val() || {};
+  const payload = {};
+  for (const k in raw) payload[k] = typeof raw[k] === 'string' ? raw[k] : JSON.stringify(raw[k]);
+  const n = Object.keys(payload).length;
+  // Same floor as the daily backup: never file a partial season as the final one.
+  if (n < 4) throw new Error('only ' + n + ' keys found for ' + id + ' — refusing to store a partial season');
+  const res = await withinMs(postBackup(payload, { kind: 'final', league: id }), 60000);
+  if (res.kind !== 'final') {
+    throw new Error('the script stored it as ' + (res.sheet || 'a daily backup') + ', not a final — redeploy apps-script-v4');
+  }
+  const record = { sheet: res.sheet, keys: res.keys, at: firebase.database.ServerValue.TIMESTAMP };
+  try { await withinMs(fbDb.ref('leagues/' + id + '/meta/finalBackup').set(record), 8000); }
+  catch (e) { /* the tab exists either way; this only drives the Seasons list */ }
+  archiveFinals[id] = { sheet: res.sheet, keys: res.keys, at: Date.now() };
+  return res;
+}
+
+async function saveFinalBackup(key) {
+  const entry = archiveSeasons.find(s => archiveEntryKey(s) === key);
+  if (!entry || !entry.league) return;
+  const msg = document.getElementById('archiveImportMsg');
+  const say = (text, colour) => {
+    if (!msg) return;
+    msg.textContent = text; msg.style.color = colour; msg.style.display = 'block';
+  };
+  say(`Saving a permanent backup of "${entry.name}"…`, 'var(--gold)');
+  try {
+    const res = await finalBackupLeague(slugLeague(entry.league));
+    say(`✓ "${entry.name}" saved to the sheet as ${res.sheet} (${res.keys} keys). It is never pruned.`, 'var(--teal)');
+  } catch (e) {
+    say(`✗ "${entry.name}": ${e.message}`, 'var(--red)');
+  }
+  if (currentTabName === 'archive' && activeArchiveSub === 'seasons') {
+    const keepMsg = msg ? [msg.textContent, msg.style.color] : null;
+    renderArchive();
+    if (keepMsg) say(keepMsg[0], keepMsg[1]);
   }
 }
 
@@ -4368,7 +4450,10 @@ async function loadOneArchive(entry) {
     const league = slugLeague(entry.league);
     try {
       if (!fbDb) throw new Error('Not connected');
-      const stamp = (await onceWithin(fbDb.ref('leagues/' + league + '/meta/updatedAt'), 8000)).val();
+      const meta = (await onceWithin(fbDb.ref('leagues/' + league + '/meta'), 8000)).val() || {};
+      if (meta.finalBackup) archiveFinals[league] = meta.finalBackup;
+      else delete archiveFinals[league];
+      const stamp = meta.updatedAt === undefined ? null : meta.updatedAt;
       if (cached && stamp != null && cached.stamp === stamp) return cached.data;
       const data = shapeArchiveSeason(await fetchArchiveFromLeague(league));
       writeArchiveCache(entry, stamp, data);
@@ -4700,6 +4785,7 @@ function renderArchiveSeasons() {
           <span class="archive-season-url-name">${esc(s.name)}</span>
           <span class="archive-season-url-val" title="${escAttr(s.url || s.sourceUrl || s.league)}">${esc(where)}${live ? ' · being played now' : ''}${failedKeys.has(key) ? ' · <span style="color:var(--red)">could not load</span>' : ''}</span>
           ${s.url && !s.league ? `<button class="btn-secondary" style="font-size:11px;padding:4px 10px;" data-key="${escAttr(key)}" onclick="importSheetSeason(this.dataset.key)">Copy to database</button>` : ''}
+          ${finalBackupCell(s, key, live)}
           <button class="archive-del-btn" data-key="${escAttr(key)}" onclick="removeArchiveSeason(this.dataset.key)" aria-label="Remove ${escAttr(s.name)}">✕</button>
         </div>`;
   };
@@ -4722,6 +4808,19 @@ function renderArchiveSeasons() {
         <div id="archiveAddMsg" style="font-size:12px;font-family:'Inter',sans-serif;letter-spacing:1px;display:none;"></div>
       </div>
     </div>`;
+}
+
+// A database season with no sheet behind it needs a final backup to be safe
+// once its daily backups are pruned. Seasons copied from a sheet still have
+// that sheet, so they don't.
+function finalBackupCell(s, key, live) {
+  if (!s.league || s.sourceUrl || live || !backupUrl) return '';
+  const rec = archiveFinals[slugLeague(s.league)];
+  if (rec && rec.sheet) {
+    return `<span class="archive-season-url-val" style="flex-basis:100%;color:var(--teal);">✓ permanent backup · ${esc(rec.sheet)}</span>`;
+  }
+  if (!archiveRequested || archiveLoading) return '';
+  return `<button class="btn-secondary" style="font-size:11px;padding:4px 10px;" data-key="${escAttr(key)}" onclick="saveFinalBackup(this.dataset.key)">Save final backup</button>`;
 }
 
 async function addArchiveSeason() {
@@ -4895,6 +4994,26 @@ async function startNewSeason() {
   lines.push('• Every phone switches to it as soon as it is online');
   if (!confirm(lines.join('\n'))) return;
 
+  // Once this season stops being live it stops getting daily backups, and its
+  // last ones are pruned about two weeks later. Take a permanent copy first.
+  let finalNote = '';
+  if (backupUrl) {
+    show(`Saving a permanent backup of "${oldName}"…`, 'var(--gold)');
+    try {
+      const r = await finalBackupLeague(oldLeague);
+      finalNote = ` · "${oldName}" backed up as ${r.sheet}`;
+    } catch (e) {
+      const retry = archiveFirst
+        ? 'You can retry from Archive → Seasons.'
+        : 'Archive it later to get a retry button in Archive → Seasons.';
+      if (!confirm(`The permanent backup of "${oldName}" did not save:\n${e.message}\n\n`
+          + `Start the new season anyway? "${oldName}" stays in the database either way. ${retry}`)) {
+        show('Cancelled — nothing changed', 'var(--muted)'); hideSoon(); return;
+      }
+      finalNote = ` · ⚠ "${oldName}" has no permanent backup yet`;
+    }
+  }
+
   show('Starting…', 'var(--gold)');
   const S = v => JSON.stringify(v);
   const TS = firebase.database.ServerValue.TIMESTAMP;
@@ -4938,7 +5057,8 @@ async function startNewSeason() {
   // The pointer listener has usually begun the switch already; make sure.
   await followLeague(newLeague, { announce: false });
 
-  show(resuming ? `✓ Switched everyone to "${existingName}"` : `✓ Season "${name}" started`, 'var(--teal)');
+  show((resuming ? `✓ Switched everyone to "${existingName}"` : `✓ Season "${name}" started`) + finalNote,
+    /⚠/.test(finalNote) ? 'var(--gold)' : 'var(--teal)');
   document.getElementById('newSeasonId').value = '';
   document.getElementById('newSeasonNameInput').value = '';
   archiveData = {};
