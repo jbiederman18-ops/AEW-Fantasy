@@ -721,6 +721,20 @@
   .swap-history-detail b { color: var(--text); }
   .swap-history-detail .arrow { color: var(--gold); margin: 0 4px; }
 
+  /* ── RyAI ── */
+  .ryai-box { border:1px solid var(--border); border-left:3px solid var(--gold);
+    border-radius:8px; padding:12px 14px; margin-top:12px; background:var(--surface); }
+  .ryai-head { display:flex; justify-content:space-between; align-items:center; }
+  .ryai-tag { font-family:'Inter',sans-serif; font-size:11px; letter-spacing:2px;
+    color:var(--gold); font-weight:600; }
+  .ryai-count { font-family:'Inter',sans-serif; font-size:13px; color:var(--muted);
+    font-variant-numeric:tabular-nums; }
+  .ryai-name { font-size:22px; font-weight:600; margin:6px 0 4px; color:var(--text); }
+  .ryai-line { font-family:'Inter',sans-serif; font-size:13px; color:var(--muted);
+    line-height:1.45; }
+  .ryai-btns { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+  .ryai-btn { font-size:12px !important; padding:7px 12px !important; }
+
   /* ── ARCHIVE ── */
   .archive-panel { display: none; }
   .archive-panel.active-archive { display: block; }
@@ -1355,6 +1369,11 @@ const FIREBASE_RULES = `{
       ".write": "auth != null",
       ".validate": "newData.isString() && newData.val().length < 200000"
     },
+    "ryai": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      ".validate": "newData.isString() && newData.val().length < 200000"
+    },
     "leagues": {
       "$league": {
         ".read": "auth != null",
@@ -1902,6 +1921,7 @@ async function _runSync({ flush = true, label = 'Syncing…' } = {}) {
     // A launch that started offline never bound these.
     bindLeaguePointer();
     bindArchiveList();
+    ryaiLoad();
     setSyncStatus('Live', 'ok');
     return true;
   } catch (e) {
@@ -1995,6 +2015,7 @@ async function initFromBackend() {
   renderAll();
   bindLiveListener();
   bindArchiveList();
+  ryaiLoad();
 
   // Only seed rosters into a genuinely empty league. Previously any store
   // without roster keys got the hardcoded defaults written into it, which meant
@@ -3651,6 +3672,7 @@ function renderDraft(opts) {
 }
 
 function renderDraftSetup(el) {
+  ryaiDisarm();
   const totalPicks = draftState.order.length * draftState.rounds;
   el.innerHTML = `
     <div class="draft-setup">
@@ -3659,6 +3681,29 @@ function renderDraftSetup(el) {
         <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Drag to reorder, or use arrows. This is the Round 1 order — snake draft reverses each round.</p>
         <div class="draft-order-list" id="draftOrderList"></div>
       </div>
+      <div class="settings-block">
+        <h3>RyAI</h3>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">
+          Drafts for ${TEAM_LABELS[RYAI_DEFAULTS.team]} while he is away. On his turn it shows its
+          pick and counts down from ${Math.round((ryaiConfig.countdownMs || 60000) / 1000)} seconds —
+          anyone in the room can override before it commits.</p>
+        <button class="${ryaiConfig.enabled ? 'btn-primary' : 'btn-secondary'}" onclick="ryaiToggle()">
+          ${ryaiConfig.enabled ? '\u25cf RyAI is drafting' : '\u25cb RyAI is off'}</button>
+              <p style="font-size:13px;color:var(--muted);margin:16px 0 8px;">
+          Roster news, one wrestler per line: <code>Adam Cole out</code>,
+          <code>Adam Cole back</code>, <code>Kyle Fletcher +2 title feud</code>.</p>
+        <textarea id="ryaiUpdates" rows="4" placeholder="Adam Cole out"
+          style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;
+          padding:10px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;"></textarea>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:8px;">
+          <button class="btn-secondary" onclick="ryaiSubmitUpdates()">Apply updates</button>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:14px;flex-wrap:wrap;">
+          <button class="btn-secondary" onclick="ryaiCopyAnalysis()">Copy season analysis</button>
+          <span id="ryaiAnalysisResult" style="font-family:'Inter',sans-serif;font-size:12px;"></span>
+          <span id="ryaiUpdateResult" style="font-family:'Inter',sans-serif;font-size:12px;"></span>
+        </div>
+</div>
       <div class="settings-block">
         <h3>Rounds</h3>
         <div class="form-row">
@@ -3903,6 +3948,14 @@ async function commitPick(pick, expected, epoch) {
     applyDraftSnapshot(res.snapshot);
     const theirs = draftState.picks[expected];
     await reloadRoster(pick.team);
+    // Every phone runs RyAI, so several can fire the same pick at once. One
+    // transaction wins; the losers landed the identical pick and should say so
+    // quietly rather than cry collision.
+    if (pick.byBot && theirs && theirs.team === pick.team && theirs.wrestler === pick.wrestler) {
+      showDraftStatus('\u2713 RyAI pick recorded', 'var(--teal)');
+      rerenderDraft();
+      return;
+    }
     showDraftStatus(theirs
       ? `⚠ ${TEAM_LABELS[theirs.team]} took ${theirs.wrestler} on that pick first — "${pick.wrestler}" was not recorded`
       : `⚠ The draft changed on another device — "${pick.wrestler}" was not recorded`, 'var(--red)');
@@ -3916,6 +3969,583 @@ async function commitPick(pick, expected, epoch) {
   } catch (e) {
     showDraftStatus('⚠ Pick saved; roster not updated yet — Lock Rosters will fix it', 'var(--gold)');
   }
+}
+
+
+// ─────────────────────────────────────────────
+// RyAI — autodraft for an absent manager
+// ─────────────────────────────────────────────
+// Config lives at the DATABASE ROOT (/ryai), not under leagues/<id>/data.
+// startNewSeason writes a fresh league node and carries nothing forward, so a
+// per-season copy would vanish at the first rollover — exactly when RyAI is
+// still needed. Same reasoning that moved /archive up here. The board is
+// re-derivable; the alias map is not, so it is the thing that must survive.
+
+const RYAI_PATH = 'ryai';
+
+// base   = expected points per show from ordinary TV presence (0-10)
+// change = likelihood of a scoring STATE CHANGE this season (0-10): title win
+//          (20), face/heel turn (12), written off / big return (10). This is
+//          the axis Ryan appears to draft on. UNTESTED — if the score data
+//          disagrees, turn weights.change down rather than editing this list.
+const RYAI_BOARD_DEFAULT = [
+  { name:"Will Ospreay", base:9, change:7, avail:1, note:"world champ, defending constantly" },
+  { name:"Jon Moxley", base:8, change:8, avail:1, note:"Continental champ, challenging at All Out" },
+  { name:"Kazuchika Okada", base:8, change:6, avail:1, note:"International champ" },
+  { name:"Darby Allin", base:7, change:7, avail:1, note:"three-time TNT champ, stunt magnet" },
+  { name:"Andrade", base:6, change:6, avail:1, note:"National champ" },
+  { name:"Kyle Fletcher", base:7, change:7, avail:1, note:"in the International picture" },
+  { name:"Konosuke Takeshita", base:7, change:7, avail:1, note:"in the International picture" },
+  { name:"Swerve Strickland", base:8, change:6, avail:1, note:"trios gold with the new arrivals" },
+  { name:"Kenny Omega", base:7, change:8, avail:1, note:"off a title loss, repositioning" },
+  { name:"MJF", base:7, change:7, avail:1, note:"promo volume, turn candidate" },
+  { name:"Adam Page", base:7, change:5, avail:1, note:"former champ, steady main event" },
+  { name:"Jay White", base:6, change:5, avail:1, note:"Bullet Club Gold fixture" },
+  { name:"Mercedes Mone", base:8, change:6, avail:1, note:"women's world champ" },
+  { name:"Persephone", base:6, change:7, avail:1, note:"new TBS champ, first defences" },
+  { name:"Maya World", base:6, change:8, avail:1, note:"just lost TBS, rematch arc" },
+  { name:"Willow Nightingale", base:6, change:7, avail:1, note:"off a title loss" },
+  { name:"Jamie Hayter", base:6, change:6, avail:1, note:"tag champ with a singles pull" },
+  { name:"Alex Windsor", base:5, change:6, avail:1, note:"tag champ" },
+  { name:"Toni Storm", base:7, change:7, avail:1, note:"character churn, turn candidate" },
+  { name:"Thekla", base:5, change:5, avail:1, note:"faction chaos" },
+  { name:"Athena", base:5, change:5, avail:1, note:"ROH crossover" },
+  { name:"Kris Statlander", base:6, change:5, avail:1, note:"regular TV" },
+  { name:"Harley Cameron", base:5, change:6, avail:1, note:"rising, promo-heavy" },
+  { name:"Julia Hart", base:4, change:5, avail:1, note:"Sisters of Sin" },
+  { name:"Skye Blue", base:4, change:4, avail:1, note:"Sisters of Sin" },
+  { name:"Mina Shirakawa", base:4, change:4, avail:1, note:"regular TV" },
+  { name:"Austin Creed", base:6, change:9, avail:1, note:"fresh debut, trios gold" },
+  { name:"Kofi Kingston", base:6, change:9, avail:1, note:"fresh debut, trios gold" },
+  { name:"Chris Jericho", base:6, change:8, avail:1, note:"back after a year off TV" },
+  { name:"Orange Cassidy", base:6, change:4, avail:1, note:"segment machine, low volatility" },
+  { name:"HOOK", base:5, change:5, avail:1, note:"chaos categories" },
+  { name:"Brody King", base:5, change:5, avail:1, note:"brawls and pull-aparts" },
+  { name:"Claudio Castagnoli", base:5, change:4, avail:1, note:"steady" },
+  { name:"Daniel Garcia", base:5, change:6, avail:1, note:"turn candidate, promo time" },
+  { name:"Kevin Knight", base:5, change:7, avail:1, note:"ascending NJPW pipeline" },
+  { name:"Clark Connors", base:4, change:5, avail:1, note:"NJPW pipeline" },
+  { name:"Gabe Kidd", base:5, change:7, avail:1, note:"volatile, brawls" },
+  { name:"David Finlay", base:5, change:5, avail:1, note:"Bullet Club Gold" },
+  { name:"Matt Jackson", base:5, change:5, avail:1, note:"tag volume" },
+  { name:"Nick Jackson", base:5, change:5, avail:1, note:"tag volume" },
+  { name:"Dax Harwood", base:5, change:6, avail:1, note:"FTR turn candidate" },
+  { name:"Cash Wheeler", base:5, change:6, avail:1, note:"FTR turn candidate" },
+  { name:"Mark Briscoe", base:5, change:4, avail:1, note:"reliable TV" },
+  { name:"Samoa Joe", base:5, change:4, avail:1, note:"reliable TV" },
+  { name:"Roderick Strong", base:4, change:4, avail:1, note:"Undisputed Kingdom" },
+  { name:"Mike Bailey", base:5, change:4, avail:1, note:"workrate, five-star candidate" },
+  { name:"Kyle O'Reilly", base:4, change:4, avail:1, note:"steady" },
+  { name:"Wheeler Yuta", base:4, change:4, avail:1, note:"BCC" },
+  { name:"Ricochet", base:5, change:5, avail:1, note:"heel act, promo time" },
+  { name:"PAC", base:5, change:5, avail:1, note:"Death Triangle" },
+  { name:"The Beast Mortos", base:4, change:4, avail:1, note:"lucha chaos" },
+  { name:"Hologram", base:4, change:5, avail:1, note:"ascending lucha act" },
+  { name:"Komander", base:3, change:3, avail:1, note:"undercard lucha" },
+  { name:"Bandido", base:4, change:5, avail:1, note:"ROH crossover" },
+  { name:"Shelton Benjamin", base:4, change:4, avail:1, note:"Hurt Syndicate" },
+  { name:"Bobby Lashley", base:4, change:5, avail:1, note:"Hurt Syndicate" },
+  { name:"Big Bill", base:3, change:4, avail:1, note:"tag depth" },
+  { name:"Lance Archer", base:3, change:4, avail:1, note:"brawls" },
+  { name:"Powerhouse Hobbs", base:4, change:5, avail:1, note:"squash potential" },
+  { name:"Lee Moriarty", base:3, change:3, avail:1, note:"undercard" },
+  { name:"RUSH", base:4, change:4, avail:1, note:"brawls" },
+  { name:"Megasus", base:3, change:6, avail:1, note:"novelty act, high variance" },
+  { name:"Don Callis", base:4, change:4, avail:1, note:"promo volume, no matches" },
+  { name:"Christian Cage", base:5, change:5, avail:1, note:"promo volume" },
+  { name:"Adam Copeland", base:5, change:5, avail:1, note:"returning veteran" },
+  { name:"Adam Cole", base:5, change:5, avail:0, note:"Undisputed Kingdom" },
+  { name:"Josh Alexander", base:4, change:4, avail:1, note:"Callis Family" },
+  { name:"Brian Cage", base:3, change:3, avail:1, note:"depth" },
+  { name:"Wardlow", base:3, change:4, avail:1, note:"depth" },
+  { name:"Anthony Bowens", base:4, change:5, avail:1, note:"turn candidate" },
+  { name:"Billy Gunn", base:3, change:3, avail:1, note:"depth" },
+  { name:"Austin Gunn", base:3, change:3, avail:1, note:"depth" },
+  { name:"Trent Beretta", base:3, change:3, avail:1, note:"depth" },
+  { name:"Juice Robinson", base:3, change:3, avail:1, note:"depth" },
+  { name:"Lio Rush", base:3, change:4, avail:1, note:"depth" },
+  { name:"Isiah Kassidy", base:3, change:4, avail:1, note:"Private Party, tag depth" },
+  { name:"Thunder Rosa", base:3, change:3, avail:1, note:"depth" }
+];
+
+// Recency-weighted across six Ryan rosters, oldest to newest, geometric decay.
+const RYAI_FAVOURITES_DEFAULT = {
+  "Chris Jericho":4.13, "Kyle Fletcher":3.01, "Samoa Joe":2.83,
+  "Will Ospreay":2.48, "Daniel Garcia":2.41, "Adam Cole":2.25,
+  "Orange Cassidy":2.23, "Anthony Bowens":2.03, "Cash Wheeler":2.03,
+  "PAC":1.74, "The Beast Mortos":1.74, "Kevin Knight":1.65,
+  "Brody King":1.65, "Matt Jackson":1.65, "Andrade":1.65,
+  "Clark Connors":1.65, "Austin Creed":1.65, "Jamie Hayter":1.65,
+  "Dax Harwood":1.43, "HOOK":1.34, "Kenny Omega":1.27,
+  "Shelton Benjamin":1.27, "Josh Alexander":1.27, "Christian Cage":1.27,
+  "Bandido":1.27, "Toni Storm":1.21, "Jay White":0.98,
+  "Kazuchika Okada":0.98, "Big Bill":0.98, "Harley Cameron":0.98,
+  "Isiah Kassidy":0.98, "Lance Archer":0.98, "Mark Briscoe":0.76,
+  "Juice Robinson":0.76, "Ricochet":0.58, "Nick Jackson":0.58,
+  "Darby Allin":0.58, "Claudio Castagnoli":0.58, "Brian Cage":0.58,
+  "Thunder Rosa":0.58, "Adam Page":0.58, "Swerve Strickland":0.45,
+  "Roderick Strong":0.45, "Wardlow":0.45, "Austin Gunn":0.45,
+  "Billy Gunn":0.45, "Powerhouse Hobbs":0.45, "Trent Beretta":0.45,
+  "Kris Statlander":0.45
+};
+
+// The only two he has never let past slot 3.
+const RYAI_STARS_DEFAULT = ['Will Ospreay', 'PAC'];
+
+const RYAI_ALIASES_DEFAULT = {
+  'Xavier': 'Austin Creed', 'Zay': 'Isiah Kassidy',
+  'Bandito': 'Bandido', 'Daddy Ass': 'Billy Gunn'
+};
+
+const RYAI_DEFAULTS = {
+  enabled: false, team: 'ryan', countdownMs: 60000,
+  weights: { base: 1.0, change: 1.15, affinity: 2.2, star: 4.0 },
+  // How often he takes someone other than the best name on his own board.
+  // 0 drafts the optimum every time, which is the one thing Ryan demonstrably
+  // does not do. Reaches are biased toward wrestlers he has drafted before,
+  // so the mistakes look like his rather than like noise.
+  reach: 0.35,
+  aliases: RYAI_ALIASES_DEFAULT, board: RYAI_BOARD_DEFAULT,
+  favourites: RYAI_FAVOURITES_DEFAULT, stars: RYAI_STARS_DEFAULT,
+};
+
+let ryaiConfig = Object.assign({}, RYAI_DEFAULTS);
+let ryaiTimer = null, ryaiDeadline = 0, ryaiArmedFor = -1, ryaiChoice = null;
+
+// ── name resolution ──────────────────────────
+// Rosters carry jokes ("REMEMBER YOU HAVE OKADA"), misspellings ("Bobert
+// Lashley") and nicknames. Exact matching fails constantly, and a confident
+// WRONG match is worse than none — it puts the wrong wrestler in a slot and
+// nobody notices until scoring. So: fuzzy, but refuse to guess on a near tie.
+const RYAI_STOP = new Set(['the','of','who','you','may','know','as','from','say','his','her',
+  'full','name','remember','have','now','other','one','and','a','an','is','it','big','mr','ms']);
+
+function ryaiNormalize(s) {
+  return String(s == null ? '' : s).toLowerCase()
+    .replace(/(.)\1{2,}/g, '$1$1')
+    .replace(/[\u2018\u2019\u201c\u201d"']/g, '')
+    .replace(/\([^)]*\)/g, ' ')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ').trim();
+}
+function ryaiTokens(s) { return ryaiNormalize(s).split(' ').filter(t => t && !RYAI_STOP.has(t)); }
+
+function ryaiDice(a, b) {
+  if (a === b) return 1;
+  if (a.length < 2 || b.length < 2) return 0;
+  const grams = new Map();
+  for (let i = 0; i < a.length - 1; i++) { const g = a.slice(i, i + 2); grams.set(g, (grams.get(g) || 0) + 1); }
+  let hits = 0;
+  for (let i = 0; i < b.length - 1; i++) {
+    const g = b.slice(i, i + 2), c = grams.get(g) || 0;
+    if (c > 0) { grams.set(g, c - 1); hits++; }
+  }
+  return (2 * hits) / ((a.length - 1) + (b.length - 1));
+}
+function ryaiTokenScore(q, c) {
+  if (q === c) return 1;
+  if (c.startsWith(q) && q.length >= 3) return 0.92;
+  if (q.startsWith(c) && c.length >= 3) return 0.88;
+  return ryaiDice(q, c);
+}
+
+// { match, score, via }. match is null when it will not guess.
+function ryaiResolve(raw, pool) {
+  const names = pool || ryaiConfig.board.map(b => b.name);
+  const norm = ryaiNormalize(raw);
+  if (!norm) return { match: null, score: 0, via: 'empty' };
+  const aliases = ryaiConfig.aliases || {};
+  for (const k in aliases) if (ryaiNormalize(k) === norm) return { match: aliases[k], score: 1, via: 'alias' };
+  for (const n of names) if (ryaiNormalize(n) === norm) return { match: n, score: 1, via: 'exact' };
+
+  const qt = ryaiTokens(raw);
+  let best = null, bestScore = 0, runnerUp = 0;
+  for (const n of names) {
+    const ct = ryaiTokens(n);
+    let sum = 0, peak = 0;
+    for (const q of qt) {
+      let m = 0;
+      for (const c of ct) m = Math.max(m, ryaiTokenScore(q, c));
+      sum += m; peak = Math.max(peak, m);
+    }
+    // Forward coverage alone cannot tell "Cash Wheeler" from "Wheeler Yuta" —
+    // both contain the typed surname. Reverse coverage can: Yuta is left
+    // entirely unmatched, Cash is not.
+    let rsum = 0;
+    for (const c of ct) {
+      let m = 0;
+      for (const q of qt) m = Math.max(m, ryaiTokenScore(q, c));
+      rsum += m;
+    }
+    const fwd = sum / Math.max(qt.length, 1);
+    const rev = rsum / Math.max(ct.length, 1);
+    const score = (peak * 0.5) + (fwd * 0.25) + (rev * 0.25);
+    if (score > bestScore) { runnerUp = bestScore; bestScore = score; best = n; }
+    else if (score > runnerUp) { runnerUp = score; }
+  }
+  if (bestScore >= 0.80 && bestScore - runnerUp >= 0.04) return { match: best, score: bestScore, via: 'fuzzy' };
+  if (bestScore >= 0.80) return { match: null, score: bestScore, via: 'ambiguous', guess: best };
+  return { match: null, score: bestScore, via: 'unresolved', guess: best };
+}
+
+// ── engine ───────────────────────────────────
+// Anyone already on a roster is gone, however their name was typed. Manual
+// roster edits count too — not every filled slot came through the draft.
+function ryaiTaken() {
+  const taken = new Set();
+  const swallow = v => {
+    if (!v) return;
+    const r = ryaiResolve(v);
+    taken.add(ryaiNormalize(r.match || v));
+  };
+  draftState.picks.forEach(p => swallow(p.wrestler));
+  TEAMS.forEach(t => LETTERS.forEach(l => swallow((state.rosters[t] || {})[l])));
+  return taken;
+}
+
+function ryaiRank(round) {
+  const w = Object.assign({}, RYAI_DEFAULTS.weights, ryaiConfig.weights);
+  const taken = ryaiTaken();
+  const favs = ryaiConfig.favourites || {};
+  const stars = new Set((ryaiConfig.stars || []).map(ryaiNormalize));
+  const out = [];
+  const status = ryaiConfig.status || {};
+  for (const e of ryaiConfig.board) {
+    if (taken.has(ryaiNormalize(e.name))) continue;
+    // Availability is the share of the season this wrestler is expected on TV.
+    // 0 is injured, gone, or written off with no return in sight — a drafted
+    // slot that scores nothing. It scales TV volume but NOT change: someone
+    // out hurt with a return coming is what "Big Return" pays 10 for.
+    const st = status[e.name] || {};
+    const avail = st.avail == null ? (e.avail == null ? 1 : e.avail) : st.avail;
+    if (avail <= 0) continue;
+    const change = st.change == null ? e.change : st.change;
+    const aff = favs[e.name] || 0;
+    // The star premium is a slot-1-to-3 behaviour. Ryan has never taken Ospreay
+    // or PAC later than slot 3; past that the premium is spent and he works the
+    // favourites pool instead.
+    const star = (stars.has(ryaiNormalize(e.name)) && round <= 3) ? w.star : 0;
+    const parts = { base: e.base * avail * w.base, change: change * w.change,
+      affinity: aff * w.affinity, star: star };
+    out.push({ name: e.name, note: e.note, aff: aff, parts: parts,
+      total: parts.base + parts.change + parts.affinity + parts.star });
+  }
+  return out.sort((a, b) => b.total - a.total);
+}
+
+function ryaiWhy(c) {
+  if (c.parts.star > 0) return c.name + ' never gets past Ryan\u2019s first three picks.';
+  const k = Object.keys(c.parts).reduce((a, b) => c.parts[a] >= c.parts[b] ? a : b);
+  if (k === 'affinity' && c.aff >= 2) return 'Ryan has drafted ' + c.name + ' in most seasons on record.';
+  if (k === 'affinity') return c.name + ' keeps turning up on Ryan\u2019s teams.';
+  if (k === 'change') return c.name + ' \u2014 ' + c.note + '. The points are in the change.';
+  return c.name + ' \u2014 ' + c.note + '.';
+}
+
+// ── season analysis ──────────────────────────
+// Runs inside the app, on the app's origin, against data already loaded.
+// The console route kept dying on CORS and on top-level let bindings not
+// being reachable; neither problem exists in here.
+//
+// The question it answers: did Ryan's roster actually draw more of its points
+// from turns, returns and title changes than the other three? That is the
+// change-of-state hypothesis RyAI's weighting rests on, and it has never been
+// tested against a single real point.
+const RYAI_CHANGE_KEYS = ['faceheel', 'writtenoff', 'aewTitle', 'thirdTitle'];
+
+function ryaiSeasonAnalysis() {
+  // Prefer a loaded archive season; fall back to whatever this season holds.
+  let src = null, label = '';
+  const names = Object.keys(archiveData || {});
+  for (let i = 0; i < names.length; i++) {
+    const d = archiveData[names[i]];
+    if (d && d.scores && Object.keys(d.scores).length) { src = d; label = names[i]; break; }
+  }
+  if (!src && state.scores && Object.keys(state.scores).length) {
+    src = { scores: state.scores, rosters: state.rosters };
+    label = state.seasonName || 'current season';
+  }
+  if (!src) return { error: 'No scores loaded. Open the Archive tab, let it finish, then try again.' };
+
+  const swaps = ((state.swaps || {}).history) || [];
+  const per = {}, team = {};
+  TEAMS.forEach(function (t) { team[t] = { pts: 0, change: 0, shows: 0 }; });
+
+  Object.keys(src.scores).forEach(function (t) {
+    const byShow = src.scores[t] || {};
+    Object.keys(byShow).forEach(function (sid) {
+      const row = byShow[sid] || {};
+      LETTERS.forEach(function (l) {
+        const cell = row[l];
+        if (!cell) return;
+        let pts = 0, chg = 0;
+        ACCOMPLISHMENTS.forEach(function (a) {
+          const n = getCount(cell, a.key);
+          if (!n) return;
+          pts += n * a.pts;
+          if (RYAI_CHANGE_KEYS.indexOf(a.key) > -1) chg += n * a.pts;
+        });
+        const who = ((src.rosters || {})[t] || {})[l] || (t + ' slot ' + l);
+        if (!per[who]) per[who] = { team: t, slot: l, shows: 0, pts: 0, change: 0 };
+        per[who].shows++; per[who].pts += pts; per[who].change += chg;
+        if (team[t]) { team[t].pts += pts; team[t].change += chg; team[t].shows++; }
+      });
+    });
+  });
+
+  const share = {};
+  TEAMS.forEach(function (t) {
+    share[t] = team[t].pts ? Math.round((team[t].change / team[t].pts) * 1000) / 10 : 0;
+  });
+  return { season: label, teamTotals: team, changeSharePct: share, perWrestler: per, swaps: swaps };
+}
+
+function ryaiCopyAnalysis() {
+  const out = document.getElementById('ryaiAnalysisResult');
+  const a = ryaiSeasonAnalysis();
+  if (a.error) { if (out) out.innerHTML = '<span style="color:var(--red);">' + esc(a.error) + '</span>'; return; }
+  const txt = JSON.stringify(a, null, 1);
+  const done = function (msg, col) { if (out) out.innerHTML = '<span style="color:' + col + ';">' + esc(msg) + '</span>'; };
+  const summary = TEAMS.map(function (t) {
+    return TEAM_LABELS[t] + ' ' + a.changeSharePct[t] + '%';
+  }).join('  ');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(txt).then(
+      function () { done('Copied. Change-of-state share: ' + summary, 'var(--teal)'); },
+      function () { console.log(txt); done('Clipboard blocked, printed to console instead.', 'var(--gold)'); });
+  } else {
+    console.log(txt);
+    done('Printed to console.', 'var(--gold)');
+  }
+}
+
+// The refresh. One wrestler per line:
+//   Adam Cole out                 -> never drafted
+//   Adam Cole back                -> available again
+//   Kyle Fletcher +2 title feud   -> raise change of state, with a reason
+//   Hologram -1 off TV            -> lower it
+// Unrecognised names are reported back rather than silently dropped: a typo
+// that quietly does nothing is worse than one that says so.
+function ryaiApplyUpdates(text) {
+  const NL = String.fromCharCode(10);
+  const isDelta = function (x) {
+    if (x.length < 2) return false;
+    if (x.charAt(0) !== '+' && x.charAt(0) !== '-') return false;
+    for (let i = 1; i < x.length; i++) {
+      const c = x.charCodeAt(i);
+      if (c < 48 || c > 57) return false;
+    }
+    return true;
+  };
+  const applied = [], unknown = [];
+  const status = Object.assign({}, ryaiConfig.status || {});
+  String(text || '').split(NL).forEach(function (raw) {
+    const line = raw.trim();
+    if (!line || line.charAt(0) === '#') return;
+    const parts = line.split(' ').filter(function (x) { return x.length; });
+    // Scan from the right: the wrestler's name may itself contain spaces, so
+    // the verb is whatever token nearest the end reads as one.
+    let vi = -1;
+    for (let i = parts.length - 1; i >= 1; i--) {
+      const x = parts[i].toLowerCase();
+      if (x === 'out' || x === 'back' || isDelta(x)) { vi = i; break; }
+    }
+    if (vi < 1) { unknown.push(line); return; }
+    const r = ryaiResolve(parts.slice(0, vi).join(' '));
+    if (!r.match) { unknown.push(line); return; }
+    const verb = parts[vi].toLowerCase();
+    const reason = parts.slice(vi + 1).join(' ');
+    const cur = Object.assign({}, status[r.match] || {});
+    if (verb === 'out') { cur.avail = 0; applied.push(r.match + ' is out'); }
+    else if (verb === 'back') { cur.avail = 1; applied.push(r.match + ' is available'); }
+    else {
+      const row = ryaiConfig.board.filter(function (b) { return b.name === r.match; })[0];
+      const from = cur.change == null ? (row ? row.change : 5) : cur.change;
+      cur.change = Math.max(0, Math.min(10, from + parseInt(verb, 10)));
+      if (reason) cur.note = reason;
+      applied.push(r.match + ': change ' + from + ' to ' + cur.change);
+    }
+    status[r.match] = cur;
+  });
+  ryaiConfig.status = status;
+  return { applied: applied, unknown: unknown };
+}
+
+function ryaiSubmitUpdates() {
+  const box = document.getElementById('ryaiUpdates');
+  if (!box) return;
+  const res = ryaiApplyUpdates(box.value);
+  const out = document.getElementById('ryaiUpdateResult');
+  if (out) {
+    out.innerHTML =
+      (res.applied.length ? '<div style="color:var(--teal);">' + res.applied.map(esc).join('<br>') + '</div>' : '') +
+      (res.unknown.length ? '<div style="color:var(--red);">Not recognised: ' + res.unknown.map(esc).join('; ') + '</div>' : '') +
+      (!res.applied.length && !res.unknown.length ? '<div style="color:var(--muted);">Nothing to apply.</div>' : '');
+  }
+  if (res.applied.length) ryaiSave().catch(function (e) { alert('Updates not saved: ' + e.message); });
+}
+
+// Every phone in the room runs this independently, so the randomness must be
+// identical on all of them or they would show different names and try to
+// commit different wrestlers. Seeding from the pick list gives all devices the
+// same draw, keeps it stable across re-renders mid-countdown, and reshuffles
+// it the moment the board actually changes.
+function ryaiSeed() {
+  const src = draftState.picks.map(function (p) { return p.wrestler; }).join('|')
+    + '#' + draftState.picks.length;
+  let h = 2166136261;
+  for (let i = 0; i < src.length; i++) {
+    h = h ^ src.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  h = h >>> 0;
+  // one mulberry32 step, enough for a single draw per pick
+  h = (h + 1831565813) >>> 0;
+  let t = Math.imul(h ^ (h >>> 15), 1 | h);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+  return (((t ^ (t >>> 14)) >>> 0) / 4294967296);
+}
+
+function ryaiChoose(round) {
+  const r = ryaiRank(round);
+  if (!r.length) return null;
+  const reach = ryaiConfig.reach == null ? 0 : ryaiConfig.reach;
+  const best = r[0];
+  if (reach <= 0 || r.length < 2) return { name: best.name, why: ryaiWhy(best), reach: false };
+
+  // Only the names just behind the leader are candidates, and a wrestler he
+  // has drafted before is likelier to pull him off the optimum than a stranger.
+  const T = reach * 6;
+  const pool = r.slice(0, 5);
+  const weights = pool.map(function (c, i) {
+    const gap = best.total - c.total;
+    const loyalty = 1 + (c.aff * 0.5);
+    return i === 0 ? 1 : Math.exp(-gap / T) * loyalty * reach;
+  });
+  let sum = 0;
+  for (let i = 0; i < weights.length; i++) sum += weights[i];
+  let roll = ryaiSeed() * sum, idx = 0;
+  for (let i = 0; i < weights.length; i++) {
+    roll -= weights[i];
+    if (roll <= 0) { idx = i; break; }
+  }
+  const pick = pool[idx];
+  if (idx === 0) return { name: pick.name, why: ryaiWhy(pick), reach: false };
+  return { name: pick.name, reach: true,
+    why: 'Reaching past ' + best.name + '. ' + ryaiWhy(pick) };
+}
+
+// ── persistence (root node, survives the season rollover) ──
+async function ryaiLoad() {
+  if (!fbDb) return;
+  try {
+    const snap = await onceWithin(fbDb.ref(RYAI_PATH), 8000);
+    const v = parseRaw(snap.val());
+    if (v && typeof v === 'object') ryaiConfig = Object.assign({}, RYAI_DEFAULTS, v);
+  } catch (e) { /* defaults are usable; the draft must never block on this */ }
+}
+async function ryaiSave() {
+  if (!fbDb) throw new Error('not connected');
+  await withinMs(fbDb.ref(RYAI_PATH).set(JSON.stringify(ryaiConfig)), 8000);
+}
+function ryaiToggle() {
+  ryaiConfig.enabled = !ryaiConfig.enabled;
+  renderDraft();
+  ryaiSave().catch(e => alert('RyAI setting not saved: ' + e.message));
+}
+
+// ── the clock ────────────────────────────────
+function ryaiIsOnClock(team) {
+  return !!(ryaiConfig.enabled && team === ryaiConfig.team && draftState.active);
+}
+function ryaiDisarm() {
+  if (ryaiTimer) { clearInterval(ryaiTimer); ryaiTimer = null; }
+  ryaiArmedFor = -1; ryaiChoice = null;
+}
+
+function ryaiPaint() {
+  const host = document.getElementById('ryaiPanel');
+  if (!host || !ryaiChoice) return;
+  const left = Math.max(0, Math.ceil((ryaiDeadline - Date.now()) / 1000));
+  host.innerHTML =
+    '<div class="ryai-box">' +
+      '<div class="ryai-head"><span class="ryai-tag">RYAI</span>' +
+      '<span class="ryai-count">' + left + 's</span></div>' +
+      '<div class="ryai-name">' + esc(ryaiChoice.name) + '</div>' +
+      '<div class="ryai-line">' + (ryaiChoice.reach ? '<span style="color:var(--gold);">⚡ </span>' : '') +
+        esc(ryaiChoice.why) + '</div>' +
+      '<div class="ryai-btns">' +
+        '<button class="btn-secondary ryai-btn" onclick="ryaiStandDown()">Override</button>' +
+        '<button class="btn-secondary ryai-btn" onclick="ryaiPickNow()">Pick now</button>' +
+      '</div>' +
+    '</div>';
+}
+
+// Called after every draft render. A remote pick re-renders this for everyone,
+// so re-arming blindly would restart the countdown on each one — hence keying
+// the armed state to the pick index rather than to the render.
+function ryaiSync(team) {
+  if (!ryaiIsOnClock(team)) { ryaiDisarm(); return; }
+  const expected = draftState.picks.length;
+  if (ryaiArmedFor === expected && ryaiTimer) { ryaiPaint(); return; }
+  ryaiDisarm();
+  const choice = ryaiChoose(getCurrentPicker().round);
+  const host = document.getElementById('ryaiPanel');
+  if (!choice) { if (host) host.innerHTML = '<div class="ryai-line">RyAI has nobody left on its board.</div>'; return; }
+  ryaiArmedFor = expected;
+  ryaiChoice = choice;
+  ryaiDeadline = Date.now() + (ryaiConfig.countdownMs || 60000);
+  ryaiPaint();
+  ryaiTimer = setInterval(function () {
+    if (Date.now() >= ryaiDeadline) { const n = ryaiChoice.name; ryaiDisarm(); ryaiCommit(n); }
+    else ryaiPaint();
+  }, 1000);
+}
+
+// Anyone at the draft can stop the clock, not just the commissioner.
+function ryaiStandDown() {
+  ryaiDisarm();
+  const host = document.getElementById('ryaiPanel');
+  if (host) host.innerHTML = '<div class="ryai-line">RyAI stood down \u2014 type the pick above.</div>';
+  const i = document.getElementById('draftPickInput');
+  if (i) i.focus();
+}
+function ryaiPickNow() {
+  if (!ryaiChoice) return;
+  const n = ryaiChoice.name;
+  ryaiDisarm();
+  ryaiCommit(n);
+}
+
+// Commits down the same path a human pick takes: optimistic local push, then
+// the transaction. Going around it would fight the epoch/pendingPicks
+// machinery rather than ride it.
+function ryaiCommit(wrestler) {
+  const who = getCurrentPicker();
+  if (!ryaiIsOnClock(who.team)) return;
+  const slot = getNextSlotForTeam(who.team);
+  if (!slot) { showDraftStatus('\u26a0 ' + TEAM_LABELS[who.team] + ' roster is full', 'var(--red)'); return; }
+  normalizeRosters();
+  const expected = draftState.picks.length;
+  const pick = { team: who.team, wrestler: wrestler, round: who.round, slot: slot, byBot: true };
+
+  draftState.picks.push(pick);
+  state.rosters[who.team][slot] = wrestler;
+  renderDraftLive(document.getElementById('draftContent'));
+
+  if (!draftConnected()) {
+    showDraftStatus('\u26a0 Offline \u2014 RyAI pick saved on this phone only', 'var(--gold)');
+    dbSet('aew_draft', draftState)
+      .then(() => dbSet('aew_roster_' + who.team, state.rosters[who.team]))
+      .catch(() => showDraftStatus('\u26a0 Save failed \u2014 check connection', 'var(--red)'));
+    return;
+  }
+  const pp = { pick: pick, expected: expected };
+  const epoch = draftEpoch;
+  pendingPicks.push(pp);
+  draftQueue = draftQueue
+    .then(() => commitPick(pick, expected, epoch))
+    .finally(() => { pendingPicks = pendingPicks.filter(x => x !== pp); });
 }
 
 function undoLastPick() {
@@ -4013,6 +4643,7 @@ function renderDraftLive(el, opts) {
             onkeydown="if(event.key==='Enter')makePick()" enterkeyhint="done">
           <button class="draft-pick-btn" id="draftPickBtn" onclick="makePick()">Pick</button>
         </div>
+        <div id="ryaiPanel"></div>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;min-height:28px;">
         <span id="draftSaveStatus" style="font-family:'Inter',sans-serif;font-size:12px;letter-spacing:1px;color:var(--teal);"></span>
@@ -4025,7 +4656,8 @@ function renderDraftLive(el, opts) {
   const inp = document.getElementById('draftPickInput');
   if (inp && opts.fromRemote) inp.value = keepVal;
   showDraftStatus();
-  if (opts.fromRemote ? hadFocus : true) {
+  ryaiSync(team);
+  if (ryaiIsOnClock(team) ? false : (opts.fromRemote ? hadFocus : true)) {
     setTimeout(() => {
       const i = document.getElementById('draftPickInput');
       if (i) i.focus();
@@ -4034,6 +4666,7 @@ function renderDraftLive(el, opts) {
 }
 
 function renderDraftComplete(el) {
+  ryaiDisarm();
   el.innerHTML = `
     <div class="draft-live">
       <div class="draft-complete">
