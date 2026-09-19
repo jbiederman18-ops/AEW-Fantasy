@@ -4099,7 +4099,11 @@ const RYAI_ALIASES_DEFAULT = {
 
 const RYAI_DEFAULTS = {
   enabled: false, team: 'ryan', countdownMs: 60000,
-  weights: { base: 1.0, change: 1.15, affinity: 2.2, star: 4.0 },
+  // change was 1.15 until the first season of real scoring data. Change
+  // categories turned out to be 9.4% of all points league-wide, and Ryan's
+  // share was 9.5% — dead average, not a tendency. The player with the
+  // highest change share finished last. Weight now tracks the real share.
+  weights: { base: 1.0, change: 0.35, affinity: 2.4, star: 4.0 },
   // How often he takes someone other than the best name on his own board.
   // 0 drafts the optimum every time, which is the one thing Ryan demonstrably
   // does not do. Reaches are biased toward wrestlers he has drafted before,
