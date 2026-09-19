@@ -4647,8 +4647,11 @@ function renderDraftLive(el, opts) {
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;min-height:28px;">
         <span id="draftSaveStatus" style="font-family:'Inter',sans-serif;font-size:12px;letter-spacing:1px;color:var(--teal);"></span>
+        <span style="display:flex;gap:8px;align-items:center;">
         ${draftState.picks.length > 0 ? `
-        <button class="btn-secondary" style="font-size:11px;padding:6px 12px;" onclick="undoLastPick()">↩ Undo Last Pick</button>` : '<span></span>'}
+        <button class="btn-secondary" style="font-size:11px;padding:6px 12px;" onclick="undoLastPick()">↩ Undo Last Pick</button>` : ''}
+        <button class="btn-secondary" style="font-size:11px;padding:6px 12px;" onclick="resetDraft()">End Draft</button>
+        </span>
       </div>
       ${boardHTML}
     </div>`;
