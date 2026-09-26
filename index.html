@@ -670,6 +670,9 @@
   .draft-clock-name.josh { color: var(--team-josh); }
   .draft-clock-name.erik { color: var(--team-erik); }
   .draft-input-row { display: flex; gap: 8px; }
+  /* An <input> won't shrink below its default ~20-character width in a flex
+     row, which pushed PICK past the card's clipped edge on a 390px phone. */
+  .draft-input-row .draft-input { min-width: 0; }
   .draft-input { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 5px; padding: 12px 14px; color: var(--text); font-family: 'Inter', sans-serif; font-size: 16px; }
   .draft-input:focus { outline: none; border-color: var(--gold); }
   .draft-pick-btn { background: var(--gold); color: #000; border: none; border-radius: 5px; padding: 12px 20px; font-family: 'Inter', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; -webkit-tap-highlight-color: transparent; white-space: nowrap; }
@@ -989,6 +992,58 @@
   .wsc-pts { white-space: nowrap; }
   .event-name { overflow-wrap: anywhere; }
 
+  /* ── quick taps v2: a 3-up grid of short labels with the points showing ── */
+  .quick-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+  .quick-btn {
+    position: relative; min-width: 0; padding: 7px 5px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+    text-align: center; line-height: 1.15;
+  }
+  .q-lbl { font-size: 12px; font-weight: 700; overflow-wrap: anywhere; }
+  .q-pts { font-size: 10.5px; font-weight: 600; color: var(--muted); letter-spacing: 0.3px; }
+  .quick-btn.on .q-pts { color: var(--gold-dim); }
+  .q-cnt {
+    position: absolute; top: -7px; right: -5px; min-width: 20px; height: 20px; padding: 0 5px;
+    border-radius: 10px; background: var(--gold); color: #17120A;
+    font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 0 2px var(--card);
+  }
+  @media (min-width: 900px) { .quick-row { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+  /* what's logged, visible with the card closed */
+  .wsc-namewrap { display: flex; flex-direction: column; min-width: 0; flex: 1; gap: 2px; }
+  .wsc-sum {
+    font-family: 'Inter', sans-serif; font-size: 11.5px; font-weight: 600;
+    color: var(--gold); opacity: 0.85; line-height: 1.3; overflow-wrap: anywhere;
+  }
+  .wsc-sum:empty { display: none; }
+
+  /* undo last tap, beside Save */
+  .btn-undo {
+    margin-left: auto; flex-shrink: 0; min-height: 46px; min-width: 46px; padding: 0 12px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 4px;
+    color: var(--text); font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700;
+    cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+  }
+  .btn-undo:disabled { opacity: 0.3; cursor: default; }
+  .btn-undo:active:not(:disabled) { border-color: var(--gold); }
+  .btn-undo + .btn-save { margin-left: 0; }
+  .save-bar-total { white-space: nowrap; }
+  .save-bar-total .sbt-lbl { color: var(--text); }
+  @media (max-width: 440px) { .save-bar-total .sbt-lbl { display: none; } }
+  @media (max-width: 400px) { .btn-undo-txt { display: none; } .btn-save { padding: 12px 16px; } }
+  .save-bar-msg { position: absolute; left: 16px; right: 16px; bottom: calc(100% + 6px); text-align: center;
+    background: rgba(8,7,10,0.94); border: 1px solid var(--border); border-radius: 4px; padding: 6px 10px; }
+
+  /* settings readout */
+  .quick-stats-src { font-size: 12px; color: var(--muted); font-family: 'Inter', sans-serif; margin-bottom: 8px; }
+  .quick-stat { display: flex; justify-content: space-between; font-family: 'Inter', sans-serif; font-size: 13px;
+    padding: 6px 2px; border-top: 1px solid rgba(255,255,255,0.05); color: var(--muted); }
+  .quick-stat.on { color: var(--text); font-weight: 700; }
+  .draft-order-note { font-size: 12px; color: var(--teal); font-family: 'Inter', sans-serif; margin-top: 8px; min-height: 0; }
+  .draft-order-note:empty { display: none; }
+  .draft-board-cell.on-clock { color: var(--gold); background: rgba(245,194,66,0.10); box-shadow: inset 0 0 0 1px var(--gold-dim); }
+
   /* ── ON-DEVICE DIAGNOSTIC ── */
   .diag {
     position: absolute; z-index: 300; left: 8px; right: 8px; top: 8px;
@@ -1087,9 +1142,10 @@
 
 <!-- SAVE BAR (floats above nav when scoring) -->
 <div class="save-bar" id="saveBar">
-  <div class="save-bar-total">Total: <span id="weekTotalDisplay">0</span> pts</div>
+  <div class="save-bar-total"><span class="sbt-lbl">Total: </span><span id="weekTotalDisplay">0</span> pts</div>
   <span class="save-state saved" id="saveState">Saved</span>
   <div class="save-bar-msg" id="saveBarMsg"></div>
+  <button class="btn-undo" id="undoTapBtn" type="button" onclick="undoTap()" disabled aria-label="Undo last tap" title="Undo last tap">↶<span class="btn-undo-txt"> Undo</span></button>
   <button class="btn-save" id="submitBtn" onclick="submitScores()">💾 Save</button>
 </div>
 
@@ -1265,6 +1321,13 @@
       </div>
     </div>
 
+    <!-- Quick-log buttons -->
+    <div class="settings-block">
+      <h3>Quick-Log Buttons</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">The one-tap row on each wrestler is the six categories your league logs most. It re-ranks itself as the season goes.</p>
+      <div id="quickStats" class="quick-stats"></div>
+    </div>
+
     <!-- New Season -->
     <div class="settings-block" style="border-color:rgba(29,211,176,0.2);">
       <h3 style="color:var(--teal);">Start New Season</h3>
@@ -1353,9 +1416,68 @@ const ACC_GROUPS = [
   { id:'title', label:'Titles',      keys:['aewTitle','defAew','thirdTitle','defThird'] },
   { id:'chaos', label:'Chaos',       keys:['runin','brawl','stunt','fluid'] },
 ];
-// The handful that account for most entries on a normal Dynamite.
-const QUICK_KEYS = ['win','loss','main','promoLive'];
+// The one-tap row at the top of each wrestler. It used to be a fixed guess
+// (win, loss, main, live promo). It is now the QUICK_COUNT categories logged
+// most often: this season once it has QUICK_MIN_ENTRIES taps, otherwise last
+// season's ranking (written into the new season at rollover), otherwise the
+// old guess padded out. It is re-ranked only when a show or team is loaded,
+// never mid-tap, and shown in the fixed group order so buttons don't shuffle.
+const QUICK_KEYS = ['win','loss','main','promoLive','promoBack','respect'];
+const QUICK_COUNT = 6;
+const QUICK_MIN_ENTRIES = 40;
+const SHORT_LABELS = {
+  win:'Win', main:'Main Event', runin:'Run-In', fluid:'Fluid / 5★',
+  squashJobber:'Squash Jobber', squashNotable:'Squash Notable',
+  promoBack:'Backstage Promo', promoLive:'Live Promo', faceheel:'Turn',
+  timelimit:'Draw / DQ', respect:'Respect', loss:'Loss',
+  writtenoff:'Written Off / Return', stunt:'Prop Stunt', aewTitle:'AEW Title Win',
+  thirdTitle:'3rd-Party Title', defAew:'AEW Defense', defThird:'3rd-Party Defense',
+  brawl:'Brawl',
+};
+function shortLabel(key) { return SHORT_LABELS[key] || (ACC_BY_KEY[key] ? ACC_BY_KEY[key].label.split(' / ')[0] : key); }
+let quickKeysNow = QUICK_KEYS.slice();
+let quickSource = 'default';
 const ACC_BY_KEY = Object.fromEntries(ACCOMPLISHMENTS.map(a => [a.key, a]));
+const ACC_ORDER = ACC_GROUPS.flatMap(g => g.keys);
+
+// How often each category was logged (taps, not points) across every team.
+function rankQuickKeys(scores, schedule) {
+  const counts = {};
+  ACCOMPLISHMENTS.forEach(a => { counts[a.key] = 0; });
+  const sids = new Set((schedule || []).map(sh => sh.date + '_' + sh.type));
+  let total = 0;
+  for (const t of TEAMS) {
+    const byShow = (scores || {})[t] || {};
+    for (const sid in byShow) {
+      if (sids.size && !sids.has(sid)) continue;
+      const row = byShow[sid] || {};
+      for (const l of LETTERS) {
+        const cell = row[l];
+        if (!cell) continue;
+        for (const a of ACCOMPLISHMENTS) {
+          const n = getCount(cell, a.key);
+          if (n) { counts[a.key] += n; total += n; }
+        }
+      }
+    }
+  }
+  const keys = ACCOMPLISHMENTS.map((a, i) => ({ k: a.key, n: counts[a.key], i }))
+    .filter(x => x.n > 0).sort((a, b) => b.n - a.n || a.i - b.i)
+    .slice(0, QUICK_COUNT).map(x => x.k);
+  return { keys, counts, total };
+}
+
+function pickQuickKeys() {
+  const pad = keys => {
+    const out = keys.filter(k => ACC_BY_KEY[k]).slice(0, QUICK_COUNT);
+    for (const k of QUICK_KEYS) if (out.length < QUICK_COUNT && !out.includes(k)) out.push(k);
+    return out.sort((a, b) => ACC_ORDER.indexOf(a) - ACC_ORDER.indexOf(b));
+  };
+  const live = rankQuickKeys(state.scores, state.schedule);
+  if (live.total >= QUICK_MIN_ENTRIES) return { keys: pad(live.keys), source: 'this season', stats: live };
+  if (Array.isArray(state.quickSeed) && state.quickSeed.length) return { keys: pad(state.quickSeed), source: 'last season', stats: live };
+  return { keys: pad([]), source: 'default', stats: live };
+}
 
 const FIREBASE_RULES = `{
   "rules": {
@@ -1555,6 +1677,28 @@ let pendingSchedule = [];
 let settingsLoaded = false;
 // Draft state
 function blankDraft() { return { active: false, order: TEAMS.slice(), rounds: 12, picks: [] }; }
+// League rule: the draft goes in reverse order of final standings, so last
+// place picks first. Ties keep the usual team order and are named in the note
+// so the room can settle them by hand.
+function reverseStandingsOrder(totalFn) {
+  const rows = TEAMS.map((t, i) => ({ t, i, pts: totalFn(t) || 0 }))
+    .sort((a, b) => a.pts - b.pts || a.i - b.i);
+  const ties = [];
+  for (let k = 1; k < rows.length; k++) {
+    if (rows[k].pts === rows[k - 1].pts) ties.push(TEAM_LABELS[rows[k - 1].t] + ' & ' + TEAM_LABELS[rows[k].t]);
+  }
+  return { order: rows.map(r => r.t), any: rows.some(r => r.pts > 0), ties };
+}
+function seededDraft(seasonName, totalFn) {
+  const d = blankDraft();
+  const r = reverseStandingsOrder(totalFn);
+  if (!r.any) return d;
+  d.order = r.order;
+  d.seedOrder = r.order.slice();
+  d.orderNote = 'Reverse final standings of ' + seasonName
+    + (r.ties.length ? ' (tied: ' + r.ties.join(', ') + ' — adjust if you break ties differently)' : '');
+  return d;
+}
 function normalizeDraft(v) {
   const d = Object.assign(blankDraft(), (v && typeof v === 'object') ? v : {});
   if (!Array.isArray(d.picks)) d.picks = [];
@@ -1621,7 +1765,7 @@ function isKeyHeld(key) {
 // ─────────────────────────────────────────────
 // The one number the whole shell hangs off. window.innerHeight is the actual
 // visible height in iOS standalone, where 100vh is not.
-const BUILD_ID = 'b0916-finals';
+const BUILD_ID = 'b0926-draftday';
 
 function toggleDiag() {
   const p = document.getElementById('diagPanel');
@@ -2292,6 +2436,10 @@ function applyOneKey(key, v) {
     state.schedule = v; return true;
   }
   if (key === 'aew_seasonname') { state.seasonName = String(v); return true; }
+  if (key === 'aew_quickkeys') {
+    if (!Array.isArray(v)) return false;
+    state.quickSeed = v.filter(k => typeof k === 'string'); return true;
+  }
   if (key === 'aew_archive_seasons') {
     // Legacy per-league copy. Only used to seed /archive, or as a read-only
     // fallback while the rules predate /archive.
@@ -2436,6 +2584,7 @@ function resetSeasonState() {
   state.scores = {};
   state.schedule = [];
   state.seasonName = '';
+  state.quickSeed = null;
   state.rosters = blankRosters();
   state.swaps = blankSwaps();
   state.draft = null;
@@ -3118,8 +3267,39 @@ function loadShowScores() {
     }
   }
   saveRetries = 0;   // backoff belongs to the show you just left, not this one
+  tapLog = [];
+  updateUndoBtn();
+  const q = pickQuickKeys();
+  quickKeysNow = q.keys; quickSource = q.source;
   setDirty(false);
   renderScoringList();
+}
+
+// Quick taps and event chips only add. A mis-tap used to mean opening the
+// wrestler and hunting for the right − among 19 rows (or, in event mode,
+// switching modes). This undoes the last tap on this show, whatever it was.
+let tapLog = [];
+function updateUndoBtn() {
+  const b = document.getElementById('undoTapBtn');
+  if (!b) return;
+  b.disabled = !tapLog.length;
+  const last = tapLog[tapLog.length - 1];
+  b.title = last
+    ? `Undo ${last.delta > 0 ? '+' : '−'}${shortLabel(last.key)} for ${(state.rosters[currentTeam] || {})[last.letter] || last.letter.toUpperCase()}`
+    : 'Undo last tap';
+}
+function undoTap() {
+  const last = tapLog.pop();
+  if (!last) return;
+  stepAcc(last.letter, last.key, -last.delta, true);
+  const who = (state.rosters[currentTeam] || {})[last.letter] || last.letter.toUpperCase();
+  const st = document.getElementById('saveBarMsg');
+  if (st) {
+    st.textContent = `Undid ${shortLabel(last.key)} · ${who}`;
+    st.style.display = 'block';
+    clearTimeout(undoTap.t);
+    undoTap.t = setTimeout(() => { st.style.display = 'none'; }, 1800);
+  }
 }
 
 function countOf(letter, key) {
@@ -3163,6 +3343,18 @@ function accRowHTML(letter, a) {
   </div>`;
 }
 
+function quickInner(a, c) {
+  return `<span class="q-lbl">${esc(shortLabel(a.key))}</span><span class="q-pts">+${a.pts}</span>${c > 0 ? `<b class="q-cnt">${c}</b>` : ''}`;
+}
+
+// What's been logged for this wrestler on this show, readable with the card
+// closed — the quickest way to spot a double-tap.
+function cardSummary(letter) {
+  const row = liveCounts[letter] || {};
+  return ACC_ORDER.filter(k => row[k] > 0)
+    .map(k => esc(shortLabel(k)) + (row[k] > 1 ? ' ×' + row[k] : '')).join(' · ');
+}
+
 function wrestlerModeHTML() {
   return LETTERS.map(letter => {
     const name = state.rosters[currentTeam][letter];
@@ -3170,12 +3362,10 @@ function wrestlerModeHTML() {
     const pts = wrestlerPtsLive(letter);
     const open = openCards.has(letter);
 
-    const quick = QUICK_KEYS.map(k => {
+    const quick = quickKeysNow.map(k => {
       const a = ACC_BY_KEY[k]; if (!a) return '';
       const c = countOf(letter, k);
-      return `<button class="quick-btn ${c>0?'on':''}" onclick="stepAcc('${letter}','${k}',1)">
-        ${esc(a.label.split(' / ')[0])}${c>0?` <b>${c}</b>`:''}
-      </button>`;
+      return `<button class="quick-btn ${c>0?'on':''}" id="q_${letter}_${k}" type="button" aria-label="Add one ${escAttr(a.label)}" onclick="stepAcc('${letter}','${k}',1)">${quickInner(a, c)}</button>`;
     }).join('');
 
     const groups = ACC_GROUPS.map(g => `
@@ -3187,7 +3377,10 @@ function wrestlerModeHTML() {
       <button class="wsc-header" type="button" id="wsch_${letter}" aria-expanded="${open}" aria-controls="accs_${letter}" onclick="toggleCard('${letter}')">
         <span class="wsc-left">
           <span class="wsc-letter">${letter.toUpperCase()}</span>
-          <span class="wsc-name">${esc(name)}</span>
+          <span class="wsc-namewrap">
+            <span class="wsc-name">${esc(name)}</span>
+            <span class="wsc-sum" id="sum_${letter}">${cardSummary(letter)}</span>
+          </span>
         </span>
         <span class="wsc-right">
           <span class="wsc-pts" id="prev_${letter}">${pts>0?'+'+pts+' pts':''}</span>
@@ -3286,8 +3479,15 @@ function setScoreMode(mode, btn) {
   renderScoringList();
 }
 
-function stepAcc(letter, key, delta) {
-  const next = Math.max(0, countOf(letter, key) + delta);
+function stepAcc(letter, key, delta, fromUndo) {
+  const before = countOf(letter, key);
+  const next = Math.max(0, before + delta);
+  if (next === before) return;          // − on zero: nothing to change or save
+  if (!fromUndo) {
+    tapLog.push({ letter, key, delta: next - before });
+    if (tapLog.length > 60) tapLog.shift();
+  }
+  updateUndoBtn();
   if (!liveCounts[letter]) liveCounts[letter] = {};
   if (next === 0) delete liveCounts[letter][key];
   else liveCounts[letter][key] = next;
@@ -3309,14 +3509,10 @@ function stepAcc(letter, key, delta) {
       else chip.insertAdjacentHTML('beforeend', `<span class="chip-count">${next}</span>`);
     } else if (cc) cc.remove();
   }
-  const quickBtns = document.querySelectorAll(`#accs_${letter} .quick-btn`);
-  if (quickBtns.length) {
-    QUICK_KEYS.forEach((qk, i) => {
-      if (qk !== key || !quickBtns[i]) return;
-      const a = ACC_BY_KEY[qk];
-      quickBtns[i].classList.toggle('on', next > 0);
-      quickBtns[i].innerHTML = `${esc(a.label.split(' / ')[0])}${next>0?` <b>${next}</b>`:''}`;
-    });
+  const qb = document.getElementById(`q_${letter}_${key}`);
+  if (qb) {
+    qb.classList.toggle('on', next > 0);
+    qb.innerHTML = quickInner(ACC_BY_KEY[key], next);
   }
   const tally = document.getElementById(`evttally_${key}`);
   if (tally) {
@@ -3339,6 +3535,8 @@ function updateTotals(changedLetter) {
     const pts = wrestlerPtsLive(l);
     const prev = document.getElementById(`prev_${l}`);
     if (prev) prev.textContent = pts > 0 ? `+${pts} pts` : '';
+    const sum = document.getElementById(`sum_${l}`);
+    if (sum) sum.innerHTML = cardSummary(l);
     const card = document.getElementById(`card_${l}`);
     if (card) card.classList.toggle('scored', pts > 0);
   }
@@ -3647,7 +3845,11 @@ async function saveSchedule() {
   const msg = document.getElementById('scheduleSaveMsg');
   msg.textContent = 'Saving…'; msg.style.display = 'inline'; msg.style.color = 'var(--teal)';
   try {
-    await saveToSheet();
+    // Schedule and name only. This used to go through saveToSheet, which also
+    // rewrote all four rosters from this phone's copy — during a draft that
+    // could put back a slot someone had just filled on another phone.
+    await dbSet('aew_schedule', state.schedule);
+    await dbSet('aew_seasonname', state.seasonName);
     msg.textContent = `✓ ${state.schedule.length} shows saved!`;
     renderAll();
   } catch(e) { msg.textContent = '✗ Error'; msg.style.color = 'var(--red)'; }
@@ -3678,8 +3880,10 @@ function renderDraftSetup(el) {
     <div class="draft-setup">
       <div class="settings-block">
         <h3>Draft Order</h3>
-        <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Drag to reorder, or use arrows. This is the Round 1 order — snake draft reverses each round.</p>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Use the arrows to reorder. This is the Round 1 order — snake draft reverses each round.</p>
         <div class="draft-order-list" id="draftOrderList"></div>
+        <div id="draftOrderNote" class="draft-order-note"></div>
+        <button class="btn-secondary" style="margin-top:10px;font-size:12px;padding:8px 14px;" onclick="draftOrderFromLastSeason()">Set from last season’s standings</button>
       </div>
       <div class="settings-block">
         <h3>RyAI</h3>
@@ -3726,7 +3930,37 @@ function renderDraftSetup(el) {
   renderDraftOrderList();
 }
 
+function renderDraftOrderNote() {
+  const el = document.getElementById('draftOrderNote');
+  if (!el) return;
+  const seeded = draftState.orderNote && Array.isArray(draftState.seedOrder)
+    && draftState.seedOrder.join() === draftState.order.join();
+  el.textContent = seeded ? '✓ ' + draftState.orderNote : '';
+}
+
+// For a season that was started before the order was seeded automatically, or
+// after someone shuffled it: rank the most recently archived season.
+async function draftOrderFromLastSeason() {
+  const el = document.getElementById('draftOrderNote');
+  const say = t => { if (el) el.textContent = t; };
+  const entries = archivedEntries().filter(e => e.league || e.url);
+  const entry = entries[entries.length - 1];
+  if (!entry) { say('No archived season to rank — set the order by hand.'); return; }
+  say('Reading ' + (entry.name || 'last season') + '…');
+  let data;
+  try { data = await loadOneArchive(entry); }
+  catch (e) { say('Could not read ' + (entry.name || 'last season') + ': ' + e.message); return; }
+  if (!data || data.isMultiSeason) { say('The last archived season has no team totals — set the order by hand.'); return; }
+  const seeded = seededDraft(data.seasonName || entry.name || 'last season', t => archiveGetTeamTotal(data, t));
+  if (!seeded.seedOrder) { say('No scores in ' + (entry.name || 'last season') + ' — set the order by hand.'); return; }
+  draftState.order = seeded.order;
+  draftState.seedOrder = seeded.seedOrder;
+  draftState.orderNote = seeded.orderNote;
+  renderDraftOrderList();
+}
+
 function renderDraftOrderList() {
+  renderDraftOrderNote();
   const list = document.getElementById('draftOrderList');
   if (!list) return;
   list.innerHTML = draftState.order.map((team, i) => `
@@ -3856,10 +4090,11 @@ async function startDraft(force) {
       // Another device started a draft and has picks in it: do not wipe it from
       // a setup screen that never saw it. Start Fresh passes force.
       if (!force && d.picks.length) return false;
-      d.active = true; d.order = order; d.rounds = rounds; d.picks = [];
+      d.active = true; d.order = order; d.rounds = rounds; d.picks = []; d.ryaiHold = -1;
     });
   } catch (e) { alert('Could not start the draft: ' + e.message); return; }
   applyDraftSnapshot(res.snapshot);
+  ryaiLocalHold = -1;
   if (!res.committed) {
     alert('Another device already has a draft with ' + draftState.picks.length
       + ' picks. Resume it, or use Start Fresh to clear it.');
@@ -3882,10 +4117,29 @@ function clearAndStartDraft() {
   startDraft(true);
 }
 
+// Who already has this wrestler, however either name was typed. Uses RyAI's
+// resolver, which refuses to guess on near ties, so a hit is a real clash.
+function draftOwnerOf(name) {
+  const key = v => { const r = ryaiResolve(v); return ryaiNormalize(r.match || v); };
+  const want = key(name);
+  if (!want) return null;
+  for (const p of draftState.picks) if (key(p.wrestler) === want) return { team: p.team, name: p.wrestler };
+  for (const t of TEAMS) for (const l of LETTERS) {
+    const v = (state.rosters[t] || {})[l];
+    if (v && key(v) === want) return { team: t, name: v };
+  }
+  return null;
+}
+
 function makePick() {
   const inp = document.getElementById('draftPickInput');
   const wrestler = inp ? inp.value.trim() : '';
   if (!wrestler) return;
+  const clash = draftOwnerOf(wrestler);
+  if (clash && !confirm(`${clash.name} is already on ${TEAM_LABELS[clash.team]}'s roster. Draft "${wrestler}" anyway?`)) {
+    if (inp) inp.select();
+    return;
+  }
 
   const { team, round } = getCurrentPicker();
   const slot = getNextSlotForTeam(team);
@@ -3931,6 +4185,7 @@ async function commitPick(pick, expected, epoch) {
   try {
     res = await draftTxn(d => {
       if (!d.active || d.picks.length !== expected) return false;
+      if (pick.byBot && d.ryaiHold === expected) return false;
       const who = pickerAt(d, expected);
       if (who.team !== pick.team) return false;
       const slot = nextSlotIn(d, pick.team);
@@ -3953,6 +4208,11 @@ async function commitPick(pick, expected, epoch) {
     // quietly rather than cry collision.
     if (pick.byBot && theirs && theirs.team === pick.team && theirs.wrestler === pick.wrestler) {
       showDraftStatus('\u2713 RyAI pick recorded', 'var(--teal)');
+      rerenderDraft();
+      return;
+    }
+    if (pick.byBot && draftState.ryaiHold === expected) {
+      showDraftStatus('RyAI stood down on another phone \u2014 its pick was not recorded', 'var(--gold)');
       rerenderDraft();
       return;
     }
@@ -3989,83 +4249,100 @@ const RYAI_PATH = 'ryai';
 //          the axis Ryan appears to draft on. UNTESTED — if the score data
 //          disagrees, turn weights.change down rather than editing this list.
 const RYAI_BOARD_DEFAULT = [
-  { name:"Will Ospreay", base:9, change:7, avail:1, note:"world champ, defending constantly" },
-  { name:"Jon Moxley", base:8, change:8, avail:1, note:"Continental champ, challenging at All Out" },
-  { name:"Kazuchika Okada", base:8, change:6, avail:1, note:"International champ" },
-  { name:"Darby Allin", base:7, change:7, avail:1, note:"three-time TNT champ, stunt magnet" },
-  { name:"Andrade", base:6, change:6, avail:1, note:"National champ" },
-  { name:"Kyle Fletcher", base:7, change:7, avail:1, note:"in the International picture" },
-  { name:"Konosuke Takeshita", base:7, change:7, avail:1, note:"in the International picture" },
-  { name:"Swerve Strickland", base:8, change:6, avail:1, note:"trios gold with the new arrivals" },
-  { name:"Kenny Omega", base:7, change:8, avail:1, note:"off a title loss, repositioning" },
-  { name:"MJF", base:7, change:7, avail:1, note:"promo volume, turn candidate" },
-  { name:"Adam Page", base:7, change:5, avail:1, note:"former champ, steady main event" },
-  { name:"Jay White", base:6, change:5, avail:1, note:"Bullet Club Gold fixture" },
-  { name:"Mercedes Mone", base:8, change:6, avail:1, note:"women's world champ" },
-  { name:"Persephone", base:6, change:7, avail:1, note:"new TBS champ, first defences" },
-  { name:"Maya World", base:6, change:8, avail:1, note:"just lost TBS, rematch arc" },
-  { name:"Willow Nightingale", base:6, change:7, avail:1, note:"off a title loss" },
-  { name:"Jamie Hayter", base:6, change:6, avail:1, note:"tag champ with a singles pull" },
-  { name:"Alex Windsor", base:5, change:6, avail:1, note:"tag champ" },
-  { name:"Toni Storm", base:7, change:7, avail:1, note:"character churn, turn candidate" },
-  { name:"Thekla", base:5, change:5, avail:1, note:"faction chaos" },
-  { name:"Athena", base:5, change:5, avail:1, note:"ROH crossover" },
-  { name:"Kris Statlander", base:6, change:5, avail:1, note:"regular TV" },
-  { name:"Harley Cameron", base:5, change:6, avail:1, note:"rising, promo-heavy" },
-  { name:"Julia Hart", base:4, change:5, avail:1, note:"Sisters of Sin" },
-  { name:"Skye Blue", base:4, change:4, avail:1, note:"Sisters of Sin" },
-  { name:"Mina Shirakawa", base:4, change:4, avail:1, note:"regular TV" },
-  { name:"Austin Creed", base:6, change:9, avail:1, note:"fresh debut, trios gold" },
-  { name:"Kofi Kingston", base:6, change:9, avail:1, note:"fresh debut, trios gold" },
-  { name:"Chris Jericho", base:6, change:8, avail:1, note:"back after a year off TV" },
-  { name:"Orange Cassidy", base:6, change:4, avail:1, note:"segment machine, low volatility" },
-  { name:"HOOK", base:5, change:5, avail:1, note:"chaos categories" },
-  { name:"Brody King", base:5, change:5, avail:1, note:"brawls and pull-aparts" },
-  { name:"Claudio Castagnoli", base:5, change:4, avail:1, note:"steady" },
-  { name:"Daniel Garcia", base:5, change:6, avail:1, note:"turn candidate, promo time" },
-  { name:"Kevin Knight", base:5, change:7, avail:1, note:"ascending NJPW pipeline" },
-  { name:"Clark Connors", base:4, change:5, avail:1, note:"NJPW pipeline" },
-  { name:"Gabe Kidd", base:5, change:7, avail:1, note:"volatile, brawls" },
-  { name:"David Finlay", base:5, change:5, avail:1, note:"Bullet Club Gold" },
-  { name:"Matt Jackson", base:5, change:5, avail:1, note:"tag volume" },
-  { name:"Nick Jackson", base:5, change:5, avail:1, note:"tag volume" },
-  { name:"Dax Harwood", base:5, change:6, avail:1, note:"FTR turn candidate" },
-  { name:"Cash Wheeler", base:5, change:6, avail:1, note:"FTR turn candidate" },
-  { name:"Mark Briscoe", base:5, change:4, avail:1, note:"reliable TV" },
-  { name:"Samoa Joe", base:5, change:4, avail:1, note:"reliable TV" },
-  { name:"Roderick Strong", base:4, change:4, avail:1, note:"Undisputed Kingdom" },
-  { name:"Mike Bailey", base:5, change:4, avail:1, note:"workrate, five-star candidate" },
-  { name:"Kyle O'Reilly", base:4, change:4, avail:1, note:"steady" },
-  { name:"Wheeler Yuta", base:4, change:4, avail:1, note:"BCC" },
-  { name:"Ricochet", base:5, change:5, avail:1, note:"heel act, promo time" },
-  { name:"PAC", base:5, change:5, avail:1, note:"Death Triangle" },
-  { name:"The Beast Mortos", base:4, change:4, avail:1, note:"lucha chaos" },
-  { name:"Hologram", base:4, change:5, avail:1, note:"ascending lucha act" },
-  { name:"Komander", base:3, change:3, avail:1, note:"undercard lucha" },
-  { name:"Bandido", base:4, change:5, avail:1, note:"ROH crossover" },
-  { name:"Shelton Benjamin", base:4, change:4, avail:1, note:"Hurt Syndicate" },
-  { name:"Bobby Lashley", base:4, change:5, avail:1, note:"Hurt Syndicate" },
-  { name:"Big Bill", base:3, change:4, avail:1, note:"tag depth" },
-  { name:"Lance Archer", base:3, change:4, avail:1, note:"brawls" },
-  { name:"Powerhouse Hobbs", base:4, change:5, avail:1, note:"squash potential" },
-  { name:"Lee Moriarty", base:3, change:3, avail:1, note:"undercard" },
-  { name:"RUSH", base:4, change:4, avail:1, note:"brawls" },
+  { name:"Jon Moxley", base:8, change:8, avail:1, note:"Continental champ, World title shot at All Out" },
+  { name:"Chris Jericho", base:8, change:5, avail:1, note:"active on Dynamite; the comeback itself is already spent" },
+  { name:"Will Ospreay", base:7, change:7, avail:1, note:"World champ, first defence vs Moxley at All Out" },
+  { name:"Darby Allin", base:6, change:6, avail:1, note:"tag title contender match with Steven Borden" },
+  { name:"Kyle Fletcher", base:6, change:6, avail:1, note:"Callis Family, tag title contender match at All Out" },
+  { name:"Kevin Knight", base:6, change:6, avail:1, note:"Callis Family, tag title contender match at All Out" },
+  { name:"Andrade", base:5, change:8, avail:1, note:"National champ, joined United Empire, holds a guaranteed World title shot" },
+  { name:"Kenny Omega", base:5, change:8, avail:1, note:"off a title loss, repositioning" },
+  { name:"MJF", base:5, change:7, avail:1, note:"promo volume, turn candidate" },
+  { name:"Toni Storm", base:5, change:7, avail:1, note:"character churn, turn candidate" },
+  { name:"Orange Cassidy", base:6, change:4, avail:1, note:"Conglomeration, weekly presence" },
+  { name:"Swerve Strickland", base:5, change:6, avail:1, note:"trios champ, defends at All Out" },
+  { name:"Mercedes Mone", base:5, change:6, avail:0.9, note:"women's world champ; broken nose, cleared for WrestleDream" },
+  { name:"Maya World", base:4, change:8, avail:1, note:"just lost TBS, rematch arc" },
+  { name:"Persephone", base:4, change:7, avail:1, note:"new TBS champ, first defences" },
+  { name:"Willow Nightingale", base:4, change:7, avail:1, note:"contender match vs Thekla at All Out, wrestling with a broken hand" },
+  { name:"Austin Creed", base:4, change:7, avail:1, note:"trios champ, new arrival" },
+  { name:"Kofi Kingston", base:4, change:7, avail:1, note:"trios champ, new arrival" },
+  { name:"Christian Cage", base:4, change:7, avail:1, note:"tag champ, three-way ladder at All Out" },
+  { name:"Adam Copeland", base:4, change:7, avail:1, note:"tag champ, three-way ladder at All Out" },
+  { name:"Kazuchika Okada", base:4, change:6, avail:1, note:"International champ, defends vs Ciampa at All Out" },
+  { name:"Tommaso Ciampa", base:3, change:8, avail:1, note:"International title shot vs Okada at All Out" },
+  { name:"Konosuke Takeshita", base:3, change:7, avail:1, note:"in the International picture" },
+  { name:"Adam Page", base:3, change:7, avail:1, note:"trios title shot at All Out" },
+  { name:"Thekla", base:3, change:7, avail:1, note:"contender match vs Willow at All Out" },
+  { name:"Brody King", base:3, change:7, avail:1, note:"trios title shot at All Out with Bandido" },
+  { name:"Matt Jackson", base:3, change:7, avail:1, note:"tag title ladder match at All Out" },
+  { name:"Nick Jackson", base:3, change:7, avail:1, note:"tag title ladder match at All Out" },
+  { name:"Cash Wheeler", base:3, change:7, avail:1, note:"tag title ladder match at All Out" },
+  { name:"PAC", base:3, change:7, avail:1, note:"challenges Andrade for the National title at All Out" },
+  { name:"Bandido", base:3, change:7, avail:1, note:"trios title shot at All Out with Brody King" },
+  { name:"Mark Briscoe", base:4, change:4, avail:1, note:"reliable TV" },
+  { name:"Roderick Strong", base:4, change:4, avail:1, note:"Conglomeration" },
+  { name:"Mike Bailey", base:4, change:4, avail:1, note:"workrate, five-star candidate" },
+  { name:"Kyle O'Reilly", base:4, change:4, avail:1, note:"Conglomeration" },
+  { name:"Alex Windsor", base:3, change:6, avail:1, note:"women's tag champ, street fight at All Out" },
+  { name:"Harley Cameron", base:3, change:6, avail:1, note:"rising, promo-heavy" },
+  { name:"Gabe Kidd", base:3, change:6, avail:1, note:"Death Riders, in the Moxley orbit" },
   { name:"Megasus", base:3, change:6, avail:1, note:"novelty act, high variance" },
-  { name:"Don Callis", base:4, change:4, avail:1, note:"promo volume, no matches" },
-  { name:"Christian Cage", base:5, change:5, avail:1, note:"promo volume" },
-  { name:"Adam Copeland", base:5, change:5, avail:1, note:"returning veteran" },
-  { name:"Adam Cole", base:5, change:5, avail:0, note:"Undisputed Kingdom" },
-  { name:"Josh Alexander", base:4, change:4, avail:1, note:"Callis Family" },
-  { name:"Brian Cage", base:3, change:3, avail:1, note:"depth" },
-  { name:"Wardlow", base:3, change:4, avail:1, note:"depth" },
-  { name:"Anthony Bowens", base:4, change:5, avail:1, note:"turn candidate" },
-  { name:"Billy Gunn", base:3, change:3, avail:1, note:"depth" },
-  { name:"Austin Gunn", base:3, change:3, avail:1, note:"depth" },
-  { name:"Trent Beretta", base:3, change:3, avail:1, note:"depth" },
-  { name:"Juice Robinson", base:3, change:3, avail:1, note:"depth" },
-  { name:"Lio Rush", base:3, change:4, avail:1, note:"depth" },
-  { name:"Isiah Kassidy", base:3, change:4, avail:1, note:"Private Party, tag depth" },
-  { name:"Thunder Rosa", base:3, change:3, avail:1, note:"depth" }
+  { name:"Lena Kross", base:3, change:6, avail:1, note:"Divine Dominion, women's tag title shot at All Out" },
+  { name:"Megan Bayne", base:3, change:6, avail:1, note:"Divine Dominion, women's tag title shot at All Out" },
+  { name:"Steven Borden", base:3, change:6, avail:1, note:"Darby's partner, tag title contender match" },
+  { name:"Jay White", base:3, change:5, avail:1, note:"Bullet Club Gold fixture" },
+  { name:"Athena", base:3, change:5, avail:1, note:"ROH crossover" },
+  { name:"Kris Statlander", base:3, change:5, avail:1, note:"regular TV" },
+  { name:"Julia Hart", base:3, change:5, avail:1, note:"Sisters of Sin" },
+  { name:"HOOK", base:3, change:5, avail:1, note:"chaos categories" },
+  { name:"Clark Connors", base:3, change:5, avail:1, note:"NJPW pipeline" },
+  { name:"David Finlay", base:3, change:5, avail:1, note:"Bullet Club Gold" },
+  { name:"Ricochet", base:3, change:5, avail:1, note:"The Demand, trios contender" },
+  { name:"Hologram", base:3, change:5, avail:0.5, note:"knee surgery, return unclear" },
+  { name:"Powerhouse Hobbs", base:3, change:5, avail:0, note:"left for WWE" },
+  { name:"Adam Cole", base:3, change:5, avail:0, note:"Undisputed Kingdom" },
+  { name:"Anthony Bowens", base:3, change:5, avail:1, note:"turn candidate" },
+  { name:"Francesco Akira", base:3, change:5, avail:1, note:"United Empire, main-event trios exposure" },
+  { name:"Callum Newman", base:3, change:5, avail:1, note:"United Empire" },
+  { name:"Alex Shelley", base:3, change:5, avail:1, note:"Motor City Machine Guns, signed this year" },
+  { name:"Chris Sabin", base:3, change:5, avail:1, note:"Motor City Machine Guns, signed this year" },
+  { name:"Dax Harwood", base:2, change:7, avail:1, note:"tag title ladder match at All Out" },
+  { name:"Skye Blue", base:3, change:4, avail:1, note:"Sisters of Sin" },
+  { name:"Claudio Castagnoli", base:3, change:4, avail:1, note:"steady" },
+  { name:"Samoa Joe", base:3, change:4, avail:1, note:"reliable TV" },
+  { name:"Wheeler Yuta", base:3, change:4, avail:1, note:"BCC" },
+  { name:"The Beast Mortos", base:3, change:4, avail:1, note:"lucha chaos" },
+  { name:"Don Callis", base:3, change:4, avail:1, note:"promo volume, no matches" },
+  { name:"Josh Alexander", base:3, change:4, avail:0, note:"knee surgery, no return date" },
+  { name:"Nick Wayne", base:3, change:4, avail:1, note:"regular Dynamite presence" },
+  { name:"Jamie Hayter", base:2, change:6, avail:1, note:"women's tag champ, street fight at All Out" },
+  { name:"Daniel Garcia", base:2, change:5, avail:1, note:"won the Butcher Battle Royale, got a National title shot" },
+  { name:"Bishop Kaun", base:2, change:5, avail:1, note:"The Demand, trios contender" },
+  { name:"Toa Liona", base:2, change:5, avail:1, note:"The Demand, trios contender" },
+  { name:"Volador", base:2, change:5, avail:1, note:"Callis Family, ROH title challenger" },
+  { name:"Mina Shirakawa", base:2, change:4, avail:1, note:"regular TV" },
+  { name:"Shelton Benjamin", base:2, change:4, avail:1, note:"Hurt Syndicate" },
+  { name:"Big Bill", base:2, change:4, avail:1, note:"tag depth" },
+  { name:"Lance Archer", base:2, change:4, avail:1, note:"brawls" },
+  { name:"RUSH", base:2, change:4, avail:1, note:"brawls" },
+  { name:"Wardlow", base:2, change:4, avail:0.3, note:"torn pectoral, return unclear" },
+  { name:"Lio Rush", base:2, change:4, avail:1, note:"depth" },
+  { name:"Isiah Kassidy", base:2, change:4, avail:0, note:"injured, no return date" },
+  { name:"Zachary Wentz", base:2, change:4, avail:1, note:"The Rascalz, signed this year" },
+  { name:"Dezmond Xavier", base:2, change:4, avail:1, note:"The Rascalz, signed this year" },
+  { name:"Myron Reed", base:2, change:4, avail:1, note:"The Rascalz, signed this year" },
+  { name:"Komander", base:2, change:3, avail:1, note:"undercard lucha" },
+  { name:"Lee Moriarty", base:2, change:3, avail:1, note:"undercard" },
+  { name:"Brian Cage", base:2, change:3, avail:0.3, note:"cleared but barely used" },
+  { name:"Billy Gunn", base:2, change:3, avail:1, note:"depth" },
+  { name:"Austin Gunn", base:2, change:3, avail:1, note:"depth" },
+  { name:"Trent Beretta", base:2, change:3, avail:1, note:"depth" },
+  { name:"Juice Robinson", base:2, change:3, avail:1, note:"depth" },
+  { name:"Thunder Rosa", base:2, change:3, avail:1, note:"depth" },
+  { name:"Stokely Hathaway", base:2, change:3, avail:1, note:"manager, promo volume, no matches" },
+  { name:"Marq Quen", base:2, change:3, avail:0, note:"Private Party, injured with no return date" },
+  { name:"Bobby Lashley", base:1, change:5, avail:1, note:"Hurt Syndicate" }
 ];
 
 // Recency-weighted across six Ryan rosters, oldest to newest, geometric decay.
@@ -4115,6 +4392,18 @@ const RYAI_DEFAULTS = {
 
 let ryaiConfig = Object.assign({}, RYAI_DEFAULTS);
 let ryaiTimer = null, ryaiDeadline = 0, ryaiArmedFor = -1, ryaiChoice = null;
+// The pick index RyAI has been told to leave alone. It lives in the shared
+// draft (draftState.ryaiHold) so Override on one phone stops the clock on all
+// of them — each phone runs its own countdown, and before this the others kept
+// counting and committed RyAI's pick anyway. ryaiLocalHold covers the moment
+// between tapping Override and the shared write landing.
+let ryaiLocalHold = -1;
+function ryaiHeld(n) { return draftState.ryaiHold === n || ryaiLocalHold === n; }
+function ryaiPaintHeld() {
+  const host = document.getElementById('ryaiPanel');
+  if (host) host.innerHTML = '<div class="ryai-line">RyAI stood down \u2014 type the pick above.</div>'
+    + '<div class="ryai-btns"><button class="btn-secondary ryai-btn" onclick="ryaiResume()">Let RyAI pick</button></div>';
+}
 
 // ── name resolution ──────────────────────────
 // Rosters carry jokes ("REMEMBER YOU HAVE OKADA"), misspellings ("Bobert
@@ -4413,28 +4702,27 @@ function ryaiSeed() {
 function ryaiChoose(round) {
   const r = ryaiRank(round);
   if (!r.length) return null;
-  const reach = ryaiConfig.reach == null ? 0 : ryaiConfig.reach;
   const best = r[0];
-  if (reach <= 0 || r.length < 2) return { name: best.name, why: ryaiWhy(best), reach: false };
+  const reach = ryaiConfig.reach == null ? 0 : ryaiConfig.reach;
+  // The reach RATE is set by the slider alone: 0.35 means roughly 28% of picks
+  // leave the optimum. It used to fall out of how close the top names were, so
+  // a tighter board silently made RyAI reach far more often. Decoupled now.
+  const p = Math.min(0.9, reach * 0.8);
+  const roll = ryaiSeed();
+  if (r.length < 2 || roll >= p) return { name: best.name, why: ryaiWhy(best), reach: false };
 
-  // Only the names just behind the leader are candidates, and a wrestler he
-  // has drafted before is likelier to pull him off the optimum than a stranger.
-  const T = reach * 6;
-  const pool = r.slice(0, 5);
-  const weights = pool.map(function (c, i) {
-    const gap = best.total - c.total;
-    const loyalty = 1 + (c.aff * 0.5);
-    return i === 0 ? 1 : Math.exp(-gap / T) * loyalty * reach;
+  // Given a reach, lean toward names close behind the leader and names he has
+  // drafted before, so the mistakes look like his. roll / p is uniform on [0,1)
+  // here, so one seed covers both draws and every device still agrees.
+  const alts = r.slice(1, 5);
+  const w = alts.map(function (c) {
+    return Math.exp(-(best.total - c.total) / 3) * (1 + c.aff * 0.5);
   });
   let sum = 0;
-  for (let i = 0; i < weights.length; i++) sum += weights[i];
-  let roll = ryaiSeed() * sum, idx = 0;
-  for (let i = 0; i < weights.length; i++) {
-    roll -= weights[i];
-    if (roll <= 0) { idx = i; break; }
-  }
-  const pick = pool[idx];
-  if (idx === 0) return { name: pick.name, why: ryaiWhy(pick), reach: false };
+  for (let k = 0; k < w.length; k++) sum += w[k];
+  let t = (roll / p) * sum, idx = 0;
+  for (let k = 0; k < w.length; k++) { t -= w[k]; if (t <= 0) { idx = k; break; } }
+  const pick = alts[idx];
   return { name: pick.name, reach: true,
     why: 'Reaching past ' + best.name + '. ' + ryaiWhy(pick) };
 }
@@ -4491,6 +4779,7 @@ function ryaiPaint() {
 function ryaiSync(team) {
   if (!ryaiIsOnClock(team)) { ryaiDisarm(); return; }
   const expected = draftState.picks.length;
+  if (ryaiHeld(expected)) { ryaiDisarm(); ryaiPaintHeld(); return; }
   if (ryaiArmedFor === expected && ryaiTimer) { ryaiPaint(); return; }
   ryaiDisarm();
   const choice = ryaiChoose(getCurrentPicker().round);
@@ -4508,11 +4797,31 @@ function ryaiSync(team) {
 
 // Anyone at the draft can stop the clock, not just the commissioner.
 function ryaiStandDown() {
+  const expected = draftState.picks.length;
   ryaiDisarm();
-  const host = document.getElementById('ryaiPanel');
-  if (host) host.innerHTML = '<div class="ryai-line">RyAI stood down \u2014 type the pick above.</div>';
+  ryaiLocalHold = expected;
+  draftState.ryaiHold = expected;
+  ryaiPaintHeld();
   const i = document.getElementById('draftPickInput');
   if (i) i.focus();
+  ryaiShareHold(expected, expected);
+}
+// Hand the pick back: RyAI re-arms with a fresh countdown on every phone.
+function ryaiResume() {
+  const expected = draftState.picks.length;
+  ryaiLocalHold = -1;
+  draftState.ryaiHold = -1;
+  rerenderDraft();
+  ryaiShareHold(expected, -1);
+}
+function ryaiShareHold(expected, value) {
+  if (!draftConnected()) return;
+  draftQueue = draftQueue.then(() => draftTxn(d => {
+    if (d.picks.length !== expected) return false;
+    d.ryaiHold = value;
+  })).then(res => {
+    if (res && res.snapshot) { applyDraftSnapshot(res.snapshot); rerenderDraft(); }
+  }).catch(() => { /* this phone still holds locally; the room can re-tap */ });
 }
 function ryaiPickNow() {
   if (!ryaiChoice) return;
@@ -4527,6 +4836,7 @@ function ryaiPickNow() {
 function ryaiCommit(wrestler) {
   const who = getCurrentPicker();
   if (!ryaiIsOnClock(who.team)) return;
+  if (ryaiHeld(draftState.picks.length)) return;
   const slot = getNextSlotForTeam(who.team);
   if (!slot) { showDraftStatus('\u26a0 ' + TEAM_LABELS[who.team] + ' roster is full', 'var(--red)'); return; }
   normalizeRosters();
@@ -4559,6 +4869,7 @@ function undoLastPick() {
   const last = Object.assign({}, draftState.picks[expected - 1]);
   draftState.picks.pop();
   if (state.rosters[last.team]) state.rosters[last.team][last.slot] = '';
+  if (last.byBot) { ryaiLocalHold = expected - 1; draftState.ryaiHold = expected - 1; }
   renderDraftLive(document.getElementById('draftContent'));
   const epoch = draftEpoch;
   draftQueue = draftQueue.then(() => epoch === draftEpoch
@@ -4575,6 +4886,7 @@ async function commitUndo(last, expected) {
     res = await draftTxn(d => {
       if (d.picks.length !== expected || !same(d.picks[expected - 1], last)) return false;
       d.picks.pop();
+      if (last.byBot) d.ryaiHold = expected - 1;
     });
   } catch (e) { showDraftStatus('⚠ Undo not confirmed — ' + e.message, 'var(--red)'); return; }
   if (!res.committed) {
@@ -4591,6 +4903,18 @@ async function commitUndo(last, expected) {
     touchUpdatedAt();
     showDraftStatus('✓ Undone', 'var(--teal)');
   } catch (e) { showDraftStatus('⚠ Undone; roster not updated yet', 'var(--gold)'); }
+}
+
+// Board names nobody has taken yet, so spellings stay consistent (which is
+// what the resolver, the duplicate check and scoring all key on). Typing any
+// other name still works.
+function draftSuggestions() {
+  try {
+    const taken = ryaiTaken();
+    return (ryaiConfig.board || [])
+      .filter(b => !taken.has(ryaiNormalize(b.name)))
+      .map(b => `<option value="${escAttr(b.name)}"></option>`).join('');
+  } catch (e) { return ''; }
 }
 
 function renderDraftLive(el, opts) {
@@ -4631,7 +4955,7 @@ function renderDraftLive(el, opts) {
           const pickNum = isSnakeReversed
             ? ri * draftState.order.length + (draftState.order.length - ci)
             : ri * draftState.order.length + ci + 1;
-          return `<div class="draft-board-cell ${cell ? '' : 'pick-num'}">${cell ? esc(cell) : pickNum}</div>`;
+          return `<div class="draft-board-cell ${cell ? '' : 'pick-num'}${!cell && pickNum === pick ? ' on-clock' : ''}">${cell ? esc(cell) : pickNum}</div>`;
         }).join('')).join('')}
       </div>
     </div>`;
@@ -4644,7 +4968,8 @@ function renderDraftLive(el, opts) {
         <div class="draft-clock-name ${team}">${TEAM_LABELS[team]}</div>
         <div class="draft-input-row">
           <input class="draft-input" id="draftPickInput" placeholder="Type wrestler name…" autocomplete="off"
-            onkeydown="if(event.key==='Enter')makePick()" enterkeyhint="done">
+            list="draftNameList" onkeydown="if(event.key==='Enter')makePick()" enterkeyhint="done">
+          <datalist id="draftNameList">${draftSuggestions()}</datalist>
           <button class="draft-pick-btn" id="draftPickBtn" onclick="makePick()">Pick</button>
         </div>
         <div id="ryaiPanel"></div>
@@ -4730,7 +5055,8 @@ async function resetDraft() {
   if (!draftConnected()) { alert('Resetting the draft needs a connection.'); return; }
   await draftQueue;
   try {
-    const res = await draftTxn(d => { d.active = false; d.picks = []; });
+    ryaiLocalHold = -1;
+    const res = await draftTxn(d => { d.active = false; d.picks = []; d.ryaiHold = -1; });
     applyDraftSnapshot(res.snapshot);
   } catch (e) { alert('Could not reset: ' + e.message); }
   renderDraft();
@@ -5620,6 +5946,9 @@ async function startNewSeason() {
   if (!resuming && !name) { show('Enter a name for the new season', 'var(--red)'); hideSoon(3000); return; }
   msg.style.display = 'none';
 
+  // Computed now, while the outgoing season's scores are still loaded.
+  const nextDraft = seededDraft(oldName, getTeamTotal);
+  const quickSeed = rankQuickKeys(state.scores, state.schedule);
   const lines = resuming
     ? [`"${newLeague}" already has a saved season ("${existingName}").`,
        '',
@@ -5630,6 +5959,9 @@ async function startNewSeason() {
        '',
        archiveFirst ? `• "${oldName}" moves to the Archive` : '• Current season will NOT be archived',
        keepRosters ? '• Current rosters carry over' : '• Rosters clear for a fresh draft',
+       nextDraft.seedOrder
+         ? '• Draft order (reverse standings): ' + nextDraft.order.map(t => TEAM_LABELS[t]).join(', ')
+         : '• Draft order: default (no scores to rank by)',
        '• The old season stays in the database untouched'];
   lines.push('• Every phone switches to it as soon as it is online');
   if (!confirm(lines.join('\n'))) return;
@@ -5675,7 +6007,8 @@ async function startNewSeason() {
     updates[d + 'aew_seasonname'] = S(name);
     updates[d + 'aew_schedule'] = S([]);
     for (const t of TEAMS) updates[d + 'aew_roster_' + t] = S(rosters[t] || {});
-    updates[d + 'aew_draft'] = S(blankDraft());
+    updates[d + 'aew_draft'] = S(nextDraft);
+    if (quickSeed.total >= QUICK_MIN_ENTRIES) updates[d + 'aew_quickkeys'] = S(quickSeed.keys);
     updates[d + 'aew_swaps'] = S(blankSwaps());
     updates['leagues/' + newLeague + '/meta/createdAt'] = TS;
   }
@@ -5757,6 +6090,25 @@ async function switchTab(name) {
   }
 }
 
+function renderQuickStats() {
+  const el = document.getElementById('quickStats');
+  if (!el) return;
+  const q = pickQuickKeys();
+  const st = q.stats;
+  const src = q.source === 'this season'
+    ? `Ranked from ${st.total} entries logged this season.`
+    : q.source === 'last season'
+      ? `Ranked from last season until this one has ${QUICK_MIN_ENTRIES} entries (${st.total} so far).`
+      : `Default set — ranking starts once ${QUICK_MIN_ENTRIES} entries are logged (${st.total} so far).`;
+  const rows = ACCOMPLISHMENTS.map(a => ({ a, n: st.counts[a.key] || 0 }))
+    .filter(r => r.n > 0).sort((x, y) => y.n - x.n);
+  el.innerHTML = `<div class="quick-stats-src">${esc(src)}</div>` + (rows.length ? rows.map(r => {
+    const on = q.keys.includes(r.a.key);
+    const pct = st.total ? Math.round(r.n / st.total * 100) : 0;
+    return `<div class="quick-stat${on ? ' on' : ''}"><span>${on ? '★ ' : ''}${esc(shortLabel(r.a.key))}</span><span>${r.n} · ${pct}%</span></div>`;
+  }).join('') : '');
+}
+
 function _applySettingsTab() {
   // Only fetch fresh data the first time settings is opened.
   // After that, leave the input fields alone so edits aren't overwritten.
@@ -5771,7 +6123,17 @@ function _applySettingsTab() {
       pendingSchedule = JSON.parse(JSON.stringify(state.schedule));
       renderScheduleBuilder();
       document.getElementById('scheduleBuilder').style.display = 'block';
+    } else {
+      // A fresh season. Without this the previous season's dates and shows
+      // stayed in the builder, one tap on Save Schedule away from being
+      // written into the new season.
+      document.getElementById('seasonStart').value = '';
+      document.getElementById('seasonEnd').value = '';
+      pendingSchedule = [];
+      document.getElementById('scheduleGrid').innerHTML = '';
+      document.getElementById('scheduleBuilder').style.display = 'none';
     }
+    renderQuickStats();
   };
 
   if (dbRoot) {
