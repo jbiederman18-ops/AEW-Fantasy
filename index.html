@@ -4243,61 +4243,67 @@ async function commitPick(pick, expected, epoch) {
 
 const RYAI_PATH = 'ryai';
 
+// Bump whenever RYAI_BOARD_DEFAULT is rewritten. Saving any RyAI setting writes
+// the whole config, board included, so without this a board saved before the
+// rewrite would keep masking it forever.
+const RYAI_BOARD_REV = '2026-09-27 after All Out';
+
 // base   = expected points per show from ordinary TV presence (0-10)
 // change = likelihood of a scoring STATE CHANGE this season (0-10): title win
 //          (20), face/heel turn (12), written off / big return (10). This is
 //          the axis Ryan appears to draft on. UNTESTED — if the score data
 //          disagrees, turn weights.change down rather than editing this list.
 const RYAI_BOARD_DEFAULT = [
-  { name:"Jon Moxley", base:8, change:8, avail:1, note:"Continental champ, World title shot at All Out" },
+  { name:"Jon Moxley", base:8, change:8, avail:1, note:"lost to Ospreay at All Out, shook his hand after; Death Riders brawled United Empire — turn or split watch" },
   { name:"Chris Jericho", base:8, change:5, avail:1, note:"active on Dynamite; the comeback itself is already spent" },
-  { name:"Will Ospreay", base:7, change:7, avail:1, note:"World champ, first defence vs Moxley at All Out" },
-  { name:"Darby Allin", base:6, change:6, avail:1, note:"tag title contender match with Steven Borden" },
-  { name:"Kyle Fletcher", base:6, change:6, avail:1, note:"Callis Family, tag title contender match at All Out" },
-  { name:"Kevin Knight", base:6, change:6, avail:1, note:"Callis Family, tag title contender match at All Out" },
-  { name:"Andrade", base:5, change:8, avail:1, note:"National champ, joined United Empire, holds a guaranteed World title shot" },
+  { name:"Will Ospreay", base:7, change:7, avail:1, note:"World champ, beat Moxley at All Out; Andrade holds a guaranteed shot" },
+  { name:"Darby Allin", base:6, change:5, avail:1, note:"lost the tag contender match at All Out when Borden was hurt" },
+  { name:"Kyle Fletcher", base:6, change:8, avail:1, note:"Callis Family, won a tag title shot vs the Young Bucks at All Out" },
+  { name:"Kevin Knight", base:6, change:8, avail:1, note:"Callis Family, won a tag title shot vs the Young Bucks at All Out" },
+  { name:"Andrade", base:5, change:8, avail:1, note:"National champ, 5th defence at All Out, United Empire, holds a guaranteed World title shot" },
   { name:"Kenny Omega", base:5, change:8, avail:1, note:"off a title loss, repositioning" },
   { name:"MJF", base:5, change:7, avail:1, note:"promo volume, turn candidate" },
   { name:"Toni Storm", base:5, change:7, avail:1, note:"character churn, turn candidate" },
   { name:"Orange Cassidy", base:6, change:4, avail:1, note:"Conglomeration, weekly presence" },
-  { name:"Swerve Strickland", base:5, change:6, avail:1, note:"trios champ, defends at All Out" },
-  { name:"Mercedes Mone", base:5, change:6, avail:0.9, note:"women's world champ; broken nose, cleared for WrestleDream" },
+  { name:"Swerve Strickland", base:5, change:6, avail:1, note:"trios champ, retained at All Out; Hangman feud reignited" },
+  { name:"Mercedes Mone", base:5, change:7, avail:1, note:"women's world champ, defends vs Thekla at WrestleDream" },
   { name:"Maya World", base:4, change:8, avail:1, note:"just lost TBS, rematch arc" },
-  { name:"Persephone", base:4, change:7, avail:1, note:"new TBS champ, first defences" },
-  { name:"Willow Nightingale", base:4, change:7, avail:1, note:"contender match vs Thekla at All Out, wrestling with a broken hand" },
-  { name:"Austin Creed", base:4, change:7, avail:1, note:"trios champ, new arrival" },
-  { name:"Kofi Kingston", base:4, change:7, avail:1, note:"trios champ, new arrival" },
-  { name:"Christian Cage", base:4, change:7, avail:1, note:"tag champ, three-way ladder at All Out" },
-  { name:"Adam Copeland", base:4, change:7, avail:1, note:"tag champ, three-way ladder at All Out" },
-  { name:"Kazuchika Okada", base:4, change:6, avail:1, note:"International champ, defends vs Ciampa at All Out" },
-  { name:"Tommaso Ciampa", base:3, change:8, avail:1, note:"International title shot vs Okada at All Out" },
+  { name:"Persephone", base:4, change:6, avail:1, note:"TBS champ, retained vs Dani Luna at All Out with Renee Paquette's help" },
+  { name:"Willow Nightingale", base:4, change:5, avail:0.9, note:"lost to Thekla at All Out, broken hand targeted" },
+  { name:"Austin Creed", base:4, change:6, avail:1, note:"trios champ, retained at All Out" },
+  { name:"Kofi Kingston", base:4, change:6, avail:1, note:"trios champ, retained at All Out" },
+  { name:"Christian Cage", base:4, change:6, avail:1, note:"lost the tag titles in the All Out ladder match, took the fall" },
+  { name:"Adam Copeland", base:4, change:6, avail:1, note:"lost the tag titles in the All Out ladder match" },
+  { name:"Kazuchika Okada", base:4, change:6, avail:1, note:"International champ, beat Ciampa at All Out" },
+  { name:"Tommaso Ciampa", base:3, change:5, avail:1, note:"lost to Okada at All Out" },
   { name:"Konosuke Takeshita", base:3, change:7, avail:1, note:"in the International picture" },
-  { name:"Adam Page", base:3, change:7, avail:1, note:"trios title shot at All Out" },
-  { name:"Thekla", base:3, change:7, avail:1, note:"contender match vs Willow at All Out" },
-  { name:"Brody King", base:3, change:7, avail:1, note:"trios title shot at All Out with Bandido" },
-  { name:"Matt Jackson", base:3, change:7, avail:1, note:"tag title ladder match at All Out" },
-  { name:"Nick Jackson", base:3, change:7, avail:1, note:"tag title ladder match at All Out" },
-  { name:"Cash Wheeler", base:3, change:7, avail:1, note:"tag title ladder match at All Out" },
-  { name:"PAC", base:3, change:7, avail:1, note:"challenges Andrade for the National title at All Out" },
-  { name:"Bandido", base:3, change:7, avail:1, note:"trios title shot at All Out with Brody King" },
+  { name:"Adam Page", base:3, change:6, avail:1, note:"lost the trios title match at All Out; Swerve feud reignited" },
+  { name:"Thekla", base:4, change:9, avail:1, note:"beat Willow at All Out, challenges Mone at WrestleDream (Oct 17)" },
+  { name:"Brody King", base:3, change:5, avail:1, note:"lost the trios title match at All Out" },
+  { name:"Matt Jackson", base:4, change:7, avail:1, note:"tag champ — Bucks won a record 4th reign at All Out; Fletcher & Knight next" },
+  { name:"Nick Jackson", base:4, change:7, avail:1, note:"tag champ — Bucks won a record 4th reign at All Out; Fletcher & Knight next" },
+  { name:"Cash Wheeler", base:3, change:5, avail:1, note:"FTR, lost the All Out ladder match" },
+  { name:"PAC", base:3, change:5, avail:1, note:"lost to Andrade at All Out despite Marina Shafir's help" },
+  { name:"Bandido", base:3, change:5, avail:1, note:"took the pin in the trios title loss at All Out" },
   { name:"Mark Briscoe", base:4, change:4, avail:1, note:"reliable TV" },
   { name:"Roderick Strong", base:4, change:4, avail:1, note:"Conglomeration" },
   { name:"Mike Bailey", base:4, change:4, avail:1, note:"workrate, five-star candidate" },
   { name:"Kyle O'Reilly", base:4, change:4, avail:1, note:"Conglomeration" },
-  { name:"Alex Windsor", base:3, change:6, avail:1, note:"women's tag champ, street fight at All Out" },
+  { name:"Alex Windsor", base:3, change:6, avail:1, note:"women's tag champ, retained in the All Out street fight, sided with Ospreay after" },
   { name:"Harley Cameron", base:3, change:6, avail:1, note:"rising, promo-heavy" },
-  { name:"Gabe Kidd", base:3, change:6, avail:1, note:"Death Riders, in the Moxley orbit" },
+  { name:"Gabe Kidd", base:3, change:6, avail:1, note:"Death Riders, brawled United Empire in the All Out main event" },
+  { name:"Jack Perry", base:3, change:6, avail:1, note:"beat Shibata on the All Out pre-show, then Samoa Joe returned and headbutted him" },
   { name:"Megasus", base:3, change:6, avail:1, note:"novelty act, high variance" },
-  { name:"Lena Kross", base:3, change:6, avail:1, note:"Divine Dominion, women's tag title shot at All Out" },
-  { name:"Megan Bayne", base:3, change:6, avail:1, note:"Divine Dominion, women's tag title shot at All Out" },
-  { name:"Steven Borden", base:3, change:6, avail:1, note:"Darby's partner, tag title contender match" },
-  { name:"Jay White", base:3, change:5, avail:1, note:"Bullet Club Gold fixture" },
+  { name:"Lena Kross", base:3, change:5, avail:1, note:"Divine Dominion, pinned in the All Out street fight" },
+  { name:"Megan Bayne", base:3, change:5, avail:1, note:"Divine Dominion, lost the All Out street fight" },
+  { name:"Steven Borden", base:3, change:6, avail:0.5, note:"hospitalised with a head injury at All Out (conscious, responsive), return unclear" },
+  { name:"Jay White", base:3, change:5, avail:1, note:"Bang Bang Gang, pinned Yuta to win the All Out pre-show brawl" },
   { name:"Athena", base:3, change:5, avail:1, note:"ROH crossover" },
   { name:"Kris Statlander", base:3, change:5, avail:1, note:"regular TV" },
-  { name:"Julia Hart", base:3, change:5, avail:1, note:"Sisters of Sin" },
+  { name:"Julia Hart", base:3, change:5, avail:1, note:"Sisters of Sin, kept the Artist of STARDOM titles, meddled in Thekla vs Willow" },
   { name:"HOOK", base:3, change:5, avail:1, note:"chaos categories" },
-  { name:"Clark Connors", base:3, change:5, avail:1, note:"NJPW pipeline" },
-  { name:"David Finlay", base:3, change:5, avail:1, note:"Bullet Club Gold" },
+  { name:"Clark Connors", base:3, change:5, avail:1, note:"The Dogs, lost the All Out pre-show brawl" },
+  { name:"David Finlay", base:3, change:5, avail:1, note:"The Dogs, lost the All Out pre-show brawl" },
   { name:"Ricochet", base:3, change:5, avail:1, note:"The Demand, trios contender" },
   { name:"Hologram", base:3, change:5, avail:0.5, note:"knee surgery, return unclear" },
   { name:"Powerhouse Hobbs", base:3, change:5, avail:0, note:"left for WWE" },
@@ -4307,21 +4313,22 @@ const RYAI_BOARD_DEFAULT = [
   { name:"Callum Newman", base:3, change:5, avail:1, note:"United Empire" },
   { name:"Alex Shelley", base:3, change:5, avail:1, note:"Motor City Machine Guns, signed this year" },
   { name:"Chris Sabin", base:3, change:5, avail:1, note:"Motor City Machine Guns, signed this year" },
-  { name:"Dax Harwood", base:2, change:7, avail:1, note:"tag title ladder match at All Out" },
-  { name:"Skye Blue", base:3, change:4, avail:1, note:"Sisters of Sin" },
+  { name:"Dax Harwood", base:2, change:5, avail:1, note:"FTR, lost the All Out ladder match" },
+  { name:"Skye Blue", base:3, change:4, avail:1, note:"Sisters of Sin, hit Code Blue to keep the Artist of STARDOM titles" },
   { name:"Claudio Castagnoli", base:3, change:4, avail:1, note:"steady" },
-  { name:"Samoa Joe", base:3, change:4, avail:1, note:"reliable TV" },
-  { name:"Wheeler Yuta", base:3, change:4, avail:1, note:"BCC" },
+  { name:"Samoa Joe", base:4, change:5, avail:1, note:"returned at All Out and headbutted Jack Perry — fresh feud" },
+  { name:"Wheeler Yuta", base:3, change:4, avail:1, note:"Death Riders, pinned in the All Out pre-show brawl" },
   { name:"The Beast Mortos", base:3, change:4, avail:1, note:"lucha chaos" },
   { name:"Don Callis", base:3, change:4, avail:1, note:"promo volume, no matches" },
   { name:"Josh Alexander", base:3, change:4, avail:0, note:"knee surgery, no return date" },
   { name:"Nick Wayne", base:3, change:4, avail:1, note:"regular Dynamite presence" },
-  { name:"Jamie Hayter", base:2, change:6, avail:1, note:"women's tag champ, street fight at All Out" },
-  { name:"Daniel Garcia", base:2, change:5, avail:1, note:"won the Butcher Battle Royale, got a National title shot" },
+  { name:"Jamie Hayter", base:2, change:6, avail:1, note:"women's tag champ, retained in the All Out street fight, sided with Ospreay after" },
+  { name:"Dani Luna", base:2, change:5, avail:1, note:"debuted in the TBS open challenge at All Out, lost to Persephone" },
+  { name:"Daniel Garcia", base:2, change:5, avail:1, note:"with the Death Riders, lost the All Out pre-show brawl" },
   { name:"Bishop Kaun", base:2, change:5, avail:1, note:"The Demand, trios contender" },
   { name:"Toa Liona", base:2, change:5, avail:1, note:"The Demand, trios contender" },
   { name:"Volador", base:2, change:5, avail:1, note:"Callis Family, ROH title challenger" },
-  { name:"Mina Shirakawa", base:2, change:4, avail:1, note:"regular TV" },
+  { name:"Mina Shirakawa", base:2, change:4, avail:1, note:"lost the Artist of STARDOM title match on the All Out pre-show" },
   { name:"Shelton Benjamin", base:2, change:4, avail:1, note:"Hurt Syndicate" },
   { name:"Big Bill", base:2, change:4, avail:1, note:"tag depth" },
   { name:"Lance Archer", base:2, change:4, avail:1, note:"brawls" },
@@ -4340,7 +4347,7 @@ const RYAI_BOARD_DEFAULT = [
   { name:"Trent Beretta", base:2, change:3, avail:1, note:"depth" },
   { name:"Juice Robinson", base:2, change:3, avail:1, note:"depth" },
   { name:"Thunder Rosa", base:2, change:3, avail:1, note:"depth" },
-  { name:"Stokely Hathaway", base:2, change:3, avail:1, note:"manager, promo volume, no matches" },
+  { name:"Stokely Hathaway", base:2, change:3, avail:1, note:"FTR's manager, went through a table at All Out; promo volume, no matches" },
   { name:"Marq Quen", base:2, change:3, avail:0, note:"Private Party, injured with no return date" },
   { name:"Bobby Lashley", base:1, change:5, avail:1, note:"Hurt Syndicate" }
 ];
@@ -4371,7 +4378,9 @@ const RYAI_STARS_DEFAULT = ['Will Ospreay', 'PAC'];
 
 const RYAI_ALIASES_DEFAULT = {
   'Xavier': 'Austin Creed', 'Zay': 'Isiah Kassidy',
-  'Bandito': 'Bandido', 'Daddy Ass': 'Billy Gunn'
+  'Bandito': 'Bandido', 'Daddy Ass': 'Billy Gunn',
+  'Jungle Boy': 'Jack Perry', 'Jungle Jack Perry': 'Jack Perry',
+  'Mercedes Mon\u00e9': 'Mercedes Mone', 'Andrade El Idolo': 'Andrade'
 };
 
 const RYAI_DEFAULTS = {
@@ -4386,7 +4395,7 @@ const RYAI_DEFAULTS = {
   // does not do. Reaches are biased toward wrestlers he has drafted before,
   // so the mistakes look like his rather than like noise.
   reach: 0.35,
-  aliases: RYAI_ALIASES_DEFAULT, board: RYAI_BOARD_DEFAULT,
+  aliases: RYAI_ALIASES_DEFAULT, board: RYAI_BOARD_DEFAULT, boardRev: RYAI_BOARD_REV,
   favourites: RYAI_FAVOURITES_DEFAULT, stars: RYAI_STARS_DEFAULT,
 };
 
@@ -4728,12 +4737,30 @@ function ryaiChoose(round) {
 }
 
 // ── persistence (root node, survives the season rollover) ──
+// A saved config from before the current board revision keeps its settings
+// (on/off, weights, reach, aliases, who is out) but takes the new board. Its
+// change-of-state tweaks are dropped: they were deltas on the old numbers and
+// the new board already prices in what they were anticipating.
+function ryaiMergeSaved(v) {
+  const cfg = Object.assign({}, RYAI_DEFAULTS, v);
+  if (v.boardRev === RYAI_BOARD_REV) return cfg;
+  cfg.board = RYAI_BOARD_DEFAULT;
+  cfg.boardRev = RYAI_BOARD_REV;
+  cfg.aliases = Object.assign({}, RYAI_ALIASES_DEFAULT, v.aliases || {});
+  const kept = {};
+  const old = v.status || {};
+  Object.keys(old).forEach(function (k) {
+    if (old[k] && old[k].avail != null) kept[k] = { avail: old[k].avail };
+  });
+  cfg.status = kept;
+  return cfg;
+}
 async function ryaiLoad() {
   if (!fbDb) return;
   try {
     const snap = await onceWithin(fbDb.ref(RYAI_PATH), 8000);
     const v = parseRaw(snap.val());
-    if (v && typeof v === 'object') ryaiConfig = Object.assign({}, RYAI_DEFAULTS, v);
+    if (v && typeof v === 'object') ryaiConfig = ryaiMergeSaved(v);
   } catch (e) { /* defaults are usable; the draft must never block on this */ }
 }
 async function ryaiSave() {
