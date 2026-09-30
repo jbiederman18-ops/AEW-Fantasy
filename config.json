@@ -1,6 +1,7 @@
 {
   "_comment": "Deploy this next to index.html so every device reads the same config. Replace the placeholder values with the ones from Firebase console > Project settings > Your apps > Web. The apiKey is not a secret; it identifies the project and grants nothing on its own. Access is controlled by firebase-rules.json plus anonymous auth.",
   "leagueId": "road-chip",
+     "backupUrl": "https://script.google.com/macros/s/AKfycby0LVzOAyJidE946JD5YIxHHTFmddFx3tiGOMAjfDdzI0-3qoyCtMdDJqR_a0EQ2j189A/exec",
   "firebase": {
     "apiKey": "AIzaSyAvz4xg5sFkcAbmVAJ4JYAlC0HG-Sq5F_8",
     "authDomain": "aewfantasy-47424.firebaseapp.com",
