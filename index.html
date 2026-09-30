@@ -3020,7 +3020,11 @@ let backendVersionCache = null;
 async function backendVersion() {
   if (backendVersionCache !== null) return backendVersionCache;
   const body = await sheetFetch(`${backupUrl}?action=ping`, {}, READ_RETRIES);
-  if (!body || body.ok !== true) throw new Error('the backup script did not answer ping');
+  // Say what the script actually said. A pre-Firebase (v2) script answers an
+  // unknown action with ok:false, which used to read as a generic failure.
+  if (!body || body.ok !== true) throw new Error('the backup script did not answer ping'
+    + (body && body.error ? ' (it said: ' + String(body.error).slice(0, 160) + ')' : '')
+    + ' \u2014 it is probably an older script version; redeploy the v4 script as a New version');
   backendVersionCache = Number(body.version) || 0;
   return backendVersionCache;
 }
