@@ -1935,7 +1935,7 @@ function isKeyHeld(key) {
 // ─────────────────────────────────────────────
 // The one number the whole shell hangs off. window.innerHeight is the actual
 // visible height in iOS standalone, where 100vh is not.
-const BUILD_ID = 'b0930-tvparty';
+const BUILD_ID = 'b0930-sweep';
 
 function toggleDiag() {
   const p = document.getElementById('diagPanel');
@@ -4325,6 +4325,12 @@ function makePick() {
     return;
   }
 
+  // An offline phone cannot see the room. Its queued write used to replace the
+  // whole shared draft on reconnect, wiping every pick made in the meantime.
+  if (!draftConnected()) {
+    showDraftStatus('\u26a0 Offline \u2014 pick NOT saved. Wait for LIVE, or make it on another phone.', 'var(--red)');
+    return;
+  }
   const { team, round } = getCurrentPicker();
   const slot = getNextSlotForTeam(team);
   if (!slot) {
@@ -4341,15 +4347,6 @@ function makePick() {
   inp.value = '';
   renderDraftLive(document.getElementById('draftContent'));
 
-  if (!draftConnected()) {
-    // No socket, so no way to check the turn against other phones. Keep the
-    // old behaviour — queue it — but say plainly what that risks.
-    showDraftStatus('⚠ Offline — pick queued on this phone. Don\'t pick on another phone until it syncs.', 'var(--gold)');
-    dbSet('aew_draft', draftState)
-      .then(() => dbSet('aew_roster_' + team, state.rosters[team]))
-      .catch(() => showDraftStatus('⚠ Save failed — check connection', 'var(--red)'));
-    return;
-  }
   const pp = { pick, expected };
   const epoch = draftEpoch;
   pendingPicks.push(pp);
@@ -5055,6 +5052,8 @@ function ryaiCommit(wrestler) {
   const who = getCurrentPicker();
   if (!ryaiIsOnClock(who.team)) return;
   if (ryaiHeld(draftState.picks.length)) return;
+  // Leave it to a phone that is connected (see makePick).
+  if (!draftConnected()) { showDraftStatus('\u26a0 Offline \u2014 RyAI will pick from a connected phone', 'var(--gold)'); return; }
   const slot = getNextSlotForTeam(who.team);
   if (!slot) { showDraftStatus('\u26a0 ' + TEAM_LABELS[who.team] + ' roster is full', 'var(--red)'); return; }
   normalizeRosters();
@@ -5065,13 +5064,6 @@ function ryaiCommit(wrestler) {
   state.rosters[who.team][slot] = wrestler;
   renderDraftLive(document.getElementById('draftContent'));
 
-  if (!draftConnected()) {
-    showDraftStatus('\u26a0 Offline \u2014 RyAI pick saved on this phone only', 'var(--gold)');
-    dbSet('aew_draft', draftState)
-      .then(() => dbSet('aew_roster_' + who.team, state.rosters[who.team]))
-      .catch(() => showDraftStatus('\u26a0 Save failed \u2014 check connection', 'var(--red)'));
-    return;
-  }
   const pp = { pick: pick, expected: expected };
   const epoch = draftEpoch;
   pendingPicks.push(pp);
@@ -5388,6 +5380,7 @@ function tvClockSide(cur, nextSame) {
       const left = tvRyai.deadline - Date.now();
       html += c ? '<div class="tv-ryai"><div class="tv-ryai-tag"><span>RYAI IS LEANING</span><span>'
           + (left > 0 ? tvFmt(left) : 'ANY SECOND') + '</span></div>'
+          + (left < -10000 ? '<div class="tv-ryai-why" style="color:var(--gold)">Waiting for a phone with the app open \u2014 RyAI picks from the phones, not the TV.</div>' : '')
           + '<div class="tv-ryai-name">' + (c.reach ? '⚡ ' : '') + esc(c.name) + '</div>'
           + '<div class="tv-ryai-why">' + esc(c.why) + '</div>'
           + '<div class="tv-ryai-meter"><i style="width:' + Math.max(0, Math.min(100, left / ms * 100)) + '%"></i></div></div>'
