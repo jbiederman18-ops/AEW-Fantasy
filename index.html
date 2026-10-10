@@ -716,6 +716,18 @@
   .swap-preview b { color: var(--text); }
   .swap-preview .arrow { color: var(--gold); margin: 0 6px; }
   .swap-history-list { display: flex; flex-direction: column; gap: 8px; }
+  /* Swap tokens earned on the predictions site (jbiederman18-ops.github.io/Predictions) */
+  .award-list { display: flex; flex-direction: column; gap: 8px; }
+  .award-item { display: flex; align-items: center; gap: 10px; background: rgba(240,180,41,0.06); border: 1px solid rgba(240,180,41,0.35); border-radius: 6px; padding: 10px 12px; font-size: 13px; color: var(--muted); }
+  .award-item b { color: var(--text); }
+  .award-item .award-date { margin-left: auto; font-size: 11px; letter-spacing: 1px; white-space: nowrap; }
+  .award-banner { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 12px); transform: translateX(-50%); z-index: 9999; width: min(520px, calc(100vw - 24px)); background: var(--card); border: 1px solid var(--gold); border-radius: 10px; box-shadow: 0 12px 40px rgba(0,0,0,0.5); padding: 14px 14px 12px; display: flex; flex-direction: column; gap: 10px; animation: awardIn .35s ease-out; }
+  .award-banner-msg { font-size: 14px; line-height: 1.4; color: var(--text); }
+  .award-banner-msg .trophy { font-size: 20px; margin-right: 6px; }
+  .award-banner-btns { display: flex; gap: 8px; justify-content: flex-end; }
+  .award-banner-btns button { font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; border-radius: 6px; padding: 8px 12px; cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--text); }
+  .award-banner-btns button.primary { background: var(--gold); border-color: var(--gold); color: #111; }
+  @keyframes awardIn { from { opacity: 0; transform: translate(-50%, -12px); } to { opacity: 1; transform: translate(-50%, 0); } }
   .swap-history-item { background: var(--card); border: 1px solid var(--border); border-radius: 5px; padding: 12px 14px; }
   .swap-history-top { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
   .swap-history-team { font-family: 'Anton', sans-serif; font-size: 16px; letter-spacing: 1px; }
@@ -2957,6 +2969,7 @@ function flushLiveRender() {
   if (keys.indexOf('aew_schedule') !== -1) populateShowSelect();
   if (keys.indexOf('aew_seasonname') !== -1) updateSeasonNameDisplay();
   if (keys.indexOf('aew_swaps') !== -1 && currentTabName === 'swaps') renderSwaps();
+  if (keys.indexOf('aew_swaps') !== -1) announceAwards();
   if (keys.indexOf('aew_draft') !== -1 && currentTabName === 'draft') renderDraft({ fromRemote: true });
   cacheSnapshot();
 
@@ -5733,7 +5746,22 @@ function renderSwaps() {
       </div>
     </div>` : '';
 
+  const awards = Array.isArray(sw.awards) ? sw.awards : [];
+  const awardsHTML = awards.length ? `
+    <div class="settings-block">
+      <h3>Earned in Predictions</h3>
+      <div class="award-list">
+        ${[...awards].reverse().map(a => `
+          <div class="award-item">
+            <span>🏆</span>
+            <span><b style="color:${TEAM_COLORS[a.team] || 'var(--text)'}">${esc(TEAM_LABELS[a.team] || a.team)}</b> topped <b>${esc(a.event || 'a show')}</b>${a.score ? ' (' + esc(a.score) + ')' : ''} · +1 token</span>
+            <span class="award-date">${esc(a.date || '')}</span>
+          </div>`).join('')}
+      </div>
+    </div>` : '';
+
   el.innerHTML = `
+    ${awardsHTML}
     <div class="settings-block">
       <h3>Swap Tokens — Commissioner</h3>
       <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Grant tokens to teams that earn them. Teams must use their token before the next show.</p>
@@ -5746,6 +5774,54 @@ function renderSwaps() {
 function getNextShow() {
   const today = todayISO();
   return state.schedule.find(s => s.date >= today) || null;
+}
+
+// The predictions site grants a swap token to the top predictor of each show by
+// adding to tokens[team] and appending { id, team, event, score, date } to
+// state.swaps.awards. Each device announces every award once.
+const AWARDS_SEEN_KEY = 'aew_awards_seen';
+function announceAwards() {
+  const awards = ((state.swaps || {}).awards) || [];
+  if (!Array.isArray(awards) || !awards.length) return;
+  let seen = null;
+  try { seen = JSON.parse(localStorage.getItem(AWARDS_SEEN_KEY) || 'null'); } catch (e) {}
+  const ids = awards.map(a => a && a.id).filter(Boolean);
+  if (!Array.isArray(seen)) {
+    // First run on this device: anything older than a few days is history, not news.
+    const cutoff = Date.now() - 4 * 86400000;
+    seen = awards.filter(a => !(a && a.at && a.at > cutoff)).map(a => a && a.id).filter(Boolean);
+  }
+  const fresh = awards.filter(a => a && a.id && seen.indexOf(a.id) === -1);
+  if (!fresh.length) {
+    try { localStorage.setItem(AWARDS_SEEN_KEY, JSON.stringify(seen)); } catch (e) {}
+    return;
+  }
+  const markSeen = () => {
+    try { localStorage.setItem(AWARDS_SEEN_KEY, JSON.stringify(ids)); } catch (e) {}
+  };
+  const old = document.getElementById('awardBanner');
+  if (old) old.remove();
+  const msg = fresh.map(a => {
+    const who = TEAM_LABELS[a.team] || a.team;
+    return `<b style="color:${TEAM_COLORS[a.team] || 'var(--gold)'}">${esc(who)}</b> topped the <b>${esc(a.event || 'show')}</b> predictions${a.score ? ' (' + esc(a.score) + ')' : ''} and earned a swap token.`;
+  }).join('<br>');
+  const el = document.createElement('div');
+  el.id = 'awardBanner';
+  el.className = 'award-banner';
+  el.setAttribute('role', 'status');
+  el.innerHTML = `<div class="award-banner-msg"><span class="trophy">🏆</span>${msg}</div>
+    <div class="award-banner-btns">
+      <button type="button" data-act="close">Nice</button>
+      <button type="button" class="primary" data-act="go">Go to Swaps</button>
+    </div>`;
+  el.addEventListener('click', (ev) => {
+    const act = ev.target && ev.target.dataset && ev.target.dataset.act;
+    if (!act) return;
+    markSeen();
+    el.remove();
+    if (act === 'go') switchTab('swaps');
+  });
+  document.body.appendChild(el);
 }
 
 async function adjustToken(team, delta) {
