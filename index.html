@@ -1256,6 +1256,152 @@
     .tv-reveal *, .tv-cell.clock { animation: none !important; }
   }
 
+
+  /* ── MATCH ENTRY ─────────────────────────────────────────────────────
+     One match, every team it touches. Pick who was in it, who won, and how;
+     the sheet works out each wrestler's categories and logs them to all four
+     teams' records for that show. */
+  .match-cta {
+    width: 100%; display: flex; align-items: center; gap: 14px; text-align: left;
+    background: linear-gradient(100deg, rgba(245,194,66,0.14), rgba(245,194,66,0.03) 70%), var(--card);
+    border: 1px solid var(--gold-dim); border-radius: 6px; padding: 14px 16px;
+    margin-bottom: 18px; cursor: pointer; color: var(--text);
+    -webkit-tap-highlight-color: transparent; transition: border-color .15s, transform .08s;
+  }
+  .match-cta:active { transform: translateY(1px); border-color: var(--gold); }
+  .match-cta-icon { font-size: 26px; line-height: 1; }
+  .match-cta-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  .match-cta-txt b { font-family: 'Anton', sans-serif; font-weight: 400; font-size: 20px; letter-spacing: 0.6px; text-transform: uppercase; color: var(--gold); line-height: 1; }
+  .match-cta-txt span { font-size: 12px; color: var(--muted); line-height: 1.35; }
+  .match-cta-arrow { font-size: 26px; color: var(--gold); line-height: 1; }
+
+  .match-sheet {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 160;
+    height: calc(var(--app-h, 100dvh) - var(--safe-top) - 24px);
+    display: flex; flex-direction: column;
+    background: var(--surface); border-top: 1px solid var(--border);
+    border-radius: 14px 14px 0 0; transform: translateY(100%);
+    transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+    visibility: hidden;
+  }
+  .match-sheet.open { transform: translateY(0); visibility: visible; }
+  #matchBackdrop { z-index: 155; }
+  @media (min-width: 900px) {
+    .match-sheet {
+      left: 50%; right: auto; bottom: auto; top: 50%; width: 600px;
+      height: min(860px, calc(var(--app-h, 100dvh) - 48px));
+      border: 1px solid var(--border); border-radius: 12px;
+      transform: translate(-50%, -46%); opacity: 0; transition: transform .2s, opacity .2s;
+    }
+    .match-sheet.open { transform: translate(-50%, -50%); opacity: 1; }
+    .match-sheet .sheet-grip { visibility: hidden; height: 0; margin: 4px auto; }
+  }
+  .match-head { padding: 2px 16px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .match-head-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .match-head h2 { font-family: 'Anton', sans-serif; font-weight: 400; font-size: 26px; letter-spacing: 0.5px; text-transform: uppercase; line-height: 1; }
+  .match-head h2 span { color: var(--gold); }
+  .match-close { width: 36px; height: 36px; border-radius: 50%; background: var(--card); border: 1px solid var(--border); color: var(--text); font-size: 14px; cursor: pointer; }
+  .match-show {
+    width: 100%; background: var(--card); border: 1px solid var(--border); border-radius: 6px;
+    padding: 10px 12px; color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600;
+  }
+  .match-body { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding: 4px 16px 24px; }
+  .match-step { display: flex; align-items: baseline; gap: 8px; margin: 18px 0 10px; }
+  .match-step-n {
+    font-family: 'Anton', sans-serif; font-size: 13px; color: #17120A; background: var(--gold);
+    width: 20px; height: 20px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .match-step-t { font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--text); }
+  .match-step-h { font-size: 12px; color: var(--muted); margin-left: auto; }
+
+  .match-empty { border: 1px dashed var(--border); border-radius: 6px; padding: 16px; text-align: center; color: var(--muted); font-size: 13px; }
+  .mp-list { display: flex; flex-direction: column; gap: 6px; }
+  .mp-row {
+    display: flex; align-items: center; gap: 10px; min-width: 0;
+    background: var(--card); border: 1px solid var(--border); border-left: 3px solid var(--tc);
+    border-radius: 6px; padding: 8px 8px 8px 12px;
+  }
+  .mp-row.won { border-color: var(--gold-dim); border-left-color: var(--tc); background: linear-gradient(90deg, rgba(245,194,66,0.10), transparent 60%), var(--card); }
+  .mp-who { flex: 1; min-width: 0; }
+  .mp-name { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mp-team { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--tc); }
+  .mp-x { width: 30px; height: 30px; border-radius: 4px; background: none; border: none; color: var(--muted); font-size: 16px; cursor: pointer; flex-shrink: 0; }
+
+  .seg { display: inline-flex; background: var(--surface); border: 1px solid var(--border); border-radius: 5px; padding: 3px; gap: 3px; flex-shrink: 0; }
+  .seg-btn {
+    background: none; border: none; border-radius: 3px; padding: 8px 11px; min-height: 34px;
+    color: var(--muted); font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 800;
+    letter-spacing: 0.4px; cursor: pointer; -webkit-tap-highlight-color: transparent; white-space: nowrap;
+  }
+  .seg-btn.on { background: rgba(245,194,66,0.16); color: var(--gold); }
+  .seg-btn.on.lost { background: rgba(212,43,63,0.16); color: #FF7A8A; }
+  .seg.full { display: flex; width: 100%; }
+  .seg.full .seg-btn { flex: 1; }
+
+  .match-search {
+    width: 100%; background: var(--card); border: 1px solid var(--border); border-radius: 6px;
+    padding: 10px 12px; color: var(--text); font-family: 'Inter', sans-serif; font-size: 15px; margin-bottom: 10px;
+  }
+  .mpick-wrap { margin-top: 12px; }
+  .mpick-tabs { margin-bottom: 8px; }
+  .mpick-tabs .seg-btn { padding: 8px 4px; }
+  .mpick-tabs .seg-btn.on { color: var(--tc); background: color-mix(in srgb, var(--tc) 16%, transparent); }
+  .mpick-tabs .seg-btn i { font-style: normal; font-size: 10px; background: var(--tc); color: #0B0A0F; border-radius: 8px; padding: 1px 5px; margin-left: 2px; }
+  #matchSheet:focus { outline: none; }
+  .mpick-team { margin-bottom: 10px; }
+  .mpick-team-label { font-size: 10px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--tc); margin: 0 0 6px 2px; }
+  .mpick-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  @media (min-width: 560px) { .mpick-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  .mpick {
+    display: flex; align-items: center; gap: 6px; min-width: 0; min-height: 40px;
+    background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 8px 10px;
+    color: var(--text); font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500; text-align: left; cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mpick span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mpick.in { border-color: var(--tc); background: color-mix(in srgb, var(--tc) 14%, var(--card)); }
+  .mpick.in::after { content: '✓'; color: var(--tc); font-weight: 800; }
+
+  .mopt { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .mopt:last-child { border-bottom: none; }
+  .mopt-l { font-size: 14px; font-weight: 600; }
+  .mopt-l small { display: block; font-size: 11px; font-weight: 500; color: var(--muted); margin-top: 2px; }
+  .mopt.stack { flex-direction: column; align-items: stretch; }
+  .mtoggle {
+    width: 50px; height: 30px; border-radius: 15px; background: var(--border); border: none; position: relative; cursor: pointer; flex-shrink: 0; transition: background .15s;
+  }
+  .mtoggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: var(--text); transition: transform .15s; }
+  .mtoggle[aria-checked="true"] { background: var(--gold); }
+  .mtoggle[aria-checked="true"]::after { transform: translateX(20px); background: #17120A; }
+
+  .mprev { background: var(--card); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .mprev-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--border); border-left: 3px solid var(--tc); }
+  .mprev-row:last-child { border-bottom: none; }
+  .mprev-who { flex: 1; min-width: 0; }
+  .mprev-name { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mprev-cats { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .mprev-pts { font-family: 'Anton', sans-serif; font-size: 20px; color: var(--gold); }
+
+  .match-foot {
+    flex-shrink: 0; display: flex; align-items: center; gap: 12px;
+    padding: 12px 16px calc(12px + var(--safe-bottom)); border-top: 1px solid var(--border); background: rgba(8,7,10,0.6);
+  }
+  .match-foot-sum { flex: 1; min-width: 0; }
+  .match-foot-pts { font-family: 'Anton', sans-serif; font-size: 24px; line-height: 1; }
+  .match-foot-pts b { color: var(--gold); font-weight: 400; }
+  .match-foot-sub { font-size: 11px; color: var(--muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .match-foot .btn-save { margin-left: 0; }
+
+  .match-toast {
+    position: absolute; left: 12px; right: 12px; z-index: 170;
+    bottom: calc(var(--nav-h) + var(--safe-bottom) + 76px);
+    display: flex; align-items: center; gap: 12px;
+    background: var(--card); border: 1px solid var(--gold-dim); border-radius: 8px; padding: 12px 14px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.45); font-size: 13px;
+  }
+  .match-toast span { flex: 1; min-width: 0; }
+  .match-toast button { background: none; border: 1px solid var(--border); border-radius: 4px; color: var(--gold); font: 800 12px 'Inter', sans-serif; letter-spacing: 0.5px; text-transform: uppercase; padding: 8px 12px; cursor: pointer; }
+  @media (min-width: 900px) { .match-toast { left: auto; right: 24px; width: 380px; bottom: 24px; } }
 </style>
 </head>
 <body>
@@ -1325,6 +1471,21 @@
   <button class="sheet-item" onclick="switchTab('settings'); closeMore();"><span class="sheet-icon">⚙️</span>Settings</button>
 </div>
 
+<!-- MATCH ENTRY -->
+<div class="sheet-backdrop" id="matchBackdrop" onclick="closeMatch()"></div>
+<div class="match-sheet" id="matchSheet" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="matchTitle">
+  <div class="match-head">
+    <div class="sheet-grip"></div>
+    <div class="match-head-row">
+      <h2 id="matchTitle"><span>Log</span> a Match</h2>
+      <button class="match-close" type="button" onclick="closeMatch()" aria-label="Close">✕</button>
+    </div>
+    <select id="matchShow" class="match-show" aria-label="Show" onchange="renderMatch()"></select>
+  </div>
+  <div class="match-body" id="matchBody"></div>
+  <div class="match-foot" id="matchFoot"></div>
+</div>
+
 <!-- SAVE BAR (floats above nav when scoring) -->
 <div class="save-bar" id="saveBar">
   <div class="save-bar-total"><span class="sbt-lbl">Total: </span><span id="weekTotalDisplay">0</span> pts</div>
@@ -1372,6 +1533,11 @@
   <!-- SCORE ENTRY -->
   <div id="tab-score" class="tab-panel">
     <div class="section-title"><span>Enter</span> Scores</div>
+    <button class="match-cta" type="button" onclick="openMatch()" aria-haspopup="dialog">
+      <span class="match-cta-icon" aria-hidden="true">🤼</span>
+      <span class="match-cta-txt"><b>Log a Match</b><span>Pick who was in it and who won — every team updates at once</span></span>
+      <span class="match-cta-arrow" aria-hidden="true">›</span>
+    </button>
     <div class="team-grid">
       <button class="team-btn maria" type="button" data-team="maria" aria-pressed="false" onclick="selectTeam('maria')">
         <span class="team-btn-label">Team</span><span class="team-btn-name">Maria</span>
@@ -4010,6 +4176,290 @@ function rebaseOpenShow(stored) {
   saveBase = cloneCounts(applyDelta(stored, null));
   liveCounts = cloneCounts(applyDelta(stored, unsent));
   if (JSON.stringify(applyDelta(liveCounts, null)) !== before) renderScoringList();
+}
+
+
+// ─────────────────────────────────────────────
+// MATCH ENTRY
+// ─────────────────────────────────────────────
+// Score entry is one team at a time, but a match isn't: Josh's wrestler beats
+// Maria's and that's a Win on one team and a Loss on another. This sheet takes
+// the match itself — who was in it, who won, and how — works out each
+// wrestler's categories, and sends one merging transaction per team touched
+// (sendScoreDelta, same path as a normal save), so it is safe while someone
+// else has that team open.
+let matchDraft = null;
+let lastMatch = null;
+
+function newMatchDraft() {
+  return { people: [], main: false, draw: false, title: 'none', changed: false, squash: 'none', q: '',
+           pickTeam: currentTeam || TEAMS[0] };
+}
+function matchShowRow() {
+  const sid = document.getElementById('matchShow').value;
+  return state.schedule.find(s => showId(s) === sid) || null;
+}
+function matchPersonName(p) {
+  const show = matchShowRow();
+  return show ? slotNameAt(p.team, p.letter, show.date) : ((state.rosters[p.team] || {})[p.letter] || '');
+}
+
+function openMatch() {
+  if (!state.schedule.length) { alert('Set up the season schedule in Settings first.'); return; }
+  if (!matchDraft) matchDraft = newMatchDraft();
+  const sel = document.getElementById('matchShow');
+  const src = document.getElementById('showSelect');
+  sel.innerHTML = '';
+  let lastMonth = '';
+  state.schedule.forEach(show => {
+    const month = show.date.slice(0, 7);
+    if (month !== lastMonth) {
+      const [y, m] = month.split('-');
+      const og = document.createElement('optgroup');
+      og.label = new Date(+y, +m - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      sel.appendChild(og); lastMonth = month;
+    }
+    const opt = document.createElement('option');
+    opt.value = showId(show);
+    opt.textContent = `${showLabel(show.type)} — ${fmtDate(show.date)}`;
+    sel.lastChild.appendChild(opt);
+  });
+  // The show already open in Scores, else the latest one that has aired.
+  const want = currentShowId || (src && src.value);
+  if (want && state.schedule.some(s => showId(s) === want)) sel.value = want;
+  else { const p = state.schedule.filter(s => s.date <= todayISO()).pop(); if (p) sel.value = showId(p); }
+  matchOpener = document.activeElement;
+  document.getElementById('matchSheet').classList.add('open');
+  document.getElementById('matchBackdrop').classList.add('open');
+  renderMatch();
+  // Focus moves into the dialog (for keyboards and screen readers) without
+  // lighting up a focus ring on the close button for every tap-open.
+  document.getElementById('matchSheet').focus({ preventScroll: true });
+}
+let matchOpener = null;
+function closeMatch() {
+  const sheet = document.getElementById('matchSheet');
+  if (!sheet.classList.contains('open')) return;
+  sheet.classList.remove('open');
+  document.getElementById('matchBackdrop').classList.remove('open');
+  if (matchOpener && matchOpener.focus) matchOpener.focus();
+}
+
+// What each participant gets for this match. One place, so the preview and
+// what's logged can't disagree.
+function matchCategories(p, m) {
+  const cats = [];
+  if (p.result === 'won') cats.push('win');
+  if (p.result === 'lost') cats.push('loss');
+  if (m.main) cats.push('main');
+  if (m.draw) cats.push('timelimit');
+  if (p.result === 'won' && m.title === 'aew') cats.push(m.changed ? 'aewTitle' : 'defAew');
+  if (p.result === 'won' && m.title === 'third') cats.push(m.changed ? 'thirdTitle' : 'defThird');
+  if (p.result === 'won' && m.squash === 'jobber') cats.push('squashJobber');
+  if (p.result === 'won' && m.squash === 'notable') cats.push('squashNotable');
+  return cats;
+}
+function matchDeltas(m) {
+  const by = {};
+  for (const p of m.people) {
+    for (const k of matchCategories(p, m)) {
+      const t = (by[p.team] = by[p.team] || {});
+      const row = (t[p.letter] = t[p.letter] || {});
+      row[k] = (row[k] || 0) + 1;
+    }
+  }
+  return by;
+}
+function deltaPts(d) {
+  let n = 0;
+  for (const l in d) for (const k in d[l]) n += d[l][k] * ((ACC_BY_KEY[k] || {}).pts || 0);
+  return n;
+}
+
+function matchToggle(team, letter) {
+  const m = matchDraft;
+  const i = m.people.findIndex(p => p.team === team && p.letter === letter);
+  if (i > -1) m.people.splice(i, 1);
+  else m.people.push({ team, letter, result: m.draw ? null : 'lost' });
+  renderMatch({ keepScroll: true });
+}
+function matchResult(i, r) {
+  const p = matchDraft.people[i]; if (!p) return;
+  p.result = p.result === r ? null : r;
+  renderMatch({ keepScroll: true });
+}
+function matchSet(field, v) {
+  matchDraft[field] = v;
+  if (field === 'title' && v === 'none') matchDraft.changed = false;
+  renderMatch({ keepScroll: true });
+}
+function matchSearch(v) {
+  matchDraft.q = v;
+  renderMatchPicker();
+}
+function matchPickTeam(t) {
+  matchDraft.pickTeam = t; matchDraft.q = '';
+  const inp = document.getElementById('matchSearch'); if (inp) inp.value = '';
+  renderMatchPicker();
+}
+
+function segHTML(field, value, opts) {
+  return `<div class="seg full" role="radiogroup">${opts.map(([v, label]) =>
+    `<button type="button" role="radio" aria-checked="${value === v}" class="seg-btn${value === v ? ' on' : ''}" onclick="matchSet('${field}','${v}')">${label}</button>`
+  ).join('')}</div>`;
+}
+function toggleHTML(field, on, label) {
+  return `<button type="button" class="mtoggle" role="switch" aria-checked="${on}" aria-label="${escAttr(label)}" onclick="matchSet('${field}', ${!on})"></button>`;
+}
+
+function renderMatchPicker() {
+  const el = document.getElementById('matchPicker');
+  if (!el) return;
+  const m = matchDraft, q = (m.q || '').trim().toLowerCase();
+  // One team at a time keeps the picker to six rows; a search looks across all four.
+  const tabs = `<div class="seg full mpick-tabs" role="tablist">${TEAMS.map(t => {
+    const n = m.people.filter(p => p.team === t).length;
+    const on = !q && m.pickTeam === t;
+    return `<button type="button" role="tab" aria-selected="${on}" class="seg-btn${on ? ' on' : ''}" style="--tc:${TEAM_COLORS[t]}" onclick="matchPickTeam('${t}')">${TEAM_LABELS[t]}${n ? ` <i>${n}</i>` : ''}</button>`;
+  }).join('')}</div>`;
+  const shown = q ? TEAMS : [m.pickTeam];
+  el.innerHTML = tabs + (shown.map(team => {
+    const chips = LETTERS.map(letter => {
+      const name = matchPersonName({ team, letter });
+      if (!name) return '';
+      if (q && name.toLowerCase().indexOf(q) === -1 && TEAM_LABELS[team].toLowerCase().indexOf(q) === -1) return '';
+      const on = m.people.some(p => p.team === team && p.letter === letter);
+      return `<button type="button" class="mpick${on ? ' in' : ''}" aria-pressed="${on}" onclick="matchToggle('${team}','${letter}')"><span>${esc(name)}</span></button>`;
+    }).join('');
+    if (!chips) return '';
+    return `<div class="mpick-team" style="--tc:${TEAM_COLORS[team]}">
+      ${q ? `<div class="mpick-team-label">${TEAM_LABELS[team]}</div>` : ''}
+      <div class="mpick-grid">${chips}</div></div>`;
+  }).join('') || `<div class="match-empty">Nobody on a roster matches “${esc(m.q)}”</div>`);
+}
+
+function renderMatch(opts = {}) {
+  const body = document.getElementById('matchBody');
+  if (!body || !matchDraft) return;
+  const top = body.scrollTop;
+  const m = matchDraft;
+
+  const people = m.people.length ? `<div class="mp-list">${m.people.map((p, i) => `
+      <div class="mp-row${p.result === 'won' ? ' won' : ''}" style="--tc:${TEAM_COLORS[p.team]}">
+        <div class="mp-who">
+          <div class="mp-name">${esc(matchPersonName(p))}</div>
+          <div class="mp-team">${TEAM_LABELS[p.team]}</div>
+        </div>
+        <div class="seg" role="radiogroup" aria-label="Result">
+          <button type="button" role="radio" aria-checked="${p.result === 'won'}" class="seg-btn${p.result === 'won' ? ' on' : ''}" onclick="matchResult(${i},'won')">Won</button>
+          <button type="button" role="radio" aria-checked="${p.result === 'lost'}" class="seg-btn lost${p.result === 'lost' ? ' on' : ''}" onclick="matchResult(${i},'lost')">Lost</button>
+        </div>
+        <button type="button" class="mp-x" aria-label="Remove ${escAttr(matchPersonName(p))}" onclick="matchToggle('${p.team}','${p.letter}')">✕</button>
+      </div>`).join('')}</div>`
+    : `<div class="match-empty">Tap wrestlers below to put them in the match.<br>Only rostered wrestlers score — leave everyone else out.</div>`;
+
+  const deltas = matchDeltas(m);
+  const prevRows = m.people.map(p => {
+    const cats = matchCategories(p, m);
+    const pts = cats.reduce((n, k) => n + ACC_BY_KEY[k].pts, 0);
+    return `<div class="mprev-row" style="--tc:${TEAM_COLORS[p.team]}">
+      <div class="mprev-who"><div class="mprev-name">${esc(matchPersonName(p))}</div>
+      <div class="mprev-cats">${cats.length ? cats.map(k => esc(shortLabel(k))).join(' · ') : 'Nothing to log yet'}</div></div>
+      <div class="mprev-pts">${pts ? '+' + pts : '—'}</div></div>`;
+  }).join('');
+
+  body.innerHTML = `
+    <div class="match-step"><span class="match-step-n">1</span><span class="match-step-t">Who's in it</span>
+      <span class="match-step-h">${m.people.length ? m.people.length + ' in · set who won' : ''}</span></div>
+    ${people}
+    <div class="mpick-wrap">
+      <input class="match-search" id="matchSearch" type="search" placeholder="Search all rosters…" value="${escAttr(m.q)}" oninput="matchSearch(this.value)" autocomplete="off" aria-label="Search all rosters">
+      <div id="matchPicker"></div>
+    </div>
+
+    <div class="match-step"><span class="match-step-n">2</span><span class="match-step-t">The match</span></div>
+    <div class="mopt"><span class="mopt-l">Main event<small>+${ACC_BY_KEY.main.pts} to everyone in it</small></span>${toggleHTML('main', m.main, 'Main event')}</div>
+    <div class="mopt"><span class="mopt-l">Time-limit draw or DQ<small>+${ACC_BY_KEY.timelimit.pts} to everyone in it</small></span>${toggleHTML('draw', m.draw, 'Draw or DQ')}</div>
+    <div class="mopt stack"><span class="mopt-l">Title on the line</span>
+      ${segHTML('title', m.title, [['none', 'No title'], ['aew', 'AEW'], ['third', '3rd party']])}</div>
+    ${m.title !== 'none' ? `<div class="mopt stack"><span class="mopt-l">Result<small>Winners get ${m.changed ? 'the title win' : 'the defense'}</small></span>
+      <div class="seg full" role="radiogroup">
+        <button type="button" role="radio" aria-checked="${!m.changed}" class="seg-btn${!m.changed ? ' on' : ''}" onclick="matchSet('changed', false)">Retained</button>
+        <button type="button" role="radio" aria-checked="${m.changed}" class="seg-btn${m.changed ? ' on' : ''}" onclick="matchSet('changed', true)">New champion</button>
+      </div></div>` : ''}
+    <div class="mopt stack"><span class="mopt-l">Squash<small>Added on top of the win</small></span>
+      ${segHTML('squash', m.squash, [['none', 'No'], ['jobber', 'Jobber'], ['notable', 'Notable name']])}</div>
+
+    ${m.people.length ? `<div class="match-step"><span class="match-step-n">3</span><span class="match-step-t">What gets logged</span></div>
+    <div class="mprev">${prevRows}</div>` : ''}`;
+  renderMatchPicker();
+  if (opts.keepScroll) body.scrollTop = top;
+
+  const teams = Object.keys(deltas);
+  const total = teams.reduce((n, t) => n + deltaPts(deltas[t]), 0);
+  document.getElementById('matchFoot').innerHTML = `
+    <div class="match-foot-sum">
+      <div class="match-foot-pts"><b>+${total}</b> pts</div>
+      <div class="match-foot-sub">${teams.length ? teams.map(t => TEAM_LABELS[t] + ' +' + deltaPts(deltas[t])).join(' · ') : 'Pick wrestlers to log'}</div>
+    </div>
+    <button class="btn-save" type="button" onclick="logMatch()" ${total ? '' : 'disabled'}>🤼 Log Match</button>`;
+}
+
+// Sends each team's share. The open team+show (if touched) is folded into the
+// working set first and claimed, so its own autosave won't send it again.
+function sendMatchDeltas(sid, deltas) {
+  const jobs = [];
+  for (const team of Object.keys(deltas)) {
+    const d = deltas[team];
+    if (!state.scores[team]) state.scores[team] = {};
+    state.scores[team][sid] = applyDelta(state.scores[team][sid], d);
+    let token = -1;
+    if (team === currentTeam && sid === currentShowId) {
+      liveCounts = cloneCounts(applyDelta(liveCounts, d));
+      saveBase = cloneCounts(applyDelta(saveBase, d));
+      token = loadToken;
+      renderScoringList();
+    }
+    jobs.push(deliverScoreDelta(team, sid, d, token));
+  }
+  renderStandings(); renderShowChart(); renderWrestlerList();
+  if (currentTeam) populateShowSelect();
+  return Promise.allSettled(jobs);
+}
+
+async function logMatch() {
+  const sid = document.getElementById('matchShow').value;
+  const deltas = matchDeltas(matchDraft);
+  const teams = Object.keys(deltas);
+  if (!teams.length) return;
+  if (!dbRoot) { alert('Not connected — try again once the badge says Live.'); return; }
+  const total = teams.reduce((n, t) => n + deltaPts(deltas[t]), 0);
+  const show = matchShowRow();
+  lastMatch = { sid, deltas };
+  sendMatchDeltas(sid, deltas);
+  matchDraft = newMatchDraft();
+  closeMatch();
+  matchToastShow(`Logged <b>+${total}</b> across ${teams.map(t => TEAM_LABELS[t]).join(', ')}${show ? ' · ' + esc(showLabel(show.type).replace(/.*? /, '') + ' ' + fmtShort(show.date)) : ''}`);
+}
+
+function undoMatch() {
+  if (!lastMatch) return;
+  const neg = {};
+  for (const t in lastMatch.deltas) neg[t] = negateDelta(lastMatch.deltas[t]);
+  sendMatchDeltas(lastMatch.sid, neg);
+  lastMatch = null;
+  matchToastShow('Match removed', true);
+}
+
+function matchToastShow(html, noUndo) {
+  let el = document.getElementById('matchToast');
+  if (el) el.remove();
+  el = document.createElement('div');
+  el.id = 'matchToast'; el.className = 'match-toast'; el.setAttribute('role', 'status');
+  el.innerHTML = `<span>${html}</span>${noUndo ? '' : '<button type="button" onclick="undoMatch()">Undo</button>'}`;
+  document.body.appendChild(el);
+  clearTimeout(matchToastShow.t);
+  matchToastShow.t = setTimeout(() => { el.remove(); }, noUndo ? 2500 : 8000);
 }
 
 // ─────────────────────────────────────────────
@@ -7060,7 +7510,7 @@ function closeMore() {
   if (wasOpen && moreOpener && moreOpener.focus) moreOpener.focus();
   moreOpener = null;
 }
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMore(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeMore(); closeMatch(); } });
 
 function setSyncStatus(text, type) {
   const el = document.getElementById('syncStatus');
