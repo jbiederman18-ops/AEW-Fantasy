@@ -313,6 +313,7 @@
   .wrestler-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; margin-bottom: 28px; }
   .wrestler-wrap-header { padding: 12px 14px; border-bottom: 1px solid var(--border); background: var(--surface); }
   .wrestler-wrap-header h3 { font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  .wr-former { font-size: 10px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: var(--muted); border: 1px solid var(--border); border-radius: 3px; padding: 1px 5px; margin-left: 6px; vertical-align: 1px; white-space: nowrap; }
   .filter-row { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; -webkit-overflow-scrolling: touch; }
   .filter-row::-webkit-scrollbar { display: none; }
   .filter-tab { flex-shrink: 0; background: none; border: 1px solid var(--border); border-radius: 4px; padding: 4px 12px; color: var(--muted); font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
@@ -523,12 +524,14 @@
     min-width: 14px; text-align: right; font-variant-numeric: tabular-nums;
   }
   .chip-grid {
-    display: none; grid-template-columns: repeat(2, 1fr);
+    /* minmax(0,…): a plain 1fr track won't shrink below its longest name, so
+       "Kyle Fletcher, The Prostar, SMFN" pushed the second column off screen. */
+    display: none; grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 6px; padding: 10px 12px 12px;
   }
   .chip-grid.open { display: grid; }
   .chip {
-    display: flex; align-items: center; gap: 6px;
+    display: flex; align-items: center; gap: 6px; min-width: 0;
     background: var(--surface); border: 1px solid var(--border);
     border-radius: 4px; padding: 11px 10px; cursor: pointer;
     color: var(--text); font-family: 'Inter', sans-serif;
@@ -561,7 +564,7 @@
   .save-bar.dirty { border-top-color: var(--gold-dim); }
 
   @media (min-width: 560px) {
-    .chip-grid { grid-template-columns: repeat(3, 1fr); }
+    .chip-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   }
 
   /* ── ROSTERS ── */
@@ -981,7 +984,7 @@
     .scoring-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: start; }
     .scoring-list > .event-card { margin-bottom: 0; }
     .acc-list.open { grid-template-columns: 1fr; }
-    .chip-grid.open { grid-template-columns: repeat(4, 1fr); }
+    .chip-grid.open { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     .team-grid { max-width: 640px; }
     .roster-grid { grid-template-columns: repeat(4, 1fr); }
     .mode-toggle, .show-select-wrap { max-width: 520px; }
@@ -2984,10 +2987,11 @@ function flushLiveRender() {
   const mine = (currentTeam && currentShowId)
     ? 'aew_score_' + currentTeam + '_' + currentShowId : null;
   if (mine && keys.indexOf(mine) !== -1) {
-    // Reloading the working set would discard unsaved taps, so say so instead
-    // and let the pending autosave land first.
-    if (isDirty) toastShowNav('Changed elsewhere');
-    else loadShowScores();
+        // Unsent taps here are kept and merged in; the next save sends only them.
+    if (!scoreTxnsInFlight.has(mine)) {
+      rebaseOpenShow(state.scores[currentTeam][currentShowId]);
+      if (isDirty) toastShowNav('Updated elsewhere · merged');
+    }
   }
   announceLive(keys);
 }
@@ -3227,12 +3231,64 @@ function getShowPts(team, sid) {
 function getTeamTotal(team) {
   return state.schedule.reduce((s, show) => s + getShowPts(team, showId(show)), 0);
 }
+function slotShowPts(team, sid, letter) {
+  const cell = state.scores[team]?.[sid]?.[letter];
+  if (!cell) return 0;
+  return ACCOMPLISHMENTS.reduce((pts, a) => pts + getCount(cell, a.key) * a.pts, 0);
+}
+
+// Who held a roster slot on a given show date. Points are stored by slot, so
+// without this a swap handed the incoming wrestler every point the dropped one
+// had earned, in Wrestler Rankings and on the Roster tab. Walks the swap log
+// back from the current roster. (Team totals were never affected — the points
+// stay with the team either way.)
+function swapEffective(h) { return (h && (h.effective || h.date)) || ''; }
+function slotNameAt(team, letter, date) {
+  let name = (state.rosters[team] || {})[letter] || '';
+  const hist = (((state.swaps || {}).history) || [])
+    .filter(h => h && h.team === team && h.slot === letter)
+    .sort((a, b) => swapEffective(b).localeCompare(swapEffective(a)));   // newest first
+  for (const h of hist) {
+    if (date < swapEffective(h)) name = h.oldWrestler || '';
+    else break;
+  }
+  return name;
+}
+// Name for a slot on the show open in Scores.
+function openSlotName(letter) {
+  const show = state.schedule.find(s => showId(s) === currentShowId);
+  return show ? slotNameAt(currentTeam, letter, show.date) : ((state.rosters[currentTeam] || {})[letter] || '');
+}
+
+// Points earned by whoever holds the slot now — not by the slot.
 function getWrestlerPts(team, letter) {
+  const now = (state.rosters[team] || {})[letter] || '';
   return state.schedule.reduce((s, show) => {
-    const sid = showId(show);
-    if (!state.scores[team]?.[sid]?.[letter]) return s;
-    return s + ACCOMPLISHMENTS.reduce((pts, a) => pts + getCount(state.scores[team][sid][letter], a.key) * a.pts, 0);
+    if (slotNameAt(team, letter, show.date) !== now) return s;
+    return s + slotShowPts(team, showId(show), letter);
   }, 0);
+}
+
+// One entry per wrestler per slot they held this season, current or swapped out.
+function wrestlerStints() {
+  const out = [];
+  for (const team of TEAMS) {
+    for (const letter of LETTERS) {
+      const now = (state.rosters[team] || {})[letter] || '';
+      const by = new Map();
+      if (now) by.set(now, 0);
+      for (const show of state.schedule) {
+        const who = slotNameAt(team, letter, show.date);
+        if (!who) continue;
+        by.set(who, (by.get(who) || 0) + slotShowPts(team, showId(show), letter));
+      }
+      for (const [name, pts] of by) {
+        if (name !== now && pts === 0) continue;   // dropped before scoring anything
+        out.push({ team, letter, name, pts, former: name !== now });
+      }
+    }
+  }
+  return out;
 }
 function getLastShow() {
   const sorted = [...state.schedule].sort((a,b) => b.date.localeCompare(a.date));
@@ -3297,10 +3353,7 @@ function renderShowChart() {
 // WRESTLER LIST
 // ─────────────────────────────────────────────
 function renderWrestlerList() {
-  let wrestlers = TEAMS.flatMap(team =>
-    LETTERS.map(l => ({ team, letter:l, name: state.rosters[team][l], pts: getWrestlerPts(team, l) }))
-    .filter(w => w.name)
-  );
+  let wrestlers = wrestlerStints();
   if (wrestlerFilter !== 'all') wrestlers = wrestlers.filter(w => w.team === wrestlerFilter);
   wrestlers.sort((a,b) => b.pts - a.pts);
   const max = wrestlers.length ? Math.max(...wrestlers.map(w => w.pts), 1) : 1;
@@ -3310,7 +3363,7 @@ function renderWrestlerList() {
     <div class="wrestler-row">
       <div class="wr-rank">${i+1}</div>
       <div class="wr-dot" style="background:${TEAM_COLORS[w.team]}"></div>
-      <div class="wr-name">${esc(w.name)}</div>
+      <div class="wr-name">${esc(w.name)}${w.former ? ' <span class="wr-former">swapped out</span>' : ''}</div>
       <div class="wr-pts">${w.pts}</div>
       <div class="wr-bar-wrap"><div class="wr-bar" style="width:${Math.round(w.pts/max*100)}%;background:${TEAM_COLORS[w.team]};"></div></div>
     </div>`).join('');
@@ -3460,6 +3513,8 @@ function loadShowScores() {
       if (n > 0) liveCounts[l][a.key] = n;
     }
   }
+  saveBase = cloneCounts(liveCounts);
+  loadToken++;
   saveRetries = 0;   // backoff belongs to the show you just left, not this one
   tapLog = [];
   updateUndoBtn();
@@ -3479,14 +3534,14 @@ function updateUndoBtn() {
   b.disabled = !tapLog.length;
   const last = tapLog[tapLog.length - 1];
   b.title = last
-    ? `Undo ${last.delta > 0 ? '+' : '−'}${shortLabel(last.key)} for ${(state.rosters[currentTeam] || {})[last.letter] || last.letter.toUpperCase()}`
+    ? `Undo ${last.delta > 0 ? '+' : '−'}${shortLabel(last.key)} for ${openSlotName(last.letter) || last.letter.toUpperCase()}`
     : 'Undo last tap';
 }
 function undoTap() {
   const last = tapLog.pop();
   if (!last) return;
   stepAcc(last.letter, last.key, -last.delta, true);
-  const who = (state.rosters[currentTeam] || {})[last.letter] || last.letter.toUpperCase();
+  const who = openSlotName(last.letter) || last.letter.toUpperCase();
   const st = document.getElementById('saveBarMsg');
   if (st) {
     st.textContent = `Undid ${shortLabel(last.key)} · ${who}`;
@@ -3551,7 +3606,7 @@ function cardSummary(letter) {
 
 function wrestlerModeHTML() {
   return LETTERS.map(letter => {
-    const name = state.rosters[currentTeam][letter];
+    const name = openSlotName(letter);
     if (!name) return '';
     const pts = wrestlerPtsLive(letter);
     const open = openCards.has(letter);
@@ -3607,7 +3662,7 @@ function eventModeHTML() {
         </button>
         <div class="chip-grid${open?' open':''}" id="evtbody_${k}">
           ${LETTERS.map(l => {
-            const name = state.rosters[currentTeam][l];
+            const name = openSlotName(l);
             if (!name) return '';
             const c = countOf(l, k);
             return `<button class="chip${c>0?' on':''}" id="chip_${l}_${k}" onclick="stepAcc('${l}','${k}',1)">
@@ -3796,50 +3851,165 @@ async function submitScores(auto = false) {
 async function _runSave(auto) {
   const btn = document.getElementById('submitBtn');
   const st  = document.getElementById('saveState');
+  // NB: named `sid`, not `showId` — a local called showId shadows the global
+  // showId() helper for the whole function body.
+  const team = currentTeam, sid = currentShowId, token = loadToken;
+  const sent = cloneCounts(liveCounts);
+  const delta = countsDelta(sent, saveBase);
+  if (!delta) { setDirty(false); return; }      // nothing new since the last save
+
   if (!auto && btn) { btn.disabled = true; btn.innerHTML = '<span class="loading-spinner"></span> Saving'; }
   if (st) { st.textContent = 'Saving…'; st.className = 'save-state saving'; }
 
-  // Snapshot at send time so taps during the request aren't silently included
-  // or lost — anything newer triggers the coalesced follow-up above.
-  // NB: named `sid`, not `showId` — a local called showId shadows the global
-  // showId() helper for the whole function body.
-  const team = currentTeam, sid = currentShowId;
-  const committed = {};
-  for (const l of LETTERS) {
-    const row = {};
-    for (const key in (liveCounts[l] || {})) {
-      const n = liveCounts[l][key];
-      if (n > 0) row[key] = n;
-    }
-    committed[l] = row;
-  }
+  // Claim these taps now, at send time. See "merging saves" below.
+  saveBase = sent;
   if (!state.scores[team]) state.scores[team] = {};
-  state.scores[team][sid] = committed;
+  state.scores[team][sid] = applyDelta(sent, null);
+  setDirty(false);
+  if (st) { st.textContent = 'Saving…'; st.className = 'save-state saving'; }
 
-  try {
-    const result = await dbSet(`aew_score_${team}_${sid}`, committed);
-    saveRetries = 0;
-    setDirty(false);
-    if (st) {
-      // 'queued' means the write is held locally and will replay on reconnect.
-      // Calling that "Saved" would be a lie, and calling it a failure would be
-      // one too, since nothing has been lost.
-      st.textContent = result === 'queued' ? 'Saved offline' : 'Saved';
-      st.className = 'save-state saved';
-    }
-    renderStandings(); renderShowChart(); renderWrestlerList();
-  } catch(e) {
-    // Back off rather than hammering a struggling connection.
-    saveRetries = Math.min(saveRetries + 1, 5);
-    const wait = Math.min(2000 * Math.pow(2, saveRetries - 1), 30000);
-    if (st) {
-      st.textContent = `Retrying in ${Math.round(wait/1000)}s`;
-      st.className = 'save-state failed';
-    }
-    clearTimeout(autosaveTimer);
-    autosaveTimer = setTimeout(() => submitScores(true), wait);
+  const outcome = await Promise.race([
+    deliverScoreDelta(team, sid, delta, token).then(() => 'saved', () => 'retrying'),
+    sleep(WRITE_ACK_MS).then(() => 'queued'),
+  ]);
+  if (st && token === loadToken && !isDirty && outcome !== 'retrying') {
+    // 'queued' means the transaction is held locally and will run on
+    // reconnect. Calling that "Saved" would be a lie, and calling it a failure
+    // would be one too, since nothing has been lost.
+    st.textContent = outcome === 'queued' ? 'Saved offline' : 'Saved';
+    st.className = 'save-state saved';
   }
+  renderStandings(); renderShowChart(); renderWrestlerList();
   if (!auto && btn) { btn.disabled = false; btn.innerHTML = '💾 Save'; }
+}
+
+// ── merging saves ───────────────────────────────────────────────────────
+// A save used to write this device's whole copy of the team+show record. If
+// another phone logged something on the same show meanwhile, "Changed
+// elsewhere" appeared and then the autosave overwrote it anyway. A save now
+// sends only the taps made here since the last save, applied by transaction to
+// whatever the server holds, so two people logging one show both land.
+//
+// saveBase is what this device has already sent (or loaded). Taps are claimed
+// into it when a save is *sent*, not when it is acknowledged, so two saves in
+// flight always carry disjoint deltas: nothing is counted twice even when the
+// first is still waiting on a dead connection as the second goes out. Nothing
+// here times out a transaction and resends it — RTDB keeps a pending
+// transaction and runs it on reconnect, and a resend would double it.
+let saveBase = {};
+let loadToken = 0;                       // bumped each time a show is (re)loaded
+const scoreTxnsInFlight = new Map();     // key -> transactions outstanding
+
+function cloneCounts(c) {
+  const out = {};
+  for (const l of LETTERS) out[l] = Object.assign({}, (c && c[l]) || {});
+  return out;
+}
+// now − base, per slot and category. null when they're the same.
+function countsDelta(now, base) {
+  const d = {}; let any = false;
+  for (const l of LETTERS) {
+    const a = (now && now[l]) || {}, b = (base && base[l]) || {};
+    for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) {
+      const n = (a[k] || 0) - (b[k] || 0);
+      if (n) { (d[l] = d[l] || {})[k] = n; any = true; }
+    }
+  }
+  return any ? d : null;
+}
+function negateDelta(d) {
+  const out = {};
+  for (const l in d) { out[l] = {}; for (const k in d[l]) out[l][k] = -d[l][k]; }
+  return out;
+}
+// A stored record with a delta added, in the stored shape: every slot present,
+// only positive counts, only known categories. Never goes below zero.
+function applyDelta(stored, delta) {
+  const out = {};
+  for (const l of LETTERS) {
+    const src = (stored && stored[l]) || {}, row = {};
+    for (const a of ACCOMPLISHMENTS) {
+      const n = Math.max(0, getCount(src, a.key) + ((delta && delta[l] && delta[l][a.key]) || 0));
+      if (n > 0) row[a.key] = n;
+    }
+    out[l] = row;
+  }
+  return out;
+}
+
+// One transaction: delta onto the server's copy. Resolves with the merged
+// record. Match entry uses this directly for teams other than the open one.
+function sendScoreDelta(team, sid, delta, token) {
+  if (!dbRoot) return Promise.reject(new Error('Backend not initialised'));
+  const key = `aew_score_${team}_${sid}`;
+  holdKey(key);
+  scoreTxnsInFlight.set(key, (scoreTxnsInFlight.get(key) || 0) + 1);
+  const settle = () => {
+    const left = (scoreTxnsInFlight.get(key) || 1) - 1;
+    if (left > 0) scoreTxnsInFlight.set(key, left);
+    else scoreTxnsInFlight.delete(key);
+    return left;
+  };
+  let merged = null;
+  return dbRoot.child(key).transaction(cur => {
+    merged = applyDelta(parseRaw(cur), delta);
+    return JSON.stringify(merged);
+  }, undefined, false).then(res => {
+    if (!res || !res.committed) throw new Error('Save was not committed');
+    const finalVal = parseRaw(res.snapshot.val()) || merged;
+    touchUpdatedAt();
+    if (settle() === 0) {
+      if (!state.scores[team]) state.scores[team] = {};
+      state.scores[team][sid] = finalVal;
+      if (window._sheetPayload) window._sheetPayload[key] = finalVal;
+      if (token === loadToken && team === currentTeam && sid === currentShowId) rebaseOpenShow(finalVal);
+      releaseKey(key);
+    }
+    return finalVal;
+  }, err => {
+    if (settle() === 0) releaseKey(key);
+    throw err;
+  });
+}
+
+// Sends a delta, retrying with backoff on a real failure (the rules refusing
+// it, or the transaction aborting). A failed transaction applied nothing, so
+// resending the same delta is safe. Resolves or rejects on the FIRST attempt
+// so the save bar can report; retries carry on in the background.
+function deliverScoreDelta(team, sid, delta, token, attempt = 0) {
+  return sendScoreDelta(team, sid, delta, token).catch(e => {
+    const st = document.getElementById('saveState');
+    const here = token === loadToken;
+    if (attempt >= 5) {
+      console.warn('Score save gave up', team, sid, e);
+      if (here) {                              // hand the taps back as unsaved
+        saveBase = applyDelta(saveBase, negateDelta(delta));
+        setDirty(true);
+        if (st) { st.textContent = 'Save failed'; st.className = 'save-state failed'; }
+      }
+      throw e;
+    }
+    const wait = Math.min(2000 * Math.pow(2, attempt), 30000);
+    if (here && st) { st.textContent = `Retrying in ${Math.round(wait / 1000)}s`; st.className = 'save-state failed'; }
+    setTimeout(() => {
+      deliverScoreDelta(team, sid, delta, token, attempt + 1).then(() => {
+        if (token === loadToken && !isDirty && st) { st.textContent = 'Saved'; st.className = 'save-state saved'; }
+        renderStandings(); renderShowChart(); renderWrestlerList();
+      }, () => {});
+    }, wait);
+    throw e;
+  });
+}
+
+// The server copy of the open show changed (our merge landed, or someone
+// else's did). Keep any taps not yet sent, put everything else in step with
+// the server, and repaint only if that changed what's on screen.
+function rebaseOpenShow(stored) {
+  const unsent = countsDelta(liveCounts, saveBase);
+  const before = JSON.stringify(applyDelta(liveCounts, null));
+  saveBase = cloneCounts(applyDelta(stored, null));
+  liveCounts = cloneCounts(applyDelta(stored, unsent));
+  if (JSON.stringify(applyDelta(liveCounts, null)) !== before) renderScoringList();
 }
 
 // ─────────────────────────────────────────────
@@ -5890,6 +6060,9 @@ async function executeSwap() {
     oldWrestler: oldName,
     newWrestler: newName,
     date: today,
+    // The first show the new wrestler scores for. Scores before it stay with
+    // the wrestler who was dropped.
+    effective: nextShow ? nextShow.date : today,
     show: nextShow ? `${showLabel(nextShow.type).replace(/.*? /,'')} ${fmtShort(nextShow.date)}` : '',
   });
 
