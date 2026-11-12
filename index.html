@@ -1707,6 +1707,88 @@
     .ls { left: 50%; right: auto; width: 560px; margin-left: calc(var(--rail-w) / 2 - 280px); }
     .lg-toast { left: auto; right: 24px; width: 380px; }
   }
+
+  /* ── TV PARTY MODE · SIM STYLE ── */
+  #tvStage { background:
+      linear-gradient(115deg, transparent 0 71%, rgba(233,192,97,0.07) 71.1% 71.3%, transparent 71.4% 79%, rgba(233,192,97,0.05) 79.1% 79.25%, transparent 79.35%),
+      #070708; }
+  .tv-top { gap: 2.4vw; padding-bottom: 1.4vh; border-bottom: 0.5vh solid var(--red); margin: 0 -2.4vw; padding-left: 2.4vw; padding-right: 2.4vw; }
+  .tv-logo { display: flex; flex-direction: column; align-items: flex-start; }
+  .tv-logo-aew { font: italic 900 4.6vh/0.9 'Barlow Condensed', sans-serif; text-transform: uppercase; color: #fff; letter-spacing: -0.1vh; }
+  .tv-logo-season { margin-top: 0.5vh; background: var(--red); color: #fff; padding: 0.1vh 1vw; font: italic 800 1.8vh/1.4 'Barlow Condensed', sans-serif;
+    letter-spacing: 0.7vh; text-transform: uppercase; white-space: nowrap; }
+  .tv-brand { font: italic 800 2.4vh 'Barlow Condensed', sans-serif; letter-spacing: 0.8vh; color: var(--gold); transform: none; text-transform: uppercase; }
+  .tv-progress { font: italic 800 2.4vh 'Barlow Condensed', sans-serif; letter-spacing: 0.2vh; text-transform: uppercase; }
+  .tv-progress > span:first-child:not(.tv-live-dot) { background: var(--gold); color: #0b0b0c; padding: 0.5vh 1vw; font-weight: 900; }
+  .tv-bar { height: 1.1vh; border-radius: 0; background: #26262a; }
+  .tv-live-dot { width: auto; height: auto; border-radius: 0; background: #fff; box-shadow: none; color: var(--red); padding: 0.5vh 0.8vw;
+    display: inline-flex; align-items: center; gap: 0.5vw; font: italic 900 2vh 'Barlow Condensed', sans-serif; letter-spacing: 0.2vh; }
+  .tv-live-dot::before { content: ''; width: 1.2vh; height: 1.2vh; border-radius: 50%; background: var(--red); }
+  .tv-live-dot::after { content: 'LIVE'; }
+  .tv-live-dot.off { background: #26262a; color: #a5a5ad; box-shadow: none; }
+  .tv-live-dot.off::before { background: #a5a5ad; }
+  .tv-live-dot.off::after { content: 'OFFLINE'; }
+
+  .tv-clock { border-radius: 0; border: 0; border-top: 0.5vh solid var(--red); border-left: 1px solid rgba(233,192,97,0.4); border-bottom: 1px solid rgba(233,192,97,0.4);
+    background: linear-gradient(115deg, transparent 0 58%, rgba(233,192,97,0.16) 58.2% 58.5%, transparent 58.7% 70%, rgba(233,192,97,0.1) 70.2% 70.4%, transparent 70.6%),
+      linear-gradient(100deg, var(--tc22), transparent 55%), #0d0d0f; }
+  .tv-clock::before { width: 1vh; }
+  .tv-clock-meta, .tv-clock-label { color: var(--gold); letter-spacing: 0.6vh; }
+  .tv-clock-team { transform: none; letter-spacing: -0.1vh; }
+  .tv-timer { font-family: 'Barlow Condensed', sans-serif; font-style: italic; font-weight: 900; }
+  .tv-again { border-radius: 0; font-family: 'Barlow Condensed', sans-serif; font-style: italic; }
+  .tv-ryai { border-radius: 0; background: rgba(0,0,0,0.45); border-left-color: var(--team-ryan); }
+  .tv-ryai-tag { color: #9cc3f5; font-family: 'Barlow Condensed', sans-serif; font-style: italic; }
+  .tv-ryai-meter, .tv-ryai-meter > i { border-radius: 0; }
+  .tv-ryai-meter > i { background: var(--team-ryan); }
+
+  .tv-col { border-radius: 0; background: #111113; border: 1px solid #26262a; }
+  .tv-col.on { border-color: var(--tc); box-shadow: 0 0 2.4vh var(--tc30); }
+  .tv-col-head { background: var(--tc); color: #0b0b0c; border-bottom: 0; font-size: 3.2vh; padding: 0.4vh 0.8vw; }
+  .tv-col-head small { color: rgba(0,0,0,0.6); font-family: 'Barlow Condensed', sans-serif; font-style: italic; font-weight: 800; }
+  .tv-cell { border-bottom-color: #1f1f23; font: italic 800 2.2vh 'Barlow Condensed', sans-serif; text-transform: uppercase; letter-spacing: 0.05vh; }
+  .tv-cell b { font: italic 800 1.6vh 'Barlow Condensed', sans-serif; color: #6d6d75; }
+  .tv-cell.fresh { background: var(--gold); color: #0b0b0c; }
+  .tv-cell.fresh b { color: rgba(0,0,0,0.55); }
+  .tv-cell.empty span { color: #3a3a40; }
+
+  .tv-panel { border-radius: 0; background: #111113; border: 1px solid #26262a; }
+  .tv-panel h3 { color: var(--gold); font: italic 800 1.9vh 'Barlow Condensed', sans-serif; letter-spacing: 0.5vh; }
+  .tv-panel h3 small { color: #8e8e96; font-weight: 700; }
+  .tv-last-name { font-size: 5vh; text-transform: uppercase; line-height: 0.95; }
+  .tv-last-meta { font-size: 1.9vh; color: #a5a5ad; }
+  .tv-chip { border-radius: 0; background: #19191c; border: 0; border-bottom: 0.5vh solid var(--tc); }
+  .tv-chip b { color: #8e8e96; }
+  .tv-chip span { font-size: 2.7vh; text-transform: uppercase; }
+  .tv-chip.now { background: var(--gold); border-bottom-color: var(--gold); }
+  .tv-best li { border-bottom-color: #1f1f23; }
+  .tv-best .nm { font: italic 900 2.5vh 'Barlow Condensed', sans-serif; text-transform: uppercase; letter-spacing: 0.05vh; }
+  .tv-pwi .rk { font-size: 2.5vh; }
+
+  .tv-reveal { background:
+      linear-gradient(115deg, transparent 0 66%, rgba(233,192,97,0.12) 66.2% 66.5%, transparent 66.7%),
+      radial-gradient(80vw 60vh at 50% 50%, var(--tc30) 0%, transparent 75%), #070708; }
+  .tv-reveal::before, .tv-reveal::after { height: 1.2vh; }
+  .tv-reveal-kicker { background: #fff; color: var(--red); padding: 0.6vh 1.6vw; letter-spacing: 1vh; font: italic 900 3.2vh 'Barlow Condensed', sans-serif; }
+  .tv-reveal-meta { color: var(--gold); font: italic 800 3.2vh 'Barlow Condensed', sans-serif; letter-spacing: 0.6vh; }
+  .tv-reveal-name { transform: none; letter-spacing: -0.2vh; }
+  .tv-reveal-note { font-size: 2.6vh; color: #d2d2cc; }
+  .tv-reveal-bot { color: #9cc3f5; font-family: 'Barlow Condensed', sans-serif; font-style: italic; }
+  .tv-toast { border-radius: 0; border: 0; border-left: 0.6vh solid var(--red); background: #fff; color: #0b0b0c;
+    font: italic 900 2.6vh 'Barlow Condensed', sans-serif; text-transform: uppercase; letter-spacing: 0.1vh; }
+
+  .tv-idle-title { color: #fff; transform: none; letter-spacing: -0.3vh; }
+  .tv-idle-season { display: inline-block; margin-top: 1.4vh; background: var(--red); color: #fff; padding: 0.3vh 1.4vw;
+    font: italic 800 3vh 'Barlow Condensed', sans-serif; letter-spacing: 1vh; text-transform: uppercase; }
+  .tv-idle-sub { color: var(--gold); font-family: 'Barlow Condensed', sans-serif; font-style: italic; font-weight: 800; }
+  .tv-idle-row { border-radius: 0; background: #111113; border: 1px solid #26262a; border-left: 0; padding: 0; gap: 1.6vw; overflow: hidden; }
+  .tv-idle-row b { background: var(--gold); color: #0b0b0c; min-width: 8vh; align-self: stretch; display: flex; align-items: center; justify-content: center; }
+  .tv-idle-row span { font-family: 'Barlow Condensed', sans-serif; font-style: italic; font-weight: 900; padding: 1vh 0; }
+  .tv-idle-row em { color: #9cc3f5; padding-right: 1.4vw; font-family: 'Barlow Condensed', sans-serif; font-style: italic; }
+  .tv-idle-order h3 { color: var(--gold); font-family: 'Barlow Condensed', sans-serif; font-style: italic; }
+  .tv-qr { border-radius: 0; }
+  .tv-banner { transform: none; }
+  .tv-ctl button { border-radius: 0; font: italic 800 1.9vh 'Barlow Condensed', sans-serif; letter-spacing: 0.15vh; text-transform: uppercase; background: #19191c; }
 </style>
 </head>
 <body>
@@ -2421,7 +2503,7 @@ function isKeyHeld(key) {
 // ─────────────────────────────────────────────
 // The one number the whole shell hangs off. window.innerHeight is the actual
 // visible height in iOS standalone, where 100vh is not.
-const BUILD_ID = 'b1112-simstyle';
+const BUILD_ID = 'b1112-simtv';
 
 function toggleDiag() {
   const p = document.getElementById('diagPanel');
@@ -6256,8 +6338,8 @@ function tvRender() {
   const total = d.order.length * d.rounds;
   const n = d.picks.length;
   const season = esc(state.seasonName || 'Fantasy');
-  const top = (right) => '<div class="tv-top"><div class="tv-brand">DRAFT NIGHT</div>'
-    + '<div class="tv-season">AEW Fantasy · ' + season + '</div>'
+  const top = (right) => '<div class="tv-top"><div class="tv-logo"><span class="tv-logo-aew">AEW Fantasy</span>'
+    + '<span class="tv-logo-season">' + season + '</span></div><div class="tv-brand">Draft Night</div>'
     + '<div class="tv-progress">' + (right || '')
     + '<span class="tv-live-dot' + (fbConnected ? '' : ' off') + '" title="' + (fbConnected ? 'Live' : 'Offline') + '"></span></div></div>';
 
@@ -6382,6 +6464,7 @@ function tvIdleHtml() {
   const d = draftState;
   return '<div class="tv-idle"><div>'
     + '<div class="tv-idle-title">Draft<br>Night</div>'
+    + (state.seasonName ? '<div class="tv-idle-season">' + esc(state.seasonName) + '</div>' : '')
     + '<div class="tv-idle-sub">' + d.order.length + ' teams · ' + d.rounds + ' rounds · snake</div>'
     + '<div class="tv-idle-wait"><span class="loading-spinner"></span> Waiting for the draft to start on a phone…</div>'
     + '<div class="tv-join"><div class="tv-qr" id="tvQr"></div><p>Pick from your phone:<br><b>'
@@ -6412,7 +6495,7 @@ function tvDrawQr() {
   if (!el) return;
   const url = tvAppUrl();
   const draw = () => {
-    try { el.innerHTML = ''; new QRCode(el, { text: url, width: 256, height: 256, colorDark: '#08070A', colorLight: '#EFEAE0' }); }
+    try { el.innerHTML = ''; new QRCode(el, { text: url, width: 256, height: 256, colorDark: '#070708', colorLight: '#f5f5f2' }); }
     catch (e) { el.style.display = 'none'; }
   };
   if (window.QRCode) { draw(); return; }
