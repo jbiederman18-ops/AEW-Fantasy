@@ -2046,6 +2046,14 @@
   .hd-stripes { flex: 1 0 24px; }
   #homeTonight .hm-chant { display: none; }
   #homeTonight::after { display: none; }
+  /* One red block in the top third: the season bar goes dark (name in red),
+     no stripe cap, no red rule, and a dark gap before tonight's card. */
+  header { border-bottom: 0; }
+  header .logo-season { background: transparent; color: var(--ryback); }
+  .hd-stripes { display: none; }
+  .hd-bar { justify-content: space-between; }
+  .hd-bar .header-right { background: transparent; }
+  #homeTonight { margin-top: 2px; }
 
   #tab-score { --tc: var(--ryback); }
   .lg-head::before { color: color-mix(in srgb, var(--tc) 12%, transparent); }
@@ -2802,7 +2810,7 @@ function isKeyHeld(key) {
 // ─────────────────────────────────────────────
 // The one number the whole shell hangs off. window.innerHeight is the actual
 // visible height in iOS standalone, where 100vh is not.
-const BUILD_ID = 'b1112-draft-safe';
+const BUILD_ID = 'b1112-calm-top';
 
 function toggleDiag() {
   const p = document.getElementById('diagPanel');
