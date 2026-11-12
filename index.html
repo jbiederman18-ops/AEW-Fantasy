@@ -2036,6 +2036,35 @@
     .hm-tonight { margin: -16px -28px 0; padding-left: 28px; }
     #homeTonight::after { margin: 0 -28px; }
   }
+  /* ══ CALMER HOME + TEAM-COLOURED LOG ══════════════════════════════
+     Home top third: one stripe accent (the season bar's end cap), no
+     watermarks, and the season name gets the room it needs.
+     Log: accents follow the team being logged (--tc), not Ryback red. */
+  .hd-chant { display: none; }
+  header .logo-season { display: block; flex: 0 1 auto; max-width: none; min-width: 0; line-height: 30px;
+    letter-spacing: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hd-stripes { flex: 1 0 24px; }
+  #homeTonight .hm-chant { display: none; }
+  #homeTonight::after { display: none; }
+
+  #tab-score { --tc: var(--ryback); }
+  .lg-head::before { color: color-mix(in srgb, var(--tc) 12%, transparent); }
+  .lg-head::after { background: repeating-linear-gradient(-45deg, var(--tc) 0 6px, #070708 6px 12px); }
+  .lg-kick { color: var(--tc); }
+  .lg-search input { border-color: var(--tc); }
+  .lg-tab b { color: var(--tc); }
+  .lg-tab[aria-selected="true"] { border-bottom-color: var(--tc); }
+  .lg-tile .sl { background: color-mix(in srgb, var(--tc) 30%, #141416); color: #e4e4e8; }
+  .lg-tile.on { border-color: color-mix(in srgb, var(--tc) 60%, transparent); }
+  .lg-tile.on .sl { background: var(--tc); color: #0b0b0c; }
+  .lg-foot { border-top-color: var(--tc); }
+  .ls::before { background: repeating-linear-gradient(-45deg, var(--tc) 0 6px, #070708 6px 12px); }
+  .ls-head::before { color: color-mix(in srgb, var(--tc) 11%, transparent); }
+  .ls-t.on .ls-add { background: var(--tc); color: #0b0b0c; }
+  .ls-t.on .ls-add .p { color: #0b0b0c; }
+  .ls-minus { border-color: var(--tc); }
+  .ls-foot { border-top-color: var(--tc); }
+  .ls-foot .ls-done { background: var(--tc); color: #0b0b0c; }
 </style>
 </head>
 <body>
@@ -2773,7 +2802,7 @@ function isKeyHeld(key) {
 // ─────────────────────────────────────────────
 // The one number the whole shell hangs off. window.innerHeight is the actual
 // visible height in iOS standalone, where 100vh is not.
-const BUILD_ID = 'b1112-shows-style';
+const BUILD_ID = 'b1112-draft-safe';
 
 function toggleDiag() {
   const p = document.getElementById('diagPanel');
@@ -3422,7 +3451,7 @@ function onceWithin(ref, ms) {
 function withinMs(promise, ms) {
   return Promise.race([
     promise,
-    sleep(ms).then(() => { throw new Error('Not confirmed after ' + ms / 1000 + 's'); }),
+    sleep(ms).then(() => { const e = new Error('Not confirmed after ' + ms / 1000 + 's'); e.timeout = true; throw e; }),
   ]);
 }
 
@@ -4700,9 +4729,11 @@ function renderLogHead() {
 function renderLogTabs() {
   const tabs = document.getElementById('lgTabs');
   if (!tabs) return;
+  const panel = document.getElementById('tab-score');
+  if (panel && TEAM_COLORS[currentTeam]) panel.style.setProperty('--tc', TEAM_COLORS[currentTeam]);
   tabs.innerHTML = logTabTeams().map(t => {
     const pts = teamShowLive(t);
-    return `<button type="button" role="tab" class="lg-tab" id="lgtab_${t}" aria-selected="${t === currentTeam}" onclick="selectTeam('${t}')">`
+    return `<button type="button" role="tab" class="lg-tab" id="lgtab_${t}" style="--tc:${TEAM_COLORS[t]}" aria-selected="${t === currentTeam}" onclick="selectTeam('${t}')">`
       + `<b>${esc(TEAM_LABELS[t])}</b><span>${pts ? '+' + pts : '0'}</span></button>`;
   }).join('');
   const sw = document.getElementById('lgSwitch');
@@ -5235,6 +5266,12 @@ function renderDraftSetup(el) {
           <span style="font-size:13px;color:var(--muted);font-family:'Barlow',sans-serif;letter-spacing:1px;">${draftState.order.length} teams × rounds = ${totalPicks} total picks</span>
         </div>
       </div>
+      ${draftBackupAvailable() ? `
+      <div class="settings-block" style="border-color:rgba(245,196,0,0.35);">
+        <h3 style="color:var(--gold);">Cleared Draft</h3>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">${draftState.lastReset.picks.length} picks were cleared from the board. Ended by mistake? Bring them back and carry on.</p>
+        <button class="btn-primary" onclick="restoreDraft()">↩ Restore ${draftState.lastReset.picks.length} picks</button>
+      </div>` : ''}
       ${draftState.picks.length > 0 ? `
       <div class="settings-block" style="border-color:rgba(232,50,74,0.3);">
         <h3 style="color:var(--red);">Previous Draft Found</h3>
@@ -5333,11 +5370,35 @@ function overlayPendingPicks(d) {
   return d;
 }
 
-function draftTxn(fn) {
-  return withinMs(dbRoot.child('aew_draft').transaction(cur => {
+function draftTxnRaw(fn) {
+  return dbRoot.child('aew_draft').transaction(cur => {
     const d = normalizeDraft(parseRaw(cur));
     return fn(d, cur) === false ? undefined : JSON.stringify(d);
-  }, undefined, false), DRAFT_TXN_MS);
+  }, undefined, false);
+}
+function draftTxn(fn) { return withinMs(draftTxnRaw(fn), DRAFT_TXN_MS); }
+
+// Same team, same wrestler at that pick number: it IS this pick, however it got
+// there. RTDB re-sends a transaction whose reply was lost to a Wi-Fi blip; the
+// re-run finds the pick already in and reports "not committed". Treating that as
+// a collision told the picker their pick was lost (it wasn't) and skipped the
+// roster write, which invited the room to draft the same wrestler twice.
+function samePick(a, b) {
+  return !!(a && b && a.team === b.team && ryaiNormalize(a.wrestler) === ryaiNormalize(b.wrestler));
+}
+// One-off id stamped on start/reset, so a re-sent copy recognises itself and
+// does not run again on top of picks made in the meantime.
+function draftToken() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+function draftBackup(d) {
+  return { picks: d.picks.slice(), order: d.order.slice(), rounds: d.rounds, style: d.style, at: Date.now() };
+}
+// Put this phone back on the server's board after a change that did not go
+// through, dropping the optimistic copy of it.
+async function resyncDraft(team, pick) {
+  if (pick) pendingPicks = pendingPicks.filter(x => x.pick !== pick);
+  try { applyDraftSnapshot(await onceWithin(dbRoot.child('aew_draft'), 6000)); } catch (e) { /* listener will bring it */ }
+  if (team) await reloadRoster(team);
+  rerenderDraft();
 }
 
 // Rosters are one JSON value per team, so a pick edits one slot through a
@@ -5399,7 +5460,9 @@ function applyDraftSnapshot(snap) {
 
 async function reloadRoster(team) {
   try {
-    const v = await dbGet('aew_roster_' + team);
+    // Bounded: this runs inside the draft queue, and an unbounded read while the
+    // socket is down would stall every later pick on this phone.
+    const v = parseRaw((await onceWithin(dbRoot.child('aew_roster_' + team), 6000)).val());
     if (v && typeof v === 'object') state.rosters[team] = v;
   } catch(e) { /* the listener will bring it */ }
 }
@@ -5412,18 +5475,22 @@ async function startDraft(force) {
   const order = draftState.order.slice();
   const style = draftIsSnake(draftState) ? 'snake' : 'linear';
   if (!draftConnected()) { alert('Starting a draft needs a connection, so every phone sees the same board.'); return; }
+  const token = draftToken();
   let res;
   try {
     res = await draftTxn(d => {
+      if (d.startId === token) return false;   // our own start, re-sent after a lost reply
       // Another device started a draft and has picks in it: do not wipe it from
       // a setup screen that never saw it. Start Fresh passes force.
       if (!force && d.picks.length) return false;
+      if (d.picks.length) d.lastReset = draftBackup(d);
       d.active = true; d.order = order; d.rounds = rounds; d.picks = []; d.ryaiHold = -1; d.style = style;
+      d.startId = token;
     });
   } catch (e) { alert('Could not start the draft: ' + e.message); return; }
   applyDraftSnapshot(res.snapshot);
   ryaiLocalHold = -1;
-  if (!res.committed) {
+  if (!res.committed && draftState.startId !== token) {
     alert('Another device already has a draft with ' + draftState.picks.length
       + ' picks. Resume it, or use Start Fresh to clear it.');
     draftState.active = false;
@@ -5506,36 +5573,67 @@ async function commitPick(pick, expected, epoch) {
     rerenderDraft();
     return;
   }
+  const txn = draftTxnRaw(d => {
+    if (!d.active || d.picks.length !== expected) return false;
+    if (pick.byBot && d.ryaiHold === expected) return false;
+    const who = pickerAt(d, expected);
+    if (who.team !== pick.team) return false;
+    const slot = nextSlotIn(d, pick.team);
+    if (!slot) return false;
+    pick.slot = slot; pick.round = who.round;
+    d.picks.push(pick);
+  });
   let res;
   try {
-    res = await draftTxn(d => {
-      if (!d.active || d.picks.length !== expected) return false;
-      if (pick.byBot && d.ryaiHold === expected) return false;
-      const who = pickerAt(d, expected);
-      if (who.team !== pick.team) return false;
-      const slot = nextSlotIn(d, pick.team);
-      if (!slot) return false;
-      pick.slot = slot; pick.round = who.round;
-      d.picks.push(pick);
-    });
+    res = await withinMs(txn, DRAFT_TXN_MS);
   } catch (e) {
-    showDraftStatus('⚠ Pick not confirmed — ' + e.message, 'var(--red)');
+    if (!e || !e.timeout) {
+      showDraftStatus('⚠ "' + pick.wrestler + '" not saved — ' + (e && e.message), 'var(--red)');
+      await resyncDraft(pick.team, pick);
+      return;
+    }
+    // Slow is not failed. RTDB still holds the transaction and finishes it, or
+    // re-runs it on reconnect; report what actually happened when it does.
+    showDraftStatus('⏳ Slow connection — still saving "' + pick.wrestler + '"…', 'var(--gold)');
+    txn.then(r => settlePick(pick, expected, r, true),
+      () => resyncDraft(pick.team, pick).then(() =>
+        showDraftStatus('⚠ "' + pick.wrestler + '" was not saved — check the board', 'var(--red)')));
     return;
   }
-  if (!res.committed) {
+  await settlePick(pick, expected, res, false);
+}
+
+async function settlePick(pick, expected, res, late) {
+  if (res.committed) {
+    // Late landing: if the pick has been undone since, leave the roster alone.
+    if (late && !samePick(draftState.picks[expected], pick)) return;
+    try {
+      await patchRoster(pick.team, { [pick.slot]: pick.wrestler });
+      touchUpdatedAt();
+      showDraftStatus(pick.byBot ? '\u2713 RyAI pick recorded' : '✓ Saved', 'var(--teal)');
+    } catch (e) {
+      showDraftStatus('⚠ Pick saved; roster not updated yet — Lock Rosters will fix it', 'var(--gold)');
+    }
+    if (late) rerenderDraft();
+    return;
+  }
+  const srv = normalizeDraft(parseRaw(res.snapshot.val()));
+  const landed = srv.picks[expected];
+  if (samePick(landed, pick)) {
+    // It is in — our own pick whose reply went missing, or the identical RyAI
+    // pick fired by another phone. Make sure the roster has it too.
+    applyDraftSnapshot(res.snapshot);
+    try { if (landed.slot) await patchRoster(landed.team, { [landed.slot]: landed.wrestler }); } catch (e) { /* Lock Rosters repairs */ }
+    showDraftStatus(pick.byBot ? '\u2713 RyAI pick recorded' : '✓ Saved', 'var(--teal)');
+    rerenderDraft();
+    return;
+  }
+  {
     draftEpoch++;
     pendingPicks = [];
     applyDraftSnapshot(res.snapshot);
     const theirs = draftState.picks[expected];
     await reloadRoster(pick.team);
-    // Every phone runs RyAI, so several can fire the same pick at once. One
-    // transaction wins; the losers landed the identical pick and should say so
-    // quietly rather than cry collision.
-    if (pick.byBot && theirs && theirs.team === pick.team && theirs.wrestler === pick.wrestler) {
-      showDraftStatus('\u2713 RyAI pick recorded', 'var(--teal)');
-      rerenderDraft();
-      return;
-    }
     if (pick.byBot && draftState.ryaiHold === expected) {
       showDraftStatus('RyAI stood down on another phone \u2014 its pick was not recorded', 'var(--gold)');
       rerenderDraft();
@@ -5545,14 +5643,6 @@ async function commitPick(pick, expected, epoch) {
       ? `⚠ ${TEAM_LABELS[theirs.team]} took ${theirs.wrestler} on that pick first — "${pick.wrestler}" was not recorded`
       : `⚠ The draft changed on another device — "${pick.wrestler}" was not recorded`, 'var(--red)');
     rerenderDraft();
-    return;
-  }
-  try {
-    await patchRoster(pick.team, { [pick.slot]: pick.wrestler });
-    touchUpdatedAt();
-    showDraftStatus('✓ Saved', 'var(--teal)');
-  } catch (e) {
-    showDraftStatus('⚠ Pick saved; roster not updated yet — Lock Rosters will fix it', 'var(--gold)');
   }
 }
 
@@ -6231,21 +6321,34 @@ function undoLastPick() {
   const epoch = draftEpoch;
   draftQueue = draftQueue.then(() => epoch === draftEpoch
     ? commitUndo(last, expected)
-    : dbRoot.child('aew_draft').once('value')
-        .then(s => { applyDraftSnapshot(s); return reloadRoster(last.team); })
-        .then(rerenderDraft, rerenderDraft));
+    : resyncDraft(last.team));
 }
 
 async function commitUndo(last, expected) {
   const same = (a, b) => a && b && a.team === b.team && a.slot === b.slot && a.wrestler === b.wrestler;
+  const txn = draftTxnRaw(d => {
+    if (d.picks.length !== expected || !same(d.picks[expected - 1], last)) return false;
+    d.picks.pop();
+    if (last.byBot) d.ryaiHold = expected - 1;
+  });
   let res;
-  try {
-    res = await draftTxn(d => {
-      if (d.picks.length !== expected || !same(d.picks[expected - 1], last)) return false;
-      d.picks.pop();
-      if (last.byBot) d.ryaiHold = expected - 1;
-    });
-  } catch (e) { showDraftStatus('⚠ Undo not confirmed — ' + e.message, 'var(--red)'); return; }
+  try { res = await withinMs(txn, DRAFT_TXN_MS); }
+  catch (e) {
+    if (!e || !e.timeout) { showDraftStatus('⚠ Undo not saved — ' + (e && e.message), 'var(--red)'); await resyncDraft(last.team); return; }
+    showDraftStatus('⏳ Slow connection — still undoing…', 'var(--gold)');
+    txn.then(r => settleUndo(last, expected, r, same), () => resyncDraft(last.team));
+    return;
+  }
+  await settleUndo(last, expected, res, same);
+}
+
+async function settleUndo(last, expected, res, same) {
+  if (!res.committed) {
+    // Already gone at that spot: our own undo whose reply was lost, or two
+    // phones undoing together. Either way the roster slot still needs clearing.
+    const srv = normalizeDraft(parseRaw(res.snapshot.val()));
+    if (srv.picks.length === expected - 1) res = { committed: true, snapshot: res.snapshot };
+  }
   if (!res.committed) {
     draftEpoch++;
     pendingPicks = [];
@@ -6255,6 +6358,8 @@ async function commitUndo(last, expected) {
     rerenderDraft();
     return;
   }
+  applyDraftSnapshot(res.snapshot);
+  rerenderDraft();
   try {
     await patchRoster(last.team, { [last.slot]: '' }, { [last.slot]: last.wrestler });
     touchUpdatedAt();
@@ -6985,8 +7090,31 @@ function renderDraftLive(el, opts) {
   }
 }
 
+// The pick log is the record. Once the last pick is in, every phone rewrites the
+// drafted slots from it, so a roster write that lost a race or never confirmed
+// during the night is repaired even if nobody taps Lock Rosters. Idempotent:
+// each phone writes the same values, once per completed board.
+let rosterRepairDone = '';
+async function repairRostersFromLog() {
+  if (!draftConnected()) return [];
+  const failures = [];
+  for (const t of TEAMS) {
+    const patch = {};
+    for (const p of draftState.picks) if (p.team === t && p.slot) patch[p.slot] = p.wrestler;
+    if (!Object.keys(patch).length) continue;
+    Object.assign(state.rosters[t], patch);
+    try { await patchRoster(t, patch); } catch (e) { failures.push(TEAM_LABELS[t]); }
+  }
+  return failures;
+}
+
 function renderDraftComplete(el) {
   ryaiDisarm();
+  const sig = leagueId + ':' + draftState.picks.map(p => p.slot + p.wrestler).join('|');
+  if (rosterRepairDone !== sig && draftConnected()) {
+    rosterRepairDone = sig;
+    draftQueue = draftQueue.then(repairRostersFromLog).then(() => { touchUpdatedAt(); }, () => {});
+  }
   el.innerHTML = `
     <div class="draft-live">
       <div class="draft-complete">
@@ -7021,14 +7149,7 @@ async function finalizeDraft() {
   // Rebuild every drafted slot from the pick log — the log is the record, and
   // this repairs any roster write that failed during the draft. Slots nobody
   // drafted are left alone.
-  const failures = [];
-  for (const t of TEAMS) {
-    const patch = {};
-    for (const p of draftState.picks) if (p.team === t && p.slot) patch[p.slot] = p.wrestler;
-    if (!Object.keys(patch).length) continue;
-    Object.assign(state.rosters[t], patch);
-    try { await patchRoster(t, patch); } catch (e) { failures.push(TEAM_LABELS[t]); }
-  }
+  const failures = await repairRostersFromLog();
   touchUpdatedAt();
   renderRosters();
   renderWrestlerList();
@@ -7039,14 +7160,67 @@ async function finalizeDraft() {
 }
 
 async function resetDraft() {
-  if (!confirm('Reset draft? This will clear all picks but keep current rosters.')) return;
-  if (!draftConnected()) { alert('Resetting the draft needs a connection.'); return; }
+  const n = draftState.picks.length;
+  if (!confirm(n
+    ? `End the draft and clear all ${n} picks from the board?\n\nRosters keep what was drafted, and the picks can be restored from the Draft tab.`
+    : 'End the draft?')) return;
+  if (!draftConnected()) { alert('Ending the draft needs a connection.'); return; }
   await draftQueue;
+  const token = draftToken();
   try {
     ryaiLocalHold = -1;
-    const res = await draftTxn(d => { d.active = false; d.picks = []; d.ryaiHold = -1; });
+    const res = await draftTxn(d => {
+      if (d.resetId === token) return false;   // our own reset, re-sent after a lost reply
+      // One mistaken tap used to wipe the night's picks for good.
+      if (d.picks.length) d.lastReset = draftBackup(d);
+      d.active = false; d.picks = []; d.ryaiHold = -1; d.resetId = token;
+    });
     applyDraftSnapshot(res.snapshot);
-  } catch (e) { alert('Could not reset: ' + e.message); }
+  } catch (e) { alert('Could not end the draft: ' + e.message); }
+  renderDraft();
+}
+
+function draftBackupAvailable() {
+  const b = draftState.lastReset;
+  return !draftState.active && !draftState.picks.length && b && Array.isArray(b.picks) && b.picks.length ? b : null;
+}
+
+async function restoreDraft() {
+  const b = draftBackupAvailable();
+  if (!b) return;
+  if (!confirm(`Bring back the ${b.picks.length} cleared picks and carry on from pick ${b.picks.length + 1}?`)) return;
+  if (!draftConnected()) { alert('Restoring needs a connection.'); return; }
+  await draftQueue;
+  let res;
+  try {
+    res = await draftTxn(d => {
+      const bk = d.lastReset;
+      if (!bk || !Array.isArray(bk.picks) || !bk.picks.length) return false;
+      if (d.picks.length) return false;      // a new draft is already under way
+      d.picks = bk.picks;
+      if (Array.isArray(bk.order) && bk.order.length === TEAMS.length) d.order = bk.order;
+      if (bk.rounds) d.rounds = bk.rounds;
+      d.style = bk.style === 'linear' ? 'linear' : 'snake';
+      d.active = true; d.ryaiHold = -1;
+      delete d.lastReset;
+    });
+  } catch (e) { alert('Could not restore: ' + e.message); return; }
+  ryaiLocalHold = -1;
+  applyDraftSnapshot(res.snapshot);
+  if (!draftState.active || draftState.picks.length < b.picks.length) {
+    alert('Could not restore — a new draft has already started.');
+    renderDraft();
+    return;
+  }
+  // The pick log is the record: refill those roster slots.
+  for (const t of TEAMS) {
+    const patch = {};
+    for (const p of draftState.picks) if (p.team === t && p.slot) patch[p.slot] = p.wrestler;
+    if (!Object.keys(patch).length) continue;
+    Object.assign(state.rosters[t], patch);
+    try { await patchRoster(t, patch); } catch (e) { /* Lock Rosters repairs */ }
+  }
+  touchUpdatedAt();
   renderDraft();
 }
 
