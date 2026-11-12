@@ -1789,19 +1789,58 @@
   .tv-qr { border-radius: 0; }
   .tv-banner { transform: none; }
   .tv-ctl button { border-radius: 0; font: italic 800 1.9vh 'Barlow Condensed', sans-serif; letter-spacing: 0.15vh; text-transform: uppercase; background: #19191c; }
+
+  /* ── HEADER · AEW: RACE TO THE RYBACK ("the chant") ── */
+  :root { --ryback: #e5242b; --header-h: 86px; }
+  header { flex-direction: column; align-items: stretch; justify-content: flex-end; padding: var(--safe-top) 0 0; overflow: hidden; }
+  .hd-chant { position: absolute; left: -20px; right: -20px; top: calc(var(--safe-top) + 14px); white-space: nowrap; overflow: hidden;
+    font: italic 900 38px/1 'Barlow Condensed', sans-serif; letter-spacing: 1px; color: rgba(229,36,43,0.13);
+    transform: rotate(-4deg); pointer-events: none; }
+  header .logo { position: relative; padding: 0 14px; flex-direction: row; align-items: flex-end; min-width: 0; text-align: left; }
+  header .logo-aew { font-size: min(36px, 8.4vw); line-height: 0.95; white-space: nowrap; letter-spacing: -0.3px; }
+  .logo-aew em { font-style: inherit; color: var(--ryback); }
+  .hd-bar { position: relative; display: flex; align-items: stretch; height: 30px; margin-top: 6px; }
+  header .logo-season { display: flex; align-items: center; max-width: 58%; padding: 0 14px; background: var(--ryback); color: #fff;
+    font: italic 800 14px 'Barlow Condensed', sans-serif; letter-spacing: 4px; }
+  .hd-stripes { flex: 1; min-width: 12px; background: repeating-linear-gradient(-45deg, var(--ryback) 0 8px, #0b0b0c 8px 16px); opacity: 0.85; }
+  .hd-bar .header-right { flex: 0 0 auto; background: #070708; padding-left: 6px; padding-right: 10px; }
+  .hd-bar #syncStatus { height: 30px; padding: 0 10px; display: flex; align-items: center; }
+  @media (min-width: 900px) {
+    header { padding-left: 0; padding-right: 0; }
+    header .logo { padding-left: 28px; }
+    header .logo-aew { font-size: 40px; }
+    header .logo-season { padding-left: 28px; }
+    .hd-bar .header-right { padding-right: 28px; }
+  }
+
+  .tv-top { position: relative; overflow: hidden; }
+  .tv-chant { position: absolute; left: -2vw; right: -2vw; top: 0.4vh; white-space: nowrap; overflow: hidden; pointer-events: none;
+    font: italic 900 7vh/1 'Barlow Condensed', sans-serif; color: rgba(229,36,43,0.12); transform: rotate(-2deg); }
+  .tv-logo { position: relative; }
+  .tv-logo-aew { font-size: 5.2vh; white-space: nowrap; }
+  .tv-logo-aew em { font-style: inherit; color: var(--ryback); }
+  .tv-logo-bar { display: flex; align-items: stretch; height: 3.4vh; margin-top: 0.7vh; width: 100%; }
+  .tv-logo-bar .tv-logo-season { margin: 0; display: flex; align-items: center; background: var(--ryback); font-size: 2vh; padding: 0 1.2vw; }
+  .tv-stripes { flex: 1; min-width: 4vw; background: repeating-linear-gradient(-45deg, var(--ryback) 0 1vh, #0b0b0c 1vh 2vh); opacity: 0.85; }
+  .tv-brand, .tv-progress { position: relative; }
+  .tv-idle-season { background: var(--ryback); }
 </style>
 </head>
 <body>
 
 <!-- HEADER -->
 <header>
-  <button class="logo" type="button" onclick="toggleDiag()" aria-expanded="false" aria-controls="diagPanel" aria-label="Toggle diagnostics panel">
-    <span class="logo-aew">AEW Fantasy</span>
-    <span class="logo-season" id="seasonNameDisplay">Road Chip</span>
+  <div class="hd-chant" aria-hidden="true">FEED ME MORE · FEED ME MORE · FEED ME MORE · FEED ME MORE · FEED ME MORE · FEED ME MORE · FEED ME MORE · FEED ME MORE · </div>
+  <button class="logo" type="button" onclick="toggleDiag()" aria-expanded="false" aria-controls="diagPanel" aria-label="AEW: Race to the Ryback — toggle diagnostics panel">
+    <span class="logo-aew">AEW: Race to the <em>Ryback</em></span>
     <span id="buildStamp" hidden></span>
   </button>
-  <div class="header-right">
-    <button id="syncStatus" type="button" class="sync-loading" onclick="resync()" title="Tap to retry now"><span class="loading-spinner"></span> Loading</button>
+  <div class="hd-bar">
+    <span class="logo-season" id="seasonNameDisplay">Road Chip</span>
+    <span class="hd-stripes" aria-hidden="true"></span>
+    <div class="header-right">
+      <button id="syncStatus" type="button" class="sync-loading" onclick="resync()" title="Tap to retry now"><span class="loading-spinner"></span> Loading</button>
+    </div>
   </div>
 </header>
 
@@ -2503,7 +2542,7 @@ function isKeyHeld(key) {
 // ─────────────────────────────────────────────
 // The one number the whole shell hangs off. window.innerHeight is the actual
 // visible height in iOS standalone, where 100vh is not.
-const BUILD_ID = 'b1112-simtv';
+const BUILD_ID = 'b1112-ryback-hdr';
 
 function toggleDiag() {
   const p = document.getElementById('diagPanel');
@@ -2928,7 +2967,7 @@ function renderAll() {
 function updateSeasonNameDisplay() {
   const name = state.seasonName || 'Fantasy';
   document.getElementById('seasonNameDisplay').textContent = name;
-  document.title = `AEW ${name} — Fantasy League`;
+  document.title = `AEW: Race to the Ryback · ${name}`;
   const bs=document.getElementById('buildStamp'); if (bs) bs.textContent = BUILD_ID;
 }
 
@@ -6338,8 +6377,10 @@ function tvRender() {
   const total = d.order.length * d.rounds;
   const n = d.picks.length;
   const season = esc(state.seasonName || 'Fantasy');
-  const top = (right) => '<div class="tv-top"><div class="tv-logo"><span class="tv-logo-aew">AEW Fantasy</span>'
-    + '<span class="tv-logo-season">' + season + '</span></div><div class="tv-brand">Draft Night</div>'
+  const top = (right) => '<div class="tv-top"><div class="tv-chant" aria-hidden="true">FEED ME MORE · FEED ME MORE · FEED ME MORE · FEED ME MORE · FEED ME MORE · FEED ME MORE · FEED ME MORE · FEED ME MORE · </div>'
+    + '<div class="tv-logo"><span class="tv-logo-aew">AEW: Race to the <em>Ryback</em></span>'
+    + '<span class="tv-logo-bar"><span class="tv-logo-season">' + season + '</span><span class="tv-stripes"></span></span></div>'
+    + '<div class="tv-brand">Draft Night</div>'
     + '<div class="tv-progress">' + (right || '')
     + '<span class="tv-live-dot' + (fbConnected ? '' : ' off') + '" title="' + (fbConnected ? 'Live' : 'Offline') + '"></span></div></div>';
 
