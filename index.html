@@ -5384,6 +5384,7 @@ function draftTxn(fn) { return withinMs(draftTxnRaw(fn), DRAFT_TXN_MS); }
 // re-run finds the pick already in and reports "not committed". Treating that as
 // a collision told the picker their pick was lost (it wasn't) and skipped the
 // roster write, which invited the room to draft the same wrestler twice.
+function draftKey(name) { const r = ryaiResolve(name); return ryaiNormalize(r.match || name); }
 function samePick(a, b) {
   return !!(a && b && a.team === b.team && ryaiNormalize(a.wrestler) === ryaiNormalize(b.wrestler));
 }
@@ -5536,6 +5537,7 @@ function makePick() {
     if (inp) inp.select();
     return;
   }
+  const dupOk = !!clash;
 
   // An offline phone cannot see the room. Its queued write used to replace the
   // whole shared draft on reconnect, wiping every pick made in the meantime.
@@ -5552,6 +5554,7 @@ function makePick() {
   normalizeRosters();
   const expected = draftState.picks.length;
   const pick = { team, wrestler, round, slot };
+  if (dupOk) pick.dupOk = true;
 
   // The board moves on at once; the commit catches up behind it.
   draftState.picks.push(pick);
@@ -5575,12 +5578,18 @@ async function commitPick(pick, expected, epoch) {
     return;
   }
   const txn = draftTxnRaw(d => {
+    pick.dupRefused = false;
     if (!d.active || d.picks.length !== expected) return false;
     if (pick.byBot && d.ryaiHold === expected) return false;
     const who = pickerAt(d, expected);
     if (who.team !== pick.team) return false;
     const slot = nextSlotIn(d, pick.team);
     if (!slot) return false;
+    // Checked against the server's board, not this phone's: a wrestler taken a
+    // moment ago on another phone is refused here. Only a person who saw and
+    // accepted the duplicate warning gets through.
+    const key = draftKey(pick.wrestler);
+    if (!pick.dupOk && d.picks.some(p => draftKey(p.wrestler) === key)) { pick.dupRefused = true; return false; }
     pick.slot = slot; pick.round = who.round;
     d.picks.push(pick);
   });
@@ -5635,6 +5644,11 @@ async function settlePick(pick, expected, res, late) {
     applyDraftSnapshot(res.snapshot);
     const theirs = draftState.picks[expected];
     await reloadRoster(pick.team);
+    if (pick.dupRefused && draftState.picks.length === expected) {
+      showDraftStatus(`⚠ ${pick.wrestler} was just drafted — ${pick.byBot ? 'RyAI is choosing again' : 'pick someone else'}`, 'var(--red)');
+      rerenderDraft();
+      return;
+    }
     if (pick.byBot && draftState.ryaiHold === expected) {
       showDraftStatus('RyAI stood down on another phone \u2014 its pick was not recorded', 'var(--gold)');
       rerenderDraft();
@@ -6232,7 +6246,11 @@ function ryaiSync(team) {
   if (!ryaiIsOnClock(team)) { ryaiDisarm(); return; }
   const expected = draftState.picks.length;
   if (ryaiHeld(expected)) { ryaiDisarm(); ryaiPaintHeld(); return; }
-  if (ryaiArmedFor === expected && ryaiTimer) { ryaiPaint(); return; }
+  if (ryaiArmedFor === expected && ryaiTimer) {
+    // Same pick number does not mean the same board: a tentative pick ahead of
+    // this one can be replaced by another phone's. Re-choose if ours is gone.
+    if (ryaiChoice && !ryaiTaken().has(draftKey(ryaiChoice.name))) { ryaiPaint(); return; }
+  }
   ryaiDisarm();
   const choice = ryaiChoose(getCurrentPicker().round);
   const host = document.getElementById('ryaiPanel');
@@ -6242,7 +6260,12 @@ function ryaiSync(team) {
   ryaiDeadline = Date.now() + (ryaiConfig.countdownMs || 60000);
   ryaiPaint();
   ryaiTimer = setInterval(function () {
-    if (Date.now() >= ryaiDeadline) { const n = ryaiChoice.name; ryaiDisarm(); ryaiCommit(n); }
+    if (Date.now() >= ryaiDeadline) {
+      const n = ryaiChoice.name;
+      ryaiDisarm();
+      if (ryaiTaken().has(draftKey(n))) { ryaiSync(getCurrentPicker().team); return; }   // taken meanwhile: choose again
+      ryaiCommit(n);
+    }
     else ryaiPaint();
   }, 1000);
 }
