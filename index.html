@@ -1824,6 +1824,180 @@
   .tv-stripes { flex: 1; min-width: 4vw; background: repeating-linear-gradient(-45deg, var(--ryback) 0 1vh, #0b0b0c 1vh 2vh); opacity: 0.85; }
   .tv-brand, .tv-progress { position: relative; }
   .tv-idle-season { background: var(--ryback); }
+
+  /* ══════════════════════════════════════════════════════════════════
+     RACE TO THE RYBACK SKIN — the header's red slabs, hazard stripes and
+     faint chant carried through every screen. Last in the sheet so it wins.
+     Tonight's points stay gold; structure and actions go Ryback red.
+     ══════════════════════════════════════════════════════════════════ */
+  :root { --rr-stripe: repeating-linear-gradient(-45deg, var(--ryback) 0 6px, #070708 6px 12px);
+    --rr-tick: repeating-linear-gradient(-45deg, var(--ryback) 0 4px, transparent 4px 8px); }
+
+  /* nav: red rule, red skewed Log button, red tick on the active tab */
+  nav { border-top: 2px solid var(--ryback); }
+  nav button.active { color: #fff; box-shadow: inset 0 3px 0 var(--ryback); }
+  nav button.nav-log { background: var(--ryback); color: #fff; transform: skewX(-10deg); }
+  nav button.nav-log > * { transform: skewX(10deg); }
+  nav button.nav-log.active { color: #fff; box-shadow: 0 0 0 2px #fff inset; }
+
+  /* section titles on the other tabs */
+  .section-title { display: flex; align-items: center; gap: 10px; }
+  .section-title span { color: var(--ryback); }
+  .section-title::after { content: ''; flex: 1; height: 8px; width: auto; background: var(--rr-tick); opacity: .7; position: static; transform: none; margin: 0; }
+
+  /* home: the live show as a red slab with LIVE chanted behind it */
+  .hm-tonight { position: relative; overflow: hidden; margin: -16px -16px 0; padding: 0 0 0 16px; border: 0; background: var(--ryback); align-items: stretch; gap: 0; }
+  .hm-chant { position: absolute; left: 34%; top: -10px; white-space: nowrap; pointer-events: none;
+    font: italic 900 88px/1 'Barlow Condensed', sans-serif; color: rgba(7,7,8,0.14); }
+  .hm-tonight-main { position: relative; padding: 10px 0; }
+  .hm-kick { color: #fff; }
+  .live-tag { background: #070708; color: #fff; }
+  .live-tag::before { background: var(--ryback); }
+  .hm-show { color: #fff; }
+  .hm-tonight .btn-white { position: relative; height: auto; min-height: 64px; background: #070708; color: #fff; padding: 0 18px; }
+  .hm-tonight .btn-white::first-letter { color: inherit; }
+  #homeTonight::after { content: ''; display: block; height: 8px; margin: 0 -16px; background: var(--rr-stripe); }
+  #homeTonight:empty::after { display: none; }
+  .hm-h { align-items: center; gap: 10px; }
+  .hm-h h2 { color: #fff; font-weight: 900; font-size: 17px; letter-spacing: 2.5px; white-space: nowrap; }
+  .hm-h::after { content: ''; order: 1; flex: 1; height: 6px; background: var(--rr-tick); opacity: .7; }
+  .hm-h button, .hm-h small { order: 2; }
+  .hm-h button { color: #fff; }
+  .hm-h small { font-size: 11px; color: #9a9aa3; white-space: nowrap; }
+  .lb-row.first { background: #1a0d0e; height: 48px; }
+  .lb-row.first .lb-rank { background: var(--ryback); color: #fff; font-size: 22px; }
+  .lb-name { display: flex; flex-direction: column; justify-content: center; line-height: 1; }
+  .lb-pace { font: italic 800 11px 'Barlow Condensed', sans-serif; letter-spacing: 2px; color: var(--ryback); margin-top: 2px; }
+  .sc-card { border-left: 0; border-top: 3px solid var(--tc); }
+  .sc-card::after { content: attr(data-rank); right: -2px; top: 16px; width: auto; height: auto; background: none; transform: none;
+    font: italic 900 56px/1 'Barlow Condensed', sans-serif; color: rgba(229,36,43,0.13); }
+  .sc-pts, .sc-rank, .sc-name { position: relative; z-index: 1; }
+  .bn-row:first-child .bn-rank { color: var(--ryback); }
+
+  /* log: red kicker, red search frame, red tab underline, stripe band under the head */
+  .lg-head { position: relative; overflow: hidden; border-bottom: 0; background: #0b0b0c; }
+  .lg-head::before { content: 'FEED ME MORE · FEED ME MORE · FEED ME MORE'; position: absolute; left: -20px; top: -6px; white-space: nowrap; pointer-events: none;
+    font: italic 900 38px/1 'Barlow Condensed', sans-serif; color: rgba(229,36,43,0.12); transform: rotate(-4deg); }
+  .lg-title, .lg-search, .lg-teams { position: relative; }
+  .lg-head::after { content: ''; display: block; height: 8px; margin: 10px -14px 0; background: var(--rr-stripe); opacity: .85; }
+  .lg-kick { color: var(--ryback); }
+  .lg-search input { border-color: var(--ryback); }
+  .lg-tab[aria-selected="true"] { border-bottom-color: var(--ryback); }
+  .lg-tile .sl { background: #3a1214; color: #c9c9cf; }
+  .lg-tile.on { border-color: rgba(229,36,43,0.6); }
+  .lg-tile.on .sl { background: var(--ryback); color: #fff; }
+  .lg-tile.ry .sl { color: #c9c9cf; }
+  .lg-tile.ry.on .sl { color: #0b0b0c; }
+  .lg-foot { border-top: 2px solid var(--ryback); }
+
+  /* the wrestler sheet: stripe edge, chanted name, red for what's logged */
+  .ls { border-top: 0; }
+  .ls::before { content: ''; flex: 0 0 auto; height: 8px; background: var(--rr-stripe); }
+  .ls-head { position: relative; overflow: hidden; background: none; border-bottom-color: #26262a; }
+  .ls-head::before { content: attr(data-chant); position: absolute; left: -10px; top: -4px; white-space: nowrap; pointer-events: none;
+    font: italic 900 64px/1 'Barlow Condensed', sans-serif; text-transform: uppercase; color: rgba(229,36,43,0.1); }
+  .ls-head > * { position: relative; }
+  .ls-t.on .ls-add { background: var(--ryback); color: #fff; }
+  .ls-t.on .ls-add .p { color: #fff; }
+  .ls-minus { border-color: var(--ryback); color: #fff; background: #070708; }
+  .ls-foot { border-top: 2px solid var(--ryback); background: #0b0b0c; }
+  .ls-foot .ls-done { background: var(--ryback); color: #fff; }
+  .lg-toast { background: var(--ryback); color: #fff; }
+  .lg-toast b { color: #fff; font-size: 22px; }
+  .lg-toast button { background: #070708; color: #fff; }
+
+  /* rosters: one team at a time behind tabs, a team-colour banner with its name chanted */
+  .rr-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-bottom: 1px solid #26262a; margin: 0 0 12px; }
+  .rr-tabs button { height: 44px; background: none; border: 0; color: #9a9aa3; cursor: pointer;
+    font: italic 900 17px 'Barlow Condensed', sans-serif; letter-spacing: 1.5px; text-transform: uppercase; }
+  .rr-tabs button[aria-selected="true"] { color: #fff; box-shadow: inset 0 -4px 0 var(--tc); }
+  #rostersContent[data-team] .roster-team-block { display: none; }
+  #rostersContent[data-team="maria"] #rblock_maria, #rostersContent[data-team="ryan"] #rblock_ryan,
+  #rostersContent[data-team="josh"] #rblock_josh, #rostersContent[data-team="erik"] #rblock_erik { display: block; }
+  .roster-team-block { border: 0; border-radius: 0; background: #0b0b0c; }
+  .roster-team-header { position: relative; overflow: hidden; background: var(--tc); color: #070708; border: 0; padding: 16px 14px 14px; align-items: flex-end; }
+  .roster-team-header::before { content: attr(data-chant); position: absolute; left: -8px; top: -8px; white-space: nowrap; pointer-events: none;
+    font: italic 900 74px/1 'Barlow Condensed', sans-serif; text-transform: uppercase; color: rgba(7,7,8,0.12); }
+  .roster-team-header::after { content: ''; position: absolute; left: 0; right: 0; bottom: -8px; height: 8px; }
+  .roster-team-header > * { position: relative; }
+  .roster-team-header-left { flex-direction: column; align-items: flex-start; gap: 2px; }
+  .roster-dot { display: none; }
+  .roster-team-name { color: #070708 !important; font-size: 40px; line-height: .95; letter-spacing: 0; text-transform: uppercase; }
+  .roster-team-total { color: #070708; font-size: 11px; letter-spacing: 1.8px; text-transform: uppercase; }
+  .roster-team-total span { color: #070708; font: italic 900 22px 'Barlow Condensed', sans-serif; }
+  .roster-edit-btn { border-radius: 0; border-color: rgba(7,7,8,0.5); color: #070708; background: transparent; }
+  .roster-edit-btn.editing { background: #070708; color: #fff; border-color: #070708; }
+  .roster-body { padding: 0; border-top: 8px solid transparent; border-image: repeating-linear-gradient(-45deg, var(--tc) 0 6px, #070708 6px 12px) 8; }
+  .roster-row { gap: 12px; padding: 0 14px; min-height: 42px; border-bottom: 1px solid #1a1a1d; }
+  .roster-letter { font-size: 16px; min-width: 14px; }
+  .roster-name-view { font-size: 15px; font-weight: 600; }
+  .roster-bar { width: 64px; height: 6px; background: #1d1d21; position: relative; flex: 0 0 auto; }
+  .roster-bar i { position: absolute; inset: 0 auto 0 0; width: var(--w); background: var(--tc); }
+  .roster-row.edit-mode .roster-bar { display: none; }
+  .roster-pts-view { min-width: 34px; text-align: right; color: var(--text); font: italic 900 19px 'Barlow Condensed', sans-serif; font-variant-numeric: tabular-nums; }
+  .roster-name-input { border-radius: 0; }
+  .roster-save-row { border-top-color: #26262a; }
+
+  /* draft on the phone: the team on the clock fills the card, timer chanted behind */
+  .draft-on-clock { border-radius: 0; text-align: left; background: var(--tc); color: #070708; padding: 16px 14px 14px; }
+  .draft-on-clock::before { display: none; }
+  .draft-clock-round, .draft-clock-label { color: #070708; position: relative; }
+  .draft-clock-label { font-size: 11px; letter-spacing: 1.8px; }
+  .draft-clock-name, .draft-clock-name.maria, .draft-clock-name.ryan, .draft-clock-name.josh, .draft-clock-name.erik {
+    color: #070708; font-size: 46px; letter-spacing: 0; text-transform: uppercase; margin-bottom: 12px; position: relative; }
+  .draft-input-row { position: relative; gap: 6px; }
+  .draft-input { border-radius: 0; border: 0; background: #070708; color: var(--text); }
+  .draft-pick-btn { border-radius: 0; background: #070708; color: var(--tc);
+    font: italic 900 20px 'Barlow Condensed', sans-serif; letter-spacing: 2px; }
+  .draft-on-clock #ryaiPanel { position: relative; }
+  .draft-picks { display: flex; flex-direction: column; gap: 4px; }
+  .draft-picks li { list-style: none; display: flex; align-items: center; gap: 10px; background: #141416; min-height: 38px; padding-right: 10px; }
+  .draft-picks .rk { width: 44px; align-self: stretch; display: flex; align-items: center; justify-content: center; background: var(--ryback); color: #fff;
+    font: italic 900 15px 'Barlow Condensed', sans-serif; }
+  .draft-picks .rk::before { content: '#'; }
+  .draft-picks .nm { font-weight: 600; font-size: 14px; }
+  .draft-board { border: 0; border-radius: 0; background: none; }
+  .draft-board-header { background: none; border: 0; padding: 0 0 8px; gap: 10px; }
+  .draft-board-title { color: #fff; font: italic 900 17px 'Barlow Condensed', sans-serif; letter-spacing: 2.5px; }
+  .draft-board-header::after { content: ''; order: 1; flex: 1; height: 6px; background: var(--rr-tick); opacity: .7; }
+  .draft-board-header > span:last-child { order: 2; }
+  .draft-board-grid { gap: 3px; }
+  .draft-board-col-header { border: 0; font: italic 900 15px 'Barlow Condensed', sans-serif; padding: 0 4px 4px; }
+  .draft-board-cell { background: #141416; border: 0; font-weight: 600; min-height: 34px; padding: 6px 5px; }
+  .draft-board-cell.pick-num { background: #0d0d0f; }
+  .draft-board-cell.on-clock { background: var(--ryback); color: #fff; opacity: 1; box-shadow: none; }
+
+  /* TV: red rules and slabs where the gold used to lead */
+  .tv-top { border-bottom-color: var(--ryback); }
+  .tv-progress > span:first-child:not(.tv-live-dot) { background: #141416; color: #fff; }
+  .tv-clock { border-top-color: var(--ryback); border-left-color: rgba(229,36,43,0.45); border-bottom-color: rgba(229,36,43,0.45);
+    background: linear-gradient(100deg, var(--tc22), transparent 60%), #0d0d0f; }
+  .tv-clock-meta, .tv-clock-label { color: #fff; }
+  .tv-col-head { position: relative; }
+  .tv-col-head::after { content: ''; position: absolute; left: 0; right: 0; bottom: -0.8vh; height: 0.8vh;
+    background: repeating-linear-gradient(-45deg, var(--tc) 0 0.6vh, #070708 0.6vh 1.2vh); }
+  .tv-cell.fresh { background: var(--ryback); color: #fff; }
+  .tv-cell.fresh b { color: rgba(255,255,255,0.7); }
+  .tv-panel h3 { color: #fff; display: flex; align-items: center; gap: 0.8vw; }
+  .tv-panel h3::after { content: ''; flex: 1; min-width: 4vw; height: 0.7vh; background: repeating-linear-gradient(-45deg, var(--ryback) 0 0.4vh, transparent 0.4vh 0.8vh); opacity: .7; }
+  .tv-panel h3 small { order: 2; white-space: nowrap; }
+  .tv-chip.now { background: var(--ryback); border-bottom-color: var(--ryback); color: #fff; }
+  .tv-pwi li { background: #141416; border-bottom: 0.3vh solid #070708; }
+  .tv-pwi .rk, .tv-pwi .rk::before { color: #fff; }
+  .tv-pwi li { grid-template-columns: 7vh 1fr; padding: 0; }
+  .tv-pwi .rk { align-self: stretch; display: flex; align-items: center; justify-content: center; background: var(--ryback); text-align: center; }
+  .tv-reveal-kicker { color: var(--ryback); }
+  .tv-reveal-meta { color: #fff; }
+  .tv-toast { border-left-color: var(--ryback); }
+  .tv-idle-row b { background: var(--ryback); color: #fff; }
+  .tv-idle-sub, .tv-idle-order h3 { color: #fff; }
+  nav button.nav-log > .nav-label { display: block; }
+  @media (min-width: 900px) {
+    nav button.nav-log { transform: none; }
+    nav button.nav-log > * { transform: none; }
+    .hm-tonight { margin: -16px -28px 0; padding-left: 28px; }
+    #homeTonight::after { margin: 0 -28px; }
+  }
 </style>
 </head>
 <body>
@@ -1920,7 +2094,7 @@
   <div id="tab-leaderboard" class="tab-panel active">
     <div id="homeTonight"></div>
     <section class="hm-sec">
-      <div class="hm-h"><h2>Leaderboard</h2></div>
+      <div class="hm-h"><h2>The Race</h2><small>tonight in gold</small></div>
       <div id="standingsList"></div>
     </section>
     <section class="hm-sec">
@@ -1928,7 +2102,7 @@
       <div id="hmScorers" class="hm-cards"></div>
     </section>
     <section class="hm-sec">
-      <div class="hm-h"><h2>Biggest nights</h2></div>
+      <div class="hm-h"><h2>Biggest nights</h2><small>most on one show</small></div>
       <div id="hmNights"></div>
     </section>
 
@@ -1994,6 +2168,7 @@
   <!-- ROSTERS -->
   <div id="tab-rosters" class="tab-panel">
     <div class="section-title"><span>Team</span> Rosters</div>
+    <div class="rr-tabs" id="rrTabs" role="tablist" aria-label="Team"></div>
     <div id="rostersContent"></div>
   </div>
 
@@ -2542,7 +2717,7 @@ function isKeyHeld(key) {
 // ─────────────────────────────────────────────
 // The one number the whole shell hangs off. window.innerHeight is the actual
 // visible height in iOS standalone, where 100vh is not.
-const BUILD_ID = 'b1112-ryback-hdr';
+const BUILD_ID = 'b1112-ryback-skin';
 
 function toggleDiag() {
   const p = document.getElementById('diagPanel');
@@ -3921,7 +4096,7 @@ function renderStandings() {
       total++;
       if (sid && slotShowPts(t, sid, l) > 0) logged++;
     }
-    tn.innerHTML = `<div class="hm-tonight"><div class="hm-tonight-main">`
+    tn.innerHTML = `<div class="hm-tonight"><span class="hm-chant" aria-hidden="true">${isToday ? 'LIVE LIVE LIVE' : 'NEXT UP NEXT UP'}</span><div class="hm-tonight-main">`
       + `<div class="hm-kick">${isToday ? '<span class="live-tag">LIVE</span>Tonight' : esc(showDateTag(show))} · ${logged} of ${total} logged</div>`
       + `<div class="hm-show">${esc(showName(show))}</div></div>`
       + `<button class="btn-white" type="button" onclick="switchTab('score')">Log ▸</button></div>`;
@@ -3932,7 +4107,7 @@ function renderStandings() {
   const lead = totals[0] ? totals[0].pts : 0;
   el.innerHTML = totals.map((r, i) =>
     `<div class="lb-row${i === 0 ? ' first' : ''}" style="--tc:${TEAM_COLORS[r.team]}">`
-    + `<span class="lb-rank">${i + 1}</span><span class="lb-name">${esc(TEAM_LABELS[r.team])}</span>`
+    + `<span class="lb-rank">${i + 1}</span><span class="lb-name">${esc(TEAM_LABELS[r.team])}${i === 0 && r.pts > 0 ? '<span class="lb-pace">On Ryback pace</span>' : ''}</span>`
     + `<span class="lb-tonight">${r.tonight ? '+' + r.tonight : ''}</span>`
     + `<span class="lb-gap">${i === 0 ? '' : '−' + (lead - r.pts).toLocaleString()}</span>`
     + `<span class="lb-pts">${r.pts.toLocaleString()}</span></div>`).join('');
@@ -3940,7 +4115,7 @@ function renderStandings() {
   if (sc) {
     const top = wrestlerStints().filter(w => w.pts > 0).sort((a, b) => b.pts - a.pts).slice(0, 8);
     sc.innerHTML = top.length ? top.map((w, i) =>
-      `<div class="sc-card" style="--tc:${TEAM_COLORS[w.team]}"><span class="sc-pts">${w.pts}</span>`
+      `<div class="sc-card" data-rank="${i + 1}" style="--tc:${TEAM_COLORS[w.team]}"><span class="sc-pts">${w.pts}</span>`
       + `<span class="sc-rank">NO. ${i + 1}</span><span class="sc-name">${esc(shortName(w.name))}</span>`
       + `<span class="sc-team">${esc(teamTag(w.team))}</span></div>`).join('')
       : '<div class="hm-empty">Nobody has scored yet.</div>';
@@ -4596,6 +4771,8 @@ function renderLogSheet() {
   sheet.style.setProperty('--tc', TEAM_COLORS[team]);
   document.getElementById('lsKick').textContent = teamTag(team) + ' · Slot ' + letter.toUpperCase();
   document.getElementById('lsName').textContent = slotNameFor(team, letter);
+  const lsHead = document.querySelector('#logSheet .ls-head');
+  if (lsHead) { const sn = shortName(slotNameFor(team, letter)) || ''; lsHead.setAttribute('data-chant', (sn + ' ').repeat(3)); }
   const pts = wrestlerPtsLive(team, letter);
   document.getElementById('lsPts').textContent = pts ? '+' + pts : '0';
   document.getElementById('lsBody').innerHTML = LOG_GROUPS.map(g =>
@@ -4621,11 +4798,24 @@ function renderLogSheet() {
 // ─────────────────────────────────────────────
 // ROSTERS
 // ─────────────────────────────────────────────
+let rosterTeam = null;
+function pickRosterTeam(t) { rosterTeam = t; renderRosters(); }
 function renderRosters() {
   const container = document.getElementById('rostersContent');
   if (!container) return;
+  if (!rosterTeam || TEAMS.indexOf(rosterTeam) === -1) rosterTeam = (typeof myTeam === 'function' && TEAMS.indexOf(myTeam()) !== -1) ? myTeam() : TEAMS[0];
+  // a roster mid-edit keeps its tab; switching away would hide unsaved names
+  const editing = TEAMS.find(t => { const b = document.getElementById('redit_' + t); return b && b.classList.contains('editing'); });
+  if (editing) rosterTeam = editing;
+  const tabs = document.getElementById('rrTabs');
+  if (tabs) tabs.innerHTML = TEAMS.map(t => `<button type="button" role="tab" aria-selected="${t === rosterTeam}" style="--tc:${TEAM_COLORS[t]}" onclick="pickRosterTeam('${t}')">${esc(TEAM_LABELS[t])}</button>`).join('');
+  container.setAttribute('data-team', rosterTeam);
+  const standing = TEAMS.map(t => ({ t, p: getTeamTotal(t) })).sort((a, b) => b.p - a.p);
   container.innerHTML = TEAMS.map(team => {
     const total = getTeamTotal(team);
+    const place = standing.findIndex(x => x.t === team);
+    const back = standing[0].p - total;
+    const maxPts = Math.max(1, ...LETTERS.map(l => getWrestlerPts(team, l)));
     const rows = LETTERS.map(l => {
       const name = state.rosters[team][l] || '';
       const pts = getWrestlerPts(team, l);
@@ -4633,15 +4823,16 @@ function renderRosters() {
         <div class="roster-letter">${l.toUpperCase()}</div>
         <div class="roster-name-view">${name ? esc(name) : '<span style="color:var(--muted)">—</span>'}</div>
         <input class="roster-name-input" id="rinput_${team}_${l}" type="text" value="${esc(name)}" placeholder="Wrestler name">
-        <div class="roster-pts-view">${pts > 0 ? pts + ' pts' : ''}</div>
+        <span class="roster-bar" aria-hidden="true"><i style="--w:${Math.round(pts / maxPts * 100)}%"></i></span>
+        <div class="roster-pts-view">${pts > 0 ? pts : '0'}</div>
       </div>`;
     }).join('');
-    return `<div class="roster-team-block" id="rblock_${team}">
-      <div class="roster-team-header">
+    return `<div class="roster-team-block" id="rblock_${team}" style="--tc:${TEAM_COLORS[team]}">
+      <div class="roster-team-header" data-chant="${escAttr((TEAM_LABELS[team] + ' ').repeat(3))}">
         <div class="roster-team-header-left">
           <span class="roster-dot" style="background:${TEAM_COLORS[team]}"></span>
-          <span class="roster-team-name" style="color:${TEAM_COLORS[team]}">${TEAM_LABELS[team]}</span>
-          <span class="roster-team-total"><span>${total}</span> pts</span>
+          <span class="roster-team-name">Team ${TEAM_LABELS[team]}</span>
+          <span class="roster-team-total">${['1st','2nd','3rd','4th'][place] || ''}${place > 0 ? ' · ' + back.toLocaleString() + ' back' : ' · leading'} · <span>${total.toLocaleString()}</span> pts</span>
         </div>
         <button class="roster-edit-btn" id="redit_${team}" onclick="toggleRosterEdit('${team}')">Edit</button>
       </div>
@@ -6228,7 +6419,7 @@ function tvPwiHtml(n) {
   // tvRender repaints often; a negative delay lets the shuffle-in carry on
   // smoothly instead of restarting on every repaint.
   const since = Date.now() - t.at;
-  return '<div class="tv-panel grow"><h3>Top picks <small>PWI 500 · ' + PWI_500_YEAR + ' · reshuffled every pick</small></h3>'
+  return '<div class="tv-panel grow"><h3>Top picks <small>Reshuffled every pick</small></h3>'
     + '<ol class="tv-best tv-pwi">' + t.list.map((e, i) => {
       const delay = i * 90 - since;
       const anim = delay > -700 ? ' style="animation-delay:' + delay + 'ms"' : ' class="settled"';
@@ -6597,7 +6788,7 @@ function renderDraftLive(el, opts) {
 
   el.innerHTML = `
     <div class="draft-live">
-      <div class="draft-on-clock ${team}">
+      <div class="draft-on-clock ${team}" style="--tc:${TEAM_COLORS[team]}">
         <div class="draft-clock-round">Round ${round} · Pick ${pick} of ${totalPicks} · ${remaining} remaining</div>
         <div class="draft-clock-label">On the Clock</div>
         <div class="draft-clock-name ${team}">${TEAM_LABELS[team]}</div>
@@ -6618,6 +6809,8 @@ function renderDraftLive(el, opts) {
         <button class="btn-secondary" style="font-size:11px;padding:6px 12px;" onclick="resetDraft()">End Draft</button>
         </span>
       </div>
+      <div><div class="section-title" style="font-size:19px;margin-bottom:8px"><span>Top</span> Picks</div>
+        <ol class="draft-picks">${tvPwiPicks(draftState.picks.length).list.slice(0, 5).map(e => `<li><span class="rk">${e.rank}</span><span class="nm">${esc(e.name)}</span></li>`).join('')}</ol></div>
       ${boardHTML}
     </div>`;
 
