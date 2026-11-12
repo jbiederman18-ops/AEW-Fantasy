@@ -3838,6 +3838,7 @@ function flushLiveRender() {
   if (keys.indexOf('aew_swaps') !== -1 && currentTabName === 'swaps') renderSwaps();
   if (keys.indexOf('aew_swaps') !== -1) announceAwards();
   if (keys.indexOf('aew_draft') !== -1 && currentTabName === 'draft') renderDraft({ fromRemote: true });
+  if (keys.indexOf('aew_draft') !== -1 || keys.some(k => k.indexOf('aew_roster_') === 0)) healRostersSoon();
   cacheSnapshot();
 
   if (!liveReady) return;
@@ -7087,6 +7088,40 @@ function renderDraftLive(el, opts) {
       const i = document.getElementById('draftPickInput');
       if (i) i.focus();
     }, 100);
+  }
+}
+
+// Self-heal. A pick and its roster write are two separate steps; a phone closed,
+// locked or reloaded in between leaves the pick in the log and the slot empty,
+// and nothing else ever filled it. Every phone (not the TV) now fills such
+// slots a few seconds after the board changes. It only ever fills an EMPTY slot,
+// and only while the pick is still in the log, so it cannot resurrect an undone
+// pick or overwrite anything.
+let healTimer = null, healing = Promise.resolve();
+function healRostersSoon() {
+  if (TV_MODE) return;
+  clearTimeout(healTimer);
+  healTimer = setTimeout(healRosters, 2500 + Math.random() * 2000);
+}
+function healRosters() {
+  if (!draftConnected() || !draftState.picks.length) return;
+  for (const t of TEAMS) {
+    const fill = {};
+    for (const p of draftState.picks) {
+      if (p.team === t && p.slot && !(state.rosters[t] || {})[p.slot]) fill[p.slot] = p.wrestler;
+    }
+    const slots = Object.keys(fill);
+    if (!slots.length) continue;
+    healing = healing.then(() => withinMs(dbRoot.child('aew_roster_' + t).transaction(cur => {
+      const roster = parseRaw(cur);
+      if (!roster || typeof roster !== 'object') return undefined;
+      let changed = false;
+      for (const sl of slots) {
+        const still = draftState.picks.some(p => p.team === t && p.slot === sl && p.wrestler === fill[sl]);
+        if (still && !roster[sl]) { roster[sl] = fill[sl]; changed = true; }
+      }
+      return changed ? JSON.stringify(roster) : undefined;
+    }, undefined, false), DRAFT_TXN_MS)).catch(() => {});
   }
 }
 
