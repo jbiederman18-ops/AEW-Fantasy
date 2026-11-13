@@ -689,9 +689,23 @@
   .ryb.s-crown .ryb-spot { animation: none; transform: rotate(0); opacity: .9; }
   @keyframes rybSpin { to { transform: rotate(360deg); } }
   @keyframes rybSweep { from { transform: rotate(-24deg); } to { transform: rotate(24deg); } }
-  .ryb-stage { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    padding: calc(var(--u) * 4) 5vw; gap: calc(var(--u) * 1.6); }
-  .ryb-kicker, .ryb-title, .ryb-ladder li, .ryb-drum, .ryb-champ, .ryb-next, .ryb-go { opacity: 0; }
+  .ryb-quake { position: absolute; inset: 0; }
+  .ryb.shake .ryb-quake { animation: rybQuake .55s linear; }
+  @keyframes rybQuake { 10% { transform: translate(-1.2vh, .8vh) rotate(-.4deg); } 25% { transform: translate(1.4vh, -1vh) rotate(.5deg); }
+    40% { transform: translate(-1vh, -.6vh); } 55% { transform: translate(.8vh, .9vh) rotate(-.2deg); } 75% { transform: translate(-.4vh, .3vh); } }
+  .ryb-gloom { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 1.2s;
+    background: radial-gradient(60vmax 50vmax at 50% 45%, rgba(40,58,88,.35), rgba(8,12,22,.85)); }
+  .ryb.mood-shame .ryb-gloom { opacity: 1; }
+  .ryb.mood-hungry .ryb-gloom { opacity: .55; }
+  .ryb.mood-shame .ryb-spot, .ryb.mood-hungry .ryb-spot { opacity: .25; }
+
+  /* intro, then one scene per place, then the drum roll, then the crown */
+  .ryb-intro, .ryb-scene { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: calc(var(--u) * 4) 5vw; gap: calc(var(--u) * 1.6); transition: opacity .5s; }
+  .ryb.s-intro-out .ryb-intro { opacity: 0; }
+  .ryb-scene { opacity: 0; gap: calc(var(--u) * 2.2); }
+  .ryb-scene.show { opacity: 1; }
+  .ryb-kicker, .ryb-title, .ryb-champ, .ryb-next, .ryb-go { opacity: 0; }
   .ryb-kicker { font-size: calc(var(--u) * 2.6); font-weight: 800; letter-spacing: calc(var(--u) * 0.5); text-transform: uppercase;
     color: #E7D6C3; transition: opacity .6s, transform .6s; transform: translateY(2vh); }
   .ryb-title { font-size: calc(var(--u) * 10); font-weight: 800; line-height: .9; letter-spacing: -0.03em; text-transform: uppercase;
@@ -699,36 +713,79 @@
     transition: opacity .5s, transform .7s cubic-bezier(.2,1.4,.4,1); }
   .ryb.s-kick .ryb-kicker { opacity: 1; transform: none; }
   .ryb.s-title .ryb-title { opacity: 1; transform: scale(1); }
-  .ryb-ladder { list-style: none; display: flex; flex-direction: column; gap: calc(var(--u) * 1); width: min(560px, 86vw); margin-top: calc(var(--u) * 1.5); transition: opacity .4s; }
-  .ryb-ladder li { display: flex; align-items: center; gap: calc(var(--u) * 1.6); padding: calc(var(--u) * 1.1) calc(var(--u) * 2);
-    background: #FFF4E4; color: #1A1414; border: calc(var(--u) * .3) solid #1A1414; border-radius: calc(var(--u) * .8);
-    box-shadow: calc(var(--u) * .6) calc(var(--u) * .6) 0 var(--lc);
-    transform: translateX(-6vw); transition: opacity .45s, transform .5s cubic-bezier(.2,1.3,.4,1); }
-  .ryb-ladder li.in { opacity: 1; transform: none; }
-  .ryb-ladder b { font-size: calc(var(--u) * 2.6); font-weight: 800; color: #5E4F4F; min-width: 2.4em; text-align: left; }
-  .ryb-ladder span { font-size: calc(var(--u) * 4); font-weight: 800; letter-spacing: -0.02em; }
-  .ryb-ladder em { margin-left: auto; font-style: normal; font-weight: 800; font-size: calc(var(--u) * 2.6); font-variant-numeric: tabular-nums; }
-  .ryb-drum { font-size: calc(var(--u) * 3.2); font-weight: 800; letter-spacing: calc(var(--u) * .3); text-transform: uppercase; margin-top: calc(var(--u) * 2); }
-  .ryb.s-crown .ryb-kicker, .ryb.s-crown .ryb-ladder, .ryb.s-crown .ryb-title { opacity: 0; transition: opacity .4s; }
-  .ryb.s-drum .ryb-drum { opacity: 1; animation: rybShake .09s linear infinite; }
-  .ryb.s-crown .ryb-drum { opacity: 0; animation: none; }
+
+  .ryb-place { font-size: calc(var(--u) * 4); font-weight: 800; letter-spacing: calc(var(--u) * .5); text-transform: uppercase; color: #E7D6C3;
+    opacity: 0; transform: translateY(2vh); transition: opacity .5s, transform .5s; }
+  .ryb-scene.s1 .ryb-place { opacity: 1; transform: none; }
+  .ryb-pcard { display: flex; flex-direction: column; align-items: center; gap: calc(var(--u) * .4); padding: calc(var(--u) * 1.6) calc(var(--u) * 4.4) calc(var(--u) * 4.2);
+    background: #FFF4E4; color: #1A1414; border: calc(var(--u) * .4) solid #1A1414; border-radius: calc(var(--u) * 1);
+    box-shadow: calc(var(--u) * .9) calc(var(--u) * .9) 0 var(--lc); opacity: 0; transform: translateY(-10vh) scale(1.15);
+    transition: opacity .25s, transform .55s cubic-bezier(.2,1.4,.4,1), filter 1.6s; }
+  .ryb-pcard .nm { font-size: calc(var(--u) * 15); font-weight: 800; line-height: .95; letter-spacing: -0.04em; text-transform: uppercase; color: var(--lci); }
+  .ryb-pcard em { font-style: normal; font-size: calc(var(--u) * 3.4); font-weight: 800; color: #5E4F4F; font-variant-numeric: tabular-nums; }
+  .ryb-scene.s2 .ryb-pcard { opacity: 1; transform: none; }
+  /* after the stamp: the bottom two wilt, second place stands tall */
+  .ryb-scene.t-shame.s3 .ryb-pcard { transform: rotate(6deg) translateY(2.5vh) scale(.94); filter: saturate(.15) brightness(.85);
+    transition: transform 1.8s cubic-bezier(.5,0,.3,1), filter 1.8s; }
+  .ryb-scene.t-hungry.s3 .ryb-pcard { transform: rotate(-3deg) translateY(1vh); filter: saturate(.5);
+    transition: transform 1.4s cubic-bezier(.5,0,.3,1), filter 1.4s; }
+  .ryb-scene.t-fed.s3 .ryb-pcard { box-shadow: calc(var(--u) * .9) calc(var(--u) * .9) 0 var(--belt); }
+  .ryb-stamp { position: relative; z-index: 1; margin-top: calc(var(--u) * -5.2); padding: calc(var(--u) * .5) calc(var(--u) * 2.4);
+    font-size: calc(var(--u) * 5.2); font-weight: 800; letter-spacing: calc(var(--u) * .15); text-transform: uppercase; white-space: nowrap;
+    color: var(--stc); background: rgba(20,15,15,.82); border: calc(var(--u) * .6) solid currentColor; border-radius: calc(var(--u) * .8);
+    opacity: 0; transform: rotate(-7deg) scale(3); transition: opacity .12s, transform .3s cubic-bezier(.3,1.7,.5,1); }
+  .ryb-scene.s3 .ryb-stamp { opacity: 1; transform: rotate(-7deg) scale(1); }
+  .ryb-scene.t-shame { --stc: #FF5A5F; }
+  .ryb-scene.t-hungry { --stc: #FF9F1C; }
+  .ryb-scene.t-fed { --stc: #5BE0B5; }
+  .ryb-verdict { font-size: calc(var(--u) * 4.6); font-weight: 800; line-height: 1.15; color: #FFF4E4; opacity: 0; transition: opacity .5s .4s; }
+  .ryb-verdict b { color: var(--stc); text-transform: uppercase; }
+  .ryb-verdict small { display: block; margin-top: calc(var(--u) * .8); font-size: calc(var(--u) * 2.2); font-style: italic; font-weight: 600; color: #A8998C; }
+  .ryb-scene.s3 .ryb-verdict { opacity: 1; }
+
+  .ryb-drum { font-size: calc(var(--u) * 6); font-weight: 800; letter-spacing: calc(var(--u) * .3); text-transform: uppercase; color: var(--belt); }
+  .ryb-drum-sub { font-size: calc(var(--u) * 3); font-weight: 700; color: #E7D6C3; opacity: 0; transition: opacity .6s 1.2s; }
+  .ryb-scene.show .ryb-drum { animation: rybShake .09s linear infinite; }
+  .ryb-scene.show .ryb-drum-sub { opacity: 1; }
   @keyframes rybShake { 25% { transform: translate(.15vh, -.1vh); } 75% { transform: translate(-.15vh, .1vh); } }
-  .ryb-champ { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%) scale(2.4); padding: 0 4vw; }
+
+  .ryb-champ { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%) scale(2.4); padding: 0 4vw;
+    display: flex; flex-direction: column; align-items: center; }
   .ryb.s-crown .ryb-champ { opacity: 1; transform: translateY(-50%) scale(1); transition: opacity .25s, transform .6s cubic-bezier(.2,1.5,.35,1); }
-  .ryb-belt { line-height: 1; font-size: calc(var(--u) * 9); }
-  .ryb-belt img { width: calc(var(--u) * 36); height: auto; display: inline-block;
+  .ryb-belt { line-height: 1; height: calc(var(--u) * 25); margin-bottom: calc(var(--u) * 1.4); }
+  .ryb-belt img { width: calc(var(--u) * 46); height: auto; display: inline-block; opacity: 0; transform: translateY(-110vh) rotate(-14deg);
     filter: drop-shadow(calc(var(--u) * .7) calc(var(--u) * .7) 0 var(--ryback)) drop-shadow(0 0 4vh var(--tcA)); }
-  .ryb-is { font-size: calc(var(--u) * 2.6); font-weight: 800; letter-spacing: calc(var(--u) * .5); text-transform: uppercase; color: var(--belt); margin-top: calc(var(--u) * 1); }
-  .ryb-name { font-size: calc(var(--u) * 22); font-weight: 800; line-height: .9; letter-spacing: -0.04em; text-transform: uppercase; overflow-wrap: anywhere;
+  .ryb.s-belt .ryb-belt img { opacity: 1; transform: none; transition: transform .75s cubic-bezier(.35,1.5,.5,1), opacity .1s; }
+  .ryb.s-belt.s-glow .ryb-belt img { animation: rybGlow 2.4s ease-in-out infinite; }
+  @keyframes rybGlow { 50% { filter: drop-shadow(calc(var(--u) * .7) calc(var(--u) * .7) 0 var(--ryback)) drop-shadow(0 0 9vh var(--belt)); } }
+  .ryb-name { font-size: calc(var(--u) * 20); font-weight: 800; line-height: .9; letter-spacing: -0.04em; text-transform: uppercase; overflow-wrap: anywhere;
     color: #FFF4E4; text-shadow: calc(var(--u) * 1) calc(var(--u) * 1) 0 var(--tc); }
-  .ryb-name.co { font-size: calc(var(--u) * 13); }
-  .ryb-pts { font-size: calc(var(--u) * 3); font-weight: 800; margin-top: calc(var(--u) * 1.2); font-variant-numeric: tabular-nums; }
-  .ryb-line { display: inline-block; font-size: calc(var(--u) * 4); font-weight: 800; text-transform: uppercase; letter-spacing: -0.01em;
-    margin-top: calc(var(--u) * 1.6); background: var(--ryback); color: #fff; padding: calc(var(--u) * .4) calc(var(--u) * 2);
-    border: calc(var(--u) * .3) solid #FFF4E4; border-radius: calc(var(--u) * .6); transform: rotate(-2deg); }
+  .ryb-name.co { font-size: calc(var(--u) * 12); }
+  .ryb-fed { display: inline-block; margin-top: calc(var(--u) * 1.6); padding: calc(var(--u) * .5) calc(var(--u) * 2.4);
+    font-size: calc(var(--u) * 5.4); font-weight: 800; text-transform: uppercase; letter-spacing: -0.01em; white-space: nowrap;
+    background: var(--ryback); color: #FFF4E4; border: calc(var(--u) * .4) solid #FFF4E4; border-radius: calc(var(--u) * .6);
+    box-shadow: calc(var(--u) * .7) calc(var(--u) * .7) 0 #1A1414; opacity: 0; transform: rotate(-3deg) scale(2.6);
+    transition: opacity .12s, transform .32s cubic-bezier(.3,1.7,.5,1); }
+  .ryb.s-fed .ryb-fed { opacity: 1; transform: rotate(-3deg) scale(1); }
+  .ryb-is { font-size: calc(var(--u) * 2.8); font-weight: 800; letter-spacing: calc(var(--u) * .4); text-transform: uppercase; color: var(--belt);
+    margin-top: calc(var(--u) * 2); opacity: 0; transform: translateY(1.5vh); transition: opacity .6s, transform .6s; }
+  .ryb-pts { font-size: calc(var(--u) * 3); font-weight: 800; margin-top: calc(var(--u) * .8); font-variant-numeric: tabular-nums;
+    opacity: 0; transition: opacity .6s .3s; }
+  .ryb.s-award .ryb-is { opacity: 1; transform: none; }
+  .ryb.s-award .ryb-pts { opacity: 1; }
+
+  /* pyro: flame columns that fire from the floor */
+  .ryb-pyro { position: absolute; left: 0; right: 0; bottom: 0; height: 70vh; pointer-events: none; }
+  .ryb-pyro i { position: absolute; bottom: -2vh; width: calc(var(--u) * 4.6); height: 100%; margin-left: calc(var(--u) * -2.3); border-radius: 50% 50% 20% 20%;
+    background: linear-gradient(to top, #FFFFFF 0%, #FFF1A8 9%, #F2B705 26%, #FF6A00 52%, rgba(215,34,42,.6) 74%, rgba(215,34,42,0) 100%);
+    filter: blur(calc(var(--u) * .35)); transform-origin: 50% 100%; transform: scaleY(0); opacity: 0; mix-blend-mode: screen; }
+  .ryb-pyro.go i { animation: rybPyro 1s cubic-bezier(.2,.7,.3,1) var(--d, 0s) both; }
+  @keyframes rybPyro { 0% { transform: scaleY(0) scaleX(.6); opacity: 1; } 22% { transform: scaleY(1) scaleX(1.15); opacity: 1; }
+    60% { transform: scaleY(.85) scaleX(.9); opacity: .9; } 100% { transform: scaleY(.15) scaleX(.5); opacity: 0; } }
+
   .ryb-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
-  .ryb.s-crown .ryb-flash { animation: rybFlash .7s ease-out; }
-  @keyframes rybFlash { 0% { opacity: .85; } 100% { opacity: 0; } }
+  .ryb.flash .ryb-flash { animation: rybFlash .7s ease-out; }
+  @keyframes rybFlash { 0% { opacity: .9; } 100% { opacity: 0; } }
   .ryb-next { position: absolute; left: 0; right: 0; bottom: calc(var(--u) * 12); font-size: calc(var(--u) * 2.2); font-weight: 800;
     letter-spacing: calc(var(--u) * .3); text-transform: uppercase; color: #E7D6C3; transition: opacity .6s; }
   .ryb-go { position: absolute; left: 50%; bottom: calc(var(--u) * 4); transform: translateX(-50%); white-space: nowrap; cursor: pointer;
@@ -742,16 +799,20 @@
   .ryb canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
   @media (max-aspect-ratio: 1/1) {
     .ryb { --u: 1vw; }
-    .ryb-title { font-size: 15vw; } .ryb-name { font-size: 24vw; } .ryb-name.co { font-size: 14vw; }
-    .ryb-ladder span { font-size: 6.5vw; } .ryb-ladder b { font-size: 4.4vw; } .ryb-ladder em { font-size: 4.4vw; }
-    .ryb-kicker, .ryb-is { font-size: 3.4vw; letter-spacing: .6vw; } .ryb-drum { font-size: 4.4vw; }
-    .ryb-pts { font-size: 4.6vw; } .ryb-line { font-size: 7vw; } .ryb-belt img { width: 78vw; }
+    .ryb-title { font-size: 15vw; } .ryb-name { font-size: 22vw; } .ryb-name.co { font-size: 13vw; }
+    .ryb-kicker, .ryb-is { font-size: 3.4vw; letter-spacing: .5vw; }
+    .ryb-place { font-size: 5vw; } .ryb-pcard .nm { font-size: 17vw; } .ryb-pcard em { font-size: 4.6vw; }
+    .ryb-stamp { font-size: 7.4vw; margin-top: -7vw; } .ryb-pcard { padding-bottom: 8vw; } .ryb-verdict { margin-top: 1.5vw; } .ryb-verdict { font-size: 6vw; } .ryb-verdict small { font-size: 3.8vw; }
+    .ryb-drum { font-size: 6.4vw; } .ryb-drum-sub { font-size: 4vw; }
+    .ryb-pts { font-size: 4.6vw; } .ryb-fed { font-size: 8vw; }
+    .ryb-belt { height: 42vw; } .ryb-belt img { width: 78vw; }
+    .ryb-pyro i { width: 7vw; margin-left: -3.5vw; }
     .ryb-go { font-size: 4.2vw; padding: 3.6vw 9vw; bottom: calc(env(safe-area-inset-bottom, 0px) + 7vw); }
     .ryb-next { font-size: 3.4vw; bottom: calc(env(safe-area-inset-bottom, 0px) + 25vw); }
     .ryb-skip { font-size: 3.4vw; padding: 2vw 3.6vw; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .ryb-rays, .ryb-spot, .ryb.s-drum .ryb-drum, .live-tag::before { animation: none !important; }
+    .ryb-rays, .ryb-spot, .ryb-scene.show .ryb-drum, .ryb.shake .ryb-quake, .ryb-pyro.go i, .ryb.s-belt.s-glow .ryb-belt img, .live-tag::before { animation: none !important; }
   }
 
   /* ══ TV PARTY MODE (?tv) ══
@@ -5377,6 +5438,17 @@ function rybackClose() {
   setTimeout(() => { el.remove(); rybackPlaying = false; }, 700);
 }
 
+// Last place first. Each place gets its own scene and its own verdict; the
+// bottom two are shamed, second is tolerated, and first is fed — with pyro,
+// fireworks, confetti and the belt dropping out of the sky.
+const RYB_TIERS = {
+  2: { cls: 't-fed', stamp: 'Reasonably fed', verdict: 'Fed to a <b>reasonable</b> degree. Respectable.', sfx: '(polite golf clap)', mood: '' },
+  3: { cls: 't-hungry', stamp: 'Still hungry', verdict: 'Also needs <b>much</b> more feeding.', sfx: '(womp womp)', mood: 'mood-hungry' },
+  4: { cls: 't-shame', stamp: 'Starving', verdict: 'Shameful. Needs to feed <b>much, much</b> more.', sfx: '(sad trombone)', mood: 'mood-shame' },
+};
+function rybTier(place) { return RYB_TIERS[Math.min(4, Math.max(2, place))]; }
+function rybOrdinal(n) { return n + (n % 10 === 1 && n % 100 !== 11 ? 'st' : n % 10 === 2 && n % 100 !== 12 ? 'nd' : n % 10 === 3 && n % 100 !== 13 ? 'rd' : 'th'); }
+
 function rybackPlay(r) {
   if (rybackPlaying) return;
   rybackPlaying = true;
@@ -5384,68 +5456,138 @@ function rybackPlay(r) {
   const co = champs.length > 1;
   const color = TEAM_COLORS[champs[0]] || '#F5C242';
   const champPts = (r.standings.find(x => x.t === champs[0]) || {}).pts || 0;
-  // Everyone but the champion(s), worst first, revealed one by one.
-  const ladder = r.standings.filter(x => champs.indexOf(x.t) === -1).slice().reverse();
-  const places = ['1st', '2nd', '3rd', '4th', '5th', '6th'];
-  const placeOf = t => places[r.standings.findIndex(x => x.t === t)] || '';
+  // Places count ties: two teams level on points share the higher place.
+  const placeOf = t => {
+    const me = r.standings.find(x => x.t === t);
+    return 1 + r.standings.filter(x => me && x.pts > me.pts).length;
+  };
+  // Everyone but the champion(s), worst first.
+  const ladder = r.standings.filter(x => champs.indexOf(x.t) === -1 && TEAM_LABELS[x.t]).slice().reverse();
+  const names = champs.map(t => esc(TEAM_LABELS[t])).join(' &amp; ');
+
   const el = document.createElement('div');
   el.id = 'ryback';
   el.className = 'ryb';
   el.setAttribute('style', '--tc:' + color + ';--tcA:' + tvHex(color, .4));
   el.innerHTML =
-    '<div class="ryb-rays"></div><div class="ryb-spot"></div><div class="ryb-spot b"></div>'
+    '<div class="ryb-rays"></div><div class="ryb-spot"></div><div class="ryb-spot b"></div><div class="ryb-gloom"></div>'
+    + '<div class="ryb-pyro">' + [8, 22, 36, 64, 78, 92].map((x, i) => '<i style="left:' + x + '%;--d:' + [0, .12, .24, .24, .12, 0][i] + 's"></i>').join('') + '</div>'
     + '<canvas id="rybConfetti"></canvas><div class="ryb-flash"></div>'
     + '<button class="ryb-skip" onclick="rybackSkip()">Skip ›</button>'
-    + '<div class="ryb-stage">'
-    +   '<div class="ryb-kicker">' + esc(r.from) + ' is in the books</div>'
-    +   '<div class="ryb-title">The Ryback<br>Bearer</div>'
-    +   '<ol class="ryb-ladder">' + ladder.map(x =>
-          '<li style="--lc:' + (TEAM_COLORS[x.t] || '#888') + '"><b>' + placeOf(x.t) + '</b><span>' + esc(TEAM_LABELS[x.t] || x.t)
-          + '</span><em>' + Number(x.pts).toLocaleString() + '</em></li>').join('') + '</ol>'
-    +   '<div class="ryb-drum">' + (co ? 'And your Ryback Bearers are…' : 'And your Ryback Bearer is…') + '</div>'
-    + '</div>'
-    + '<div class="ryb-champ">'
-    +   '<div class="ryb-belt"><img src="belt.png?v=1" alt=""></div>'
-    +   '<div class="ryb-is">' + (co ? 'Co-Ryback Bearers' : 'Ryback Bearer') + ' · ' + esc(r.from) + '</div>'
-    +   '<div class="ryb-name' + (co ? ' co' : '') + '">' + champs.map(t => esc(TEAM_LABELS[t])).join(' &amp; ') + '</div>'
-    +   '<div class="ryb-pts">' + Number(champPts).toLocaleString() + ' points</div>'
-    +   '<div class="ryb-line">Feed me more!</div>'
+    + '<div class="ryb-quake">'
+    +   '<div class="ryb-intro">'
+    +     '<div class="ryb-kicker">' + esc(r.from) + ' is in the books</div>'
+    +     '<div class="ryb-title">Who got<br>fed?</div>'
+    +   '</div>'
+    +   ladder.map(x => {
+          const pl = placeOf(x.t), tier = rybTier(pl);
+          return '<div class="ryb-scene ' + tier.cls + '" data-mood="' + tier.mood + '" style="--lc:' + (TEAM_COLORS[x.t] || '#888') + ';--lci:' + (TEAM_INK[x.t] || '#1A1414') + '">'
+            + '<div class="ryb-place">In ' + rybOrdinal(pl) + ' place</div>'
+            + '<div class="ryb-pcard"><span class="nm">' + esc(TEAM_LABELS[x.t]) + '</span><em>' + Number(x.pts).toLocaleString() + ' pts</em></div>'
+            + '<div class="ryb-stamp">' + tier.stamp + '</div>'
+            + '<div class="ryb-verdict">' + tier.verdict + '<small>' + tier.sfx + '</small></div>'
+            + '</div>';
+        }).join('')
+    +   '<div class="ryb-scene ryb-drumroll">'
+    +     '<div class="ryb-drum">' + (co ? 'And your Ryback Bearers…' : 'And your Ryback Bearer…') + '</div>'
+    +     '<div class="ryb-drum-sub">' + (co ? 'the ones who have truly been fed' : 'the one who has truly been fed') + '</div>'
+    +   '</div>'
+    +   '<div class="ryb-champ">'
+    +     '<div class="ryb-belt"><img src="belt.png?v=1" alt="The Ryback title belt"></div>'
+    +     '<div class="ryb-name' + (co ? ' co' : '') + '">' + names + '</div>'
+    +     '<div class="ryb-fed">' + (co ? 'Have been fed!' : 'Has been fed!') + '</div>'
+    +     '<div class="ryb-is">The Ryback is awarded · ' + esc(r.from) + '</div>'
+    +     '<div class="ryb-pts">' + Number(champPts).toLocaleString() + ' points</div>'
+    +   '</div>'
     + '</div>'
     + '<div class="ryb-next">' + (r.to ? 'Up next: the ' + esc(r.to) + ' draft' : 'Up next: the draft') + '</div>'
     + (TV_MODE ? '' : '<button class="ryb-go" onclick="rybackClose()">On to the draft →</button>');
   document.body.appendChild(el);
   el.addEventListener('pointerdown', rybackUnlockAudio);
+  rybFxStart(el);
 
   const at = (ms, fn) => rybackTimers.push(setTimeout(fn, ms));
-  const add = c => () => el.classList.add(c);
   requestAnimationFrame(() => el.classList.add('on'));
-  at(300, add('s-kick'));
+  at(300, () => el.classList.add('s-kick'));
   at(1300, () => { el.classList.add('s-title'); rybackHit(); });
-  const lis = el.querySelectorAll('.ryb-ladder li');
-  const step = 1150, ladderStart = 2900;
-  lis.forEach((li, i) => at(ladderStart + i * step, () => { li.classList.add('in'); rybackHit(.6); }));
-  const drumAt = ladderStart + lis.length * step + 300;
-  const crownAt = drumAt + 2800;
-  at(drumAt, () => { el.classList.add('s-drum'); rybackRoll(2.8); });
-  at(crownAt, () => { el.classList.add('s-crown'); rybackCrash(); rybackConfetti(color); });
-  at(crownAt + 2600, add('s-done'));
+  at(3600, () => el.classList.add('s-intro-out'));
+
+  // one scene per non-champion, worst first
+  const scenes = el.querySelectorAll('.ryb-scene:not(.ryb-drumroll)');
+  const SCENE = 5600;
+  let t = 4100;
+  scenes.forEach((sc, i) => {
+    const t0 = t + i * SCENE;
+    const tier = sc.classList.contains('t-shame') ? 'shame' : sc.classList.contains('t-hungry') ? 'hungry' : 'fed';
+    at(t0, () => {
+      sc.classList.add('show', 's1');
+      el.classList.remove('mood-shame', 'mood-hungry');
+      if (sc.dataset.mood) el.classList.add(sc.dataset.mood);
+      rybackRoll(.8, .5);
+    });
+    at(t0 + 900, () => { sc.classList.add('s2'); rybackHit(.7); });
+    at(t0 + 1900, () => {
+      sc.classList.add('s3');
+      if (tier === 'shame') rybackTrombone();
+      else if (tier === 'hungry') rybackWomp();
+      else rybackClap();
+    });
+    at(t0 + SCENE - 450, () => sc.classList.remove('show'));
+  });
+  const drumAt = t + scenes.length * SCENE;
+  const drum = el.querySelector('.ryb-drumroll');
+  at(drumAt, () => { el.classList.remove('mood-shame', 'mood-hungry'); drum.classList.add('show'); rybackRoll(3.6); });
+  at(drumAt + 3600, () => { drum.classList.remove('show'); rybackCrown(el, color); });
+  at(drumAt + 3600 + 6500, () => el.classList.add('s-done'));
   // The TV clears itself; a phone waits for its tap.
-  if (TV_MODE) at(crownAt + 14000, rybackClose);
+  if (TV_MODE) at(drumAt + 3600 + 22000, rybackClose);
 }
+
+// The big one. Every step is scheduled off the moment of the crown.
+function rybackCrown(el, color) {
+  const at = (ms, fn) => rybackTimers.push(setTimeout(fn, ms));
+  const flash = () => { el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); };
+  const quake = () => { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); };
+  const pyro = () => { const p = el.querySelector('.ryb-pyro'); if (!p) return; p.classList.remove('go'); void p.offsetWidth; p.classList.add('go'); };
+  const W = () => el.clientWidth, H = () => el.clientHeight;
+  el.classList.remove('mood-shame', 'mood-hungry');
+  el.classList.add('s-crown');
+  flash(); quake(); pyro();
+  rybackCrash(); rybackBoom(1.2);
+  rybFx.boom(W() / 2, H() * .55, 1.4);
+  rybFx.confetti(color, 220);
+  [.08, .22, .36, .64, .78, .92].forEach(x => rybFx.fountain(W() * x, H(), 1100));
+  at(650, () => { el.classList.add('s-fed'); rybackHit(1.1); quake(); });
+  // explosions down the sides
+  [[900, .15, .35], [1150, .85, .3], [1400, .25, .7], [1600, .75, .72]].forEach(([ms, x, y]) =>
+    at(ms, () => { rybFx.boom(W() * x, H() * y, 1); rybackBoom(.8); }));
+  // the belt drops in
+  at(1900, () => { el.classList.add('s-belt'); });
+  at(2550, () => { flash(); quake(); pyro(); rybackBoom(1.3); rybackFanfare(); rybFx.confetti(color, 260);
+    [.08, .22, .36, .64, .78, .92].forEach(x => rybFx.fountain(W() * x, H(), 1300)); });
+  at(2900, () => el.classList.add('s-award', 's-glow'));
+  // fireworks for a good long while
+  const shows = TV_MODE ? 34 : 22;
+  for (let i = 0; i < shows; i++) at(2700 + i * 520 + Math.random() * 300, () => { rybFx.rocket(color); });
+  at(5200, () => { pyro(); rybackBoom(.9); rybFx.confetti(color, 160); });
+  at(8200, () => { pyro(); rybackBoom(.9); rybFx.rain(color, 5000); });
+  if (TV_MODE) at(13500, () => { pyro(); rybackBoom(1); rybFx.confetti(color, 200); });
+}
+
 // Skip jumps straight to the crowning rather than closing — nobody should miss who won.
 function rybackSkip() {
   const el = document.getElementById('ryback');
   if (!el) return;
   rybackTimers.forEach(clearTimeout); rybackTimers = [];
-  el.querySelectorAll('.ryb-ladder li').forEach(li => li.classList.add('in'));
-  el.classList.add('s-kick', 's-title', 's-crown');
+  el.classList.add('s-kick', 's-title', 's-intro-out');
+  el.querySelectorAll('.ryb-scene').forEach(sc => sc.classList.remove('show'));
   const c = getComputedStyle(el).getPropertyValue('--tc').trim() || '#F5C242';
-  rybackCrash(); rybackConfetti(c);
-  rybackTimers.push(setTimeout(() => el.classList.add('s-done'), 1200));
-  if (TV_MODE) rybackTimers.push(setTimeout(rybackClose, 12000));
+  rybackCrown(el, c);
+  rybackTimers.push(setTimeout(() => el.classList.add('s-done'), 4000));
+  if (TV_MODE) rybackTimers.push(setTimeout(rybackClose, 20000));
 }
 
-// ── sound: a snare roll and a crash, synthesised so there is nothing to load ──
+// ── sound: synthesised so there is nothing to load ──
 function rybackCtx() {
   if (TV_MODE && tvAudio) return tvAudio;
   try { if (!rybackAudio) rybackAudio = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; }
@@ -5472,15 +5614,85 @@ function rybackHit(vol) {
   g.gain.setValueAtTime((vol || 1) * .7, t); g.gain.exponentialRampToValueAtTime(.001, t + .45);
   o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + .5);
 }
-function rybackRoll(secs) {
+function rybackRoll(secs, vol) {
   const a = rybackOk(); if (!a) return;
-  const t0 = a.currentTime;
+  const t0 = a.currentTime, v0 = vol == null ? 1 : vol;
   for (let t = 0; t < secs; t += 0.045) {
     const n = rybackNoise(a, .05), f = a.createBiquadFilter(), g = a.createGain();
     f.type = 'bandpass'; f.frequency.value = 1900; f.Q.value = .7;
-    const v = 0.06 + 0.3 * (t / secs);
+    const v = (0.06 + 0.3 * (t / secs)) * v0;
     g.gain.setValueAtTime(v, t0 + t); g.gain.exponentialRampToValueAtTime(.001, t0 + t + .045);
     n.connect(f); f.connect(g); g.connect(a.destination); n.start(t0 + t);
+  }
+}
+// a brassy note through a lowpass, with optional vibrato and a pitch sag
+function rybackBrass(a, fq, start, dur, vol, opts) {
+  const o = opts || {};
+  const osc = a.createOscillator(), f = a.createBiquadFilter(), g = a.createGain();
+  osc.type = 'sawtooth'; osc.frequency.setValueAtTime(fq, start);
+  if (o.sag) osc.frequency.linearRampToValueAtTime(fq * o.sag, start + dur);
+  if (o.vib) {
+    const l = a.createOscillator(), lg = a.createGain();
+    l.frequency.value = 6; lg.gain.value = fq * .03; l.connect(lg); lg.connect(osc.frequency); l.start(start); l.stop(start + dur + .1);
+  }
+  f.type = 'lowpass'; f.frequency.value = o.dark ? 900 : 2400; f.Q.value = 1.5;
+  g.gain.setValueAtTime(0, start); g.gain.linearRampToValueAtTime(vol, start + .04);
+  g.gain.setValueAtTime(vol, start + dur * .7); g.gain.exponentialRampToValueAtTime(.001, start + dur);
+  osc.connect(f); f.connect(g); g.connect(a.destination); osc.start(start); osc.stop(start + dur + .05);
+}
+function rybackTrombone() {
+  const a = rybackOk(); if (!a) return;
+  const t = a.currentTime + .05;
+  [[294, 0, .42], [277, .45, .42], [262, .9, .42]].forEach(([f, o, d]) => rybackBrass(a, f, t + o, d, .14, { dark: 1, sag: .985 }));
+  rybackBrass(a, 247, t + 1.35, 1.5, .15, { dark: 1, vib: 1, sag: .94 });
+}
+function rybackWomp() {
+  const a = rybackOk(); if (!a) return;
+  const t = a.currentTime + .05;
+  rybackBrass(a, 233, t, .38, .13, { dark: 1, sag: .97 });
+  rybackBrass(a, 196, t + .42, .9, .13, { dark: 1, sag: .92 });
+}
+function rybackClap() {
+  const a = rybackOk(); if (!a) return;
+  const t0 = a.currentTime;
+  for (let i = 0; i < 14; i++) {
+    const at = t0 + .05 + i * .11 + Math.random() * .05;
+    const n = rybackNoise(a, .06), f = a.createBiquadFilter(), g = a.createGain();
+    f.type = 'bandpass'; f.frequency.value = 1100 + Math.random() * 600; f.Q.value = 1.2;
+    g.gain.setValueAtTime(.18 * (1 - i / 16), at); g.gain.exponentialRampToValueAtTime(.001, at + .06);
+    n.connect(f); f.connect(g); g.connect(a.destination); n.start(at);
+  }
+  [[880, 0], [1320, .12]].forEach(([fq, off]) => {
+    const o = a.createOscillator(), g = a.createGain();
+    o.type = 'sine'; o.frequency.value = fq;
+    g.gain.setValueAtTime(.12, t0 + off); g.gain.exponentialRampToValueAtTime(.001, t0 + off + .9);
+    o.connect(g); g.connect(a.destination); o.start(t0 + off); o.stop(t0 + off + 1);
+  });
+}
+function rybackBoom(vol) {
+  const a = rybackOk(); if (!a) return;
+  const t = a.currentTime, v = vol || 1;
+  const n = rybackNoise(a, 1.6), f = a.createBiquadFilter(), g = a.createGain();
+  f.type = 'lowpass'; f.frequency.setValueAtTime(900, t); f.frequency.exponentialRampToValueAtTime(90, t + 1.2);
+  g.gain.setValueAtTime(.7 * v, t); g.gain.exponentialRampToValueAtTime(.001, t + 1.5);
+  n.connect(f); f.connect(g); g.connect(a.destination); n.start(t);
+  const o = a.createOscillator(), og = a.createGain();
+  o.type = 'sine'; o.frequency.setValueAtTime(70, t); o.frequency.exponentialRampToValueAtTime(28, t + .8);
+  og.gain.setValueAtTime(.9 * v, t); og.gain.exponentialRampToValueAtTime(.001, t + .9);
+  o.connect(og); og.connect(a.destination); o.start(t); o.stop(t + 1);
+}
+function rybackPop() {
+  const a = rybackOk(); if (!a) return;
+  const t = a.currentTime;
+  const n = rybackNoise(a, .25), f = a.createBiquadFilter(), g = a.createGain();
+  f.type = 'bandpass'; f.frequency.value = 700; f.Q.value = .6;
+  g.gain.setValueAtTime(.35, t); g.gain.exponentialRampToValueAtTime(.001, t + .25);
+  n.connect(f); f.connect(g); g.connect(a.destination); n.start(t);
+  for (let i = 0; i < 10; i++) {   // crackle
+    const at = t + .15 + Math.random() * .7, c = rybackNoise(a, .015), cf = a.createBiquadFilter(), cg = a.createGain();
+    cf.type = 'highpass'; cf.frequency.value = 4000;
+    cg.gain.setValueAtTime(.12, at); cg.gain.exponentialRampToValueAtTime(.001, at + .015);
+    c.connect(cf); cf.connect(cg); cg.connect(a.destination); c.start(at);
   }
 }
 function rybackCrash() {
@@ -5491,44 +5703,141 @@ function rybackCrash() {
   g.gain.setValueAtTime(.55, t); g.gain.exponentialRampToValueAtTime(.001, t + 2.5);
   n.connect(f); f.connect(g); g.connect(a.destination); n.start(t);
   rybackHit(1.2);
-  // a short brass-ish fanfare on top
-  [[392, 0], [523, .16], [659, .32], [784, .5]].forEach(([fq, off]) => {
-    const o = a.createOscillator(), og = a.createGain();
-    o.type = 'sawtooth'; o.frequency.value = fq;
-    og.gain.setValueAtTime(0, t + off); og.gain.linearRampToValueAtTime(.09, t + off + .03);
-    og.gain.exponentialRampToValueAtTime(.001, t + off + (off >= .5 ? 1.4 : .3));
-    o.connect(og); og.connect(a.destination); o.start(t + off); o.stop(t + off + 1.5);
-  });
+}
+// a proper fanfare for the belt: da-da-da-DAAA, then the big chord
+function rybackFanfare() {
+  const a = rybackOk(); if (!a) return;
+  const t = a.currentTime + .02;
+  [[392, 0, .16], [392, .18, .16], [392, .36, .16], [523, .54, .7], [466, 1.3, .25], [523, 1.58, .2], [659, 1.82, 1.8]].forEach(([fq, off, d]) =>
+    rybackBrass(a, fq, t + off, d, .11));
+  [523, 659, 784].forEach(fq => rybackBrass(a, fq / 2, t + 1.82, 1.8, .06, { dark: 1 }));
 }
 
-function rybackConfetti(color) {
-  const cv = document.getElementById('rybConfetti');
-  if (!cv || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  const W = cv.clientWidth, H = cv.clientHeight;
-  cv.width = W * dpr; cv.height = H * dpr;
-  const g = cv.getContext('2d'); g.scale(dpr, dpr);
-  const cols = [color, '#F5C242', '#fff6d6', color, '#ffffff'];
-  const size = Math.max(6, Math.min(W, H) / 70);
-  const parts = [];
-  for (let i = 0; i < 180; i++) {
-    const side = i % 2 ? 1 : -1;
-    parts.push({ x: W / 2 + side * W * 0.05, y: H * 0.55, vx: side * (2 + Math.random() * 9) * (W / 900),
-      vy: -(6 + Math.random() * 12) * (H / 900), r: Math.random() * 6, vr: (Math.random() - .5) * .3,
-      w: size * (0.6 + Math.random()), h: size * 0.45, c: cols[i % cols.length] });
-  }
-  const start = performance.now();
-  (function frame(now) {
-    if (!document.getElementById('rybConfetti')) return;
-    const el = now - start;
+// ── one canvas for everything that flies: confetti, sparks, fireworks, blasts ──
+const rybFx = {
+  el: null, g: null, W: 0, H: 0, parts: [], blasts: [], emitters: [], rainOn: null, raf: 0, size: 8,
+  reduced() { return window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches; },
+  kick() { if (!this.raf && this.g) this.raf = requestAnimationFrame(t => this.frame(t)); },
+  confetti(color, n) {
+    if (!this.g) return;
+    const cols = [color, '#F2B705', '#FFF4E4', '#D7222A', color, '#ffffff'];
+    for (let i = 0; i < n; i++) {
+      const side = i % 2 ? 1 : -1;
+      this.parts.push({ k: 'c', x: this.W / 2 + side * this.W * .04, y: this.H * .55,
+        vx: side * (2 + Math.random() * 10) * (this.W / 900), vy: -(7 + Math.random() * 13) * (this.H / 900),
+        r: Math.random() * 6, vr: (Math.random() - .5) * .3, w: this.size * (.6 + Math.random()), h: this.size * .45,
+        c: cols[i % cols.length], life: 6500, age: 0 });
+    }
+    this.kick();
+  },
+  rain(color, ms) { if (!this.g) return; this.rainOn = { color: color, until: performance.now() + ms }; this.kick(); },
+  fountain(x, y, ms) { if (!this.g) return; this.emitters.push({ x: x, y: y, until: performance.now() + ms }); this.kick(); },
+  boom(x, y, s) {
+    if (!this.g) return;
+    this.blasts.push({ x: x, y: y, s: s || 1, age: 0 });
+    const cols = ['#FFFFFF', '#FFF1A8', '#F2B705', '#FF6A00'];
+    for (let i = 0; i < 60 * (s || 1); i++) {
+      const ang = Math.random() * Math.PI * 2, sp = (3 + Math.random() * 9) * (Math.min(this.W, this.H) / 700);
+      this.parts.push({ k: 's', x: x, y: y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, c: cols[i % 4], life: 900 + Math.random() * 600, age: 0, drag: .94 });
+    }
+    this.kick();
+  },
+  rocket(color) {
+    if (!this.g) return;
+    const x = this.W * (.12 + Math.random() * .76);
+    const ty = this.H * (.12 + Math.random() * .3);
+    const c = [color, '#F2B705', '#FFF4E4', '#D7222A', '#5BE0B5', '#8DB8F5'][Math.floor(Math.random() * 6)];
+    this.parts.push({ k: 'r', x: x, y: this.H + 10, vx: (Math.random() - .5) * 1.5, vy: -(this.H - ty) / 42, ty: ty, c: c, life: 2000, age: 0 });
+    this.kick();
+  },
+  burst(x, y, c) {
+    const n = 70, sp0 = Math.min(this.W, this.H) / 160;
+    for (let i = 0; i < n; i++) {
+      const ang = (i / n) * Math.PI * 2, sp = sp0 * (.7 + Math.random() * .6);
+      this.parts.push({ k: 'f', x: x, y: y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, c: Math.random() < .2 ? '#FFFFFF' : c,
+        life: 1300 + Math.random() * 500, age: 0, drag: .965, tw: Math.random() < .35 });
+    }
+    this.blasts.push({ x: x, y: y, s: .35, age: 0 });
+    rybackPop();
+  },
+  frame(now) {
+    this.raf = 0;
+    if (!this.el || !document.body.contains(this.el)) { this.parts = []; this.emitters = []; return; }
+    const g = this.g, W = this.W, H = this.H, dt = 16.7, grav = .26 * (H / 900);
+    g.globalCompositeOperation = 'source-over';
     g.clearRect(0, 0, W, H);
-    parts.forEach(p => {
-      p.vy += 0.28 * (H / 900); p.vx *= 0.99; p.x += p.vx; p.y += p.vy; p.r += p.vr;
-      g.save(); g.translate(p.x, p.y); g.rotate(p.r); g.globalAlpha = Math.max(0, 1 - el / 6000);
-      g.fillStyle = p.c; g.fillRect(-p.w / 2, -p.h / 2, p.w, p.h * Math.abs(Math.cos(p.r * 2)) + 1); g.restore();
+    // emitters: spark fountains from the pyro
+    this.emitters = this.emitters.filter(e => now < e.until);
+    this.emitters.forEach(e => {
+      for (let i = 0; i < 5; i++) this.parts.push({ k: 's', x: e.x + (Math.random() - .5) * 14, y: e.y,
+        vx: (Math.random() - .5) * 3, vy: -(10 + Math.random() * 9) * (H / 900), c: Math.random() < .5 ? '#FFF1A8' : '#F2B705',
+        life: 900 + Math.random() * 500, age: 0, drag: .985 });
     });
-    if (el < 6000) requestAnimationFrame(frame); else g.clearRect(0, 0, W, H);
-  })(start);
+    if (this.rainOn && now < this.rainOn.until) {
+      const cols = [this.rainOn.color, '#F2B705', '#FFF4E4', '#D7222A'];
+      for (let i = 0; i < 3; i++) this.parts.push({ k: 'c', x: Math.random() * W, y: -20, vx: (Math.random() - .5) * 2, vy: 1 + Math.random() * 2,
+        r: Math.random() * 6, vr: (Math.random() - .5) * .3, w: this.size * (.6 + Math.random()), h: this.size * .45,
+        c: cols[i % cols.length], life: 7000, age: 0 });
+    }
+    // blasts: an expanding hot glow
+    g.globalCompositeOperation = 'lighter';
+    this.blasts = this.blasts.filter(b => (b.age += dt) < 650);
+    this.blasts.forEach(b => {
+      const k = b.age / 650, rad = Math.min(W, H) * .45 * b.s * (.3 + k);
+      const gr = g.createRadialGradient(b.x, b.y, 0, b.x, b.y, rad);
+      gr.addColorStop(0, 'rgba(255,250,220,' + (.9 * (1 - k)) + ')');
+      gr.addColorStop(.35, 'rgba(255,170,40,' + (.6 * (1 - k)) + ')');
+      gr.addColorStop(1, 'rgba(215,34,42,0)');
+      g.fillStyle = gr; g.beginPath(); g.arc(b.x, b.y, rad, 0, Math.PI * 2); g.fill();
+    });
+    const next = [], cur = this.parts;
+    this.parts = [];   // bursts spawned below land here
+    cur.forEach(p => {
+      p.age += dt;
+      if (p.age > p.life || p.y > H + 60) return;
+      if (p.k === 'r') {
+        p.x += p.vx; p.y += p.vy; p.vy *= .985;
+        if (p.y <= p.ty || p.vy > -1) { this.burst(p.x, p.y, p.c); return; }
+        g.fillStyle = '#FFF1A8'; g.fillRect(p.x - 1.5, p.y, 3, 14);
+        next.push(p); return;
+      }
+      if (p.k === 'c') {
+        p.vy += grav * (p.vy > 3 ? .3 : 1); p.vx *= .99; p.x += p.vx; p.y += p.vy; p.r += p.vr;
+        g.globalCompositeOperation = 'source-over';
+        g.save(); g.translate(p.x, p.y); g.rotate(p.r); g.globalAlpha = Math.max(0, 1 - p.age / p.life);
+        g.fillStyle = p.c; g.fillRect(-p.w / 2, -p.h / 2, p.w, p.h * Math.abs(Math.cos(p.r * 2)) + 1); g.restore();
+        g.globalAlpha = 1; g.globalCompositeOperation = 'lighter';
+        next.push(p); return;
+      }
+      // sparks and firework stars
+      p.vx *= p.drag; p.vy = p.vy * p.drag + grav * .45; p.x += p.vx; p.y += p.vy;
+      const fade = 1 - p.age / p.life;
+      if (p.tw && Math.random() < .3) { next.push(p); return; }
+      g.globalAlpha = Math.max(0, fade);
+      g.fillStyle = p.c;
+      const sz = (p.k === 'f' ? 3.2 : 2.6) * Math.max(.4, fade) * (Math.min(W, H) / 700 + .4);
+      g.fillRect(p.x - sz / 2, p.y - sz / 2, sz, sz);
+      g.globalAlpha = 1;
+      next.push(p);
+    });
+    const all = next.concat(this.parts);
+    this.parts = all.length > 4000 ? all.slice(-4000) : all;
+    if (this.parts.length || this.emitters.length || this.blasts.length || (this.rainOn && now < this.rainOn.until)) this.kick();
+    else g.clearRect(0, 0, W, H);
+  },
+};
+function rybFxStart(el) {
+  rybFx.el = el; rybFx.parts = []; rybFx.blasts = []; rybFx.emitters = []; rybFx.rainOn = null; rybFx.g = null;
+  if (rybFx.reduced()) return;
+  const cv = el.querySelector('#rybConfetti');
+  if (!cv) return;
+  requestAnimationFrame(() => {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    rybFx.W = cv.clientWidth; rybFx.H = cv.clientHeight;
+    cv.width = rybFx.W * dpr; cv.height = rybFx.H * dpr;
+    rybFx.g = cv.getContext('2d'); rybFx.g.scale(dpr, dpr);
+    rybFx.size = Math.max(6, Math.min(rybFx.W, rybFx.H) / 70);
+  });
 }
 
 // ─────────────────────────────────────────────
