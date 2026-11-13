@@ -1572,6 +1572,9 @@
   .bn-name { display: block; font: italic 900 17px/1.05 'Barlow Condensed', sans-serif; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .bn-show { display: block; font-size: 11px; color: #8e8e96; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .bn-pts { font: italic 900 23px 'Barlow Condensed', sans-serif; color: var(--gold); }
+  .fv-list { list-style: none; margin: 0; padding: 0; }
+  .fv-team { display: block; font: italic 800 12px 'Barlow Condensed', sans-serif; letter-spacing: 1.5px; text-transform: uppercase; color: var(--tc); margin-top: 1px; }
+  .fv-pts { color: #fff; }
   .hm-empty { color: #8e8e96; font-size: 13px; padding: 10px 0; }
 
   /* ── LOG ── */
@@ -2195,8 +2198,8 @@
       <div id="standingsList"></div>
     </section>
     <section class="hm-sec">
-      <div class="hm-h"><h2>Top scorers · season</h2><button type="button" onclick="showAllWrestlers()">All ▸</button></div>
-      <div id="hmScorers" class="hm-cards"></div>
+      <div class="hm-h"><h2>This Season's Fav 5</h2><button type="button" onclick="showAllWrestlers()">All ▸</button></div>
+      <ol id="hmScorers" class="fv-list"></ol>
     </section>
     <section class="hm-sec">
       <div class="hm-h"><h2>Biggest nights</h2><small>most on one show</small></div>
@@ -4227,12 +4230,13 @@ function renderStandings() {
     + `<span class="lb-pts">${r.pts.toLocaleString()}</span></div>`).join('');
 
   if (sc) {
-    const top = wrestlerStints().filter(w => w.pts > 0).sort((a, b) => b.pts - a.pts).slice(0, 8);
+    const top = wrestlerStints().filter(w => w.pts > 0).sort((a, b) => b.pts - a.pts).slice(0, 5);
     sc.innerHTML = top.length ? top.map((w, i) =>
-      `<div class="sc-card" data-rank="${i + 1}" style="--tc:${TEAM_COLORS[w.team]}"><span class="sc-pts">${w.pts}</span>`
-      + `<span class="sc-rank">NO. ${i + 1}</span><span class="sc-name">${esc(shortName(w.name))}</span>`
-      + `<span class="sc-team">${esc(teamTag(w.team))}</span></div>`).join('')
-      : '<div class="hm-empty">Nobody has scored yet.</div>';
+      `<li class="bn-row fv-row" style="--tc:${TEAM_COLORS[w.team]}"><span class="bn-rank">${i + 1}</span><span class="bn-bar"></span>`
+      + `<span class="bn-who"><span class="bn-name">${esc(shortName(w.name))}</span>`
+      + `<span class="fv-team">${esc(teamTag(w.team))}${w.former ? ' · swapped out' : ''}</span></span>`
+      + `<span class="bn-pts fv-pts">${w.pts}</span></li>`).join('')
+      : '<li class="hm-empty">Nobody has scored yet.</li>';
   }
 
   if (bn) {
