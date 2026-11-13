@@ -204,6 +204,42 @@
   .save-msg-ok { color: var(--teal); }
   .save-msg-err { color: var(--ryback); }
 
+  /* Full Gear → RyAI */
+  .ppv-sub { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
+  .ppv-h4 { font: 800 13px var(--font); letter-spacing: 1px; text-transform: uppercase; margin: 18px 0 6px; }
+  .ppv-count { font: 800 12px var(--font); letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  .ppv-match { border: var(--bd); border-radius: var(--r); background: var(--card); padding: 10px; margin-bottom: 10px; }
+  .ppv-match.done { background: var(--surface); }
+  .ppv-title { font: 800 14px var(--font); margin-bottom: 8px; }
+  .ppv-title span { font-weight: 600; color: var(--muted); font-size: 12px; }
+  .ppv-sides { display: flex; flex-wrap: wrap; gap: 8px; }
+  .ppv-side { flex: 1 1 140px; position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+    min-height: 52px; padding: 8px 10px; text-align: left; border: var(--bd); border-radius: var(--r); background: var(--card);
+    color: var(--ink); font: 700 14px var(--font); cursor: pointer; box-shadow: var(--sh-sm); }
+  .ppv-side small { font-weight: 500; font-size: 11px; color: var(--muted); }
+  .ppv-side:active { transform: translate(2px, 2px); box-shadow: none; }
+  .ppv-side.on { background: var(--belt); }
+  .ppv-side.off { opacity: 0.5; box-shadow: none; }
+  .ppv-c { display: inline-block; margin-right: 6px; font: 800 10px var(--font); background: var(--belt); border: var(--bd-soft);
+    border-radius: 4px; padding: 0 4px; vertical-align: 2px; }
+  .ppv-won { font: 800 10px var(--font); letter-spacing: 1px; color: var(--ryback); }
+  .ppv-foot { margin-top: 8px; font-size: 12px; }
+  .ppv-fx { color: var(--teal); font-weight: 700; }
+  .ppv-fx.gold { color: var(--ryback); }
+  .ppv-nc { background: none; border: 0; padding: 0; color: var(--muted); text-decoration: underline; font: 600 12px var(--font); cursor: pointer; }
+  .ppv-kinds { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .ppv-kind { min-height: 38px; padding: 0 12px; font-size: 13px; }
+  .ppv-msg { font-size: 12px; margin-top: 8px; min-height: 1em; }
+  .ppv-moment { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 10px; margin-top: 6px;
+    border: var(--bd-soft); border-radius: var(--r); font-size: 13px; }
+  .ppv-moment button { background: none; border: 0; font-size: 18px; cursor: pointer; color: var(--muted); }
+  .ppv-top { margin: 0; padding-left: 22px; font-size: 14px; }
+  .ppv-top li { margin: 4px 0; }
+  .ppv-top small { display: block; color: var(--muted); font-size: 11px; }
+  .ppv-up, .ppv-dn { font: 800 11px var(--font); margin-left: 6px; }
+  .ppv-up { color: var(--teal); }
+  .ppv-dn { color: var(--ryback); }
+
   /* buttons */
   .btn-primary, .btn-secondary, .draft-pick-btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 46px; padding: 0 18px;
@@ -1365,6 +1401,7 @@
         <label><input type="checkbox" id="newSeasonArchiveCurrent" checked> Archive the current season first (adds it to the Trophy Room)</label>
         <label><input type="checkbox" id="newSeasonKeepRosters"> Keep current rosters (leave off if you're drafting fresh)</label>
       </div>
+      <button class="btn-secondary" onclick="ppvGoto()" style="margin-bottom:10px;">Enter Full Gear results for RyAI</button>
       <button class="btn-primary" onclick="startNewSeason()">Start New Season</button>
       <button class="btn-secondary" id="rybackReplayBtn" style="margin-top:10px;display:none;" onclick="rybackReplay()">Replay the Ryback Bearer reveal</button>
       <span id="newSeasonMsg" style="margin-left:10px;font-size:12px;font-family:var(--font);display:none;"></span>
@@ -4230,6 +4267,191 @@ function renderDraft(opts) {
   }
 }
 
+// ── PPV results menu (draft setup) ───────────
+function ppvBlockHtml() {
+  const kinds = Object.keys(RYAI_MOMENTS).map(function (k) {
+    return '<button type="button" class="btn-secondary ppv-kind" onclick="ppvMoment(\'' + k + '\')">' +
+      esc(RYAI_MOMENTS[k].label) + '</button>';
+  }).join('');
+  const names = ryaiBoard().map(function (b) { return '<option value="' + escAttr(b.name) + '"></option>'; }).join('');
+  return '<div class="settings-block ppv-block" id="ppvBlock">' +
+    '<h3>' + esc(RYAI_PPV.name) + ' → RyAI</h3>' +
+    '<p class="ppv-sub">' + esc(RYAI_PPV.when) + '. Tap each winner as it happens. RyAI’s board moves on every phone and the TV straight away, so the draft runs on tonight’s results. Tap a winner again to clear it.</p>' +
+    '<div id="ppvCount" class="ppv-count"></div>' +
+    '<div id="ppvMatches"></div>' +
+    '<h4 class="ppv-h4">Anything else happen?</h4>' +
+    '<p class="ppv-sub">Surprise returns, debuts, turns, injuries. Type the name, then tap what happened.</p>' +
+    '<input type="text" id="ppvName" list="ppvNames" placeholder="Wrestler" autocomplete="off" style="width:100%;">' +
+    '<datalist id="ppvNames">' + names + '</datalist>' +
+    '<div class="ppv-kinds">' + kinds + '</div>' +
+    '<div id="ppvMsg" class="ppv-msg"></div>' +
+    '<div id="ppvMoments"></div>' +
+    '<h4 class="ppv-h4">RyAI’s top picks now</h4>' +
+    '<div id="ppvTop"></div>' +
+    '<button type="button" class="btn-secondary" style="margin-top:12px;font-size:12px;min-height:38px;" onclick="ppvReset()">Clear all ' + esc(RYAI_PPV.name) + ' results</button>' +
+    '</div>';
+}
+
+function ppvSideName(side) {
+  return side.label || side.names.join(' & ');
+}
+
+function ppvPaint() {
+  const box = document.getElementById('ppvMatches');
+  if (!box) return;
+  const p = ryaiPpvLive() || { results: {}, moments: [] };
+  const res = p.results || {};
+  let done = 0;
+  box.innerHTML = RYAI_PPV.matches.map(function (m) {
+    const w = res[m.id];
+    if (w != null) done++;
+    const sides = m.sides.map(function (side, i) {
+      const on = w === i;
+      return '<button type="button" class="ppv-side' + (on ? ' on' : (w != null ? ' off' : '')) + '" ' +
+        'onclick="ppvPick(\'' + m.id + '\',' + i + ')">' +
+        '<b>' + (side.champ ? '<span class="ppv-c" title="Champion">C</span>' : '') + esc(ppvSideName(side)) + '</b>' +
+        (side.label && side.names.length <= 3 ? '<small>' + esc(side.names.join(', ')) + '</small>' : '') +
+        (on ? '<span class="ppv-won">WON</span>' : '') +
+        '</button>';
+    }).join('');
+    let foot;
+    if (w == null) {
+      foot = '<button type="button" class="ppv-nc" onclick="ppvPick(\'' + m.id + '\',-1)">No contest / draw</button>';
+    } else if (w < 0) {
+      foot = '<span class="ppv-fx">No contest — RyAI ignores it.</span> <button type="button" class="ppv-nc" onclick="ppvPick(\'' + m.id + '\',-1)">Undo</button>';
+    } else {
+      const champ = m.sides.findIndex(function (x) { return x.champ; });
+      const what = !m.title ? 'Non-title win'
+        : (w === champ ? 'Retained' : 'NEW CHAMPION' + (m.sides[w].names.length > 1 ? 'S' : ''));
+      foot = '<span class="ppv-fx' + (m.title && w !== champ ? ' gold' : '') + '">' + what + ' — RyAI updated.</span>';
+    }
+    return '<div class="ppv-match' + (w != null ? ' done' : '') + '">' +
+      '<div class="ppv-title">' + esc(m.title || m.stip) +
+        (m.title && m.stip ? ' <span>' + esc(m.stip) + '</span>' : '') + '</div>' +
+      '<div class="ppv-sides">' + sides + '</div>' +
+      '<div class="ppv-foot">' + foot + '</div></div>';
+  }).join('');
+  const cnt = document.getElementById('ppvCount');
+  if (cnt) cnt.textContent = done + ' of ' + RYAI_PPV.matches.length + ' results in';
+
+  const mbox = document.getElementById('ppvMoments');
+  if (mbox) {
+    const list = p.moments || [];
+    mbox.innerHTML = list.length ? list.map(function (mo) {
+      const k = RYAI_MOMENTS[mo.kind] || { label: mo.kind };
+      return '<div class="ppv-moment"><span><b>' + esc(mo.name) + '</b> — ' + esc(k.label.toLowerCase()) + '</span>' +
+        '<button type="button" aria-label="Remove" onclick="ppvUnmoment(\'' + escAttr(mo.id) + '\')">×</button></div>';
+    }).join('') : '';
+  }
+  ppvPaintTop();
+}
+
+// RyAI's opening preference with tonight counted, against the same board
+// without it. Rosters still hold this season's names until the rollover, so
+// "taken" is ignored here — this is the board, not a live pick.
+function ppvPaintTop() {
+  const host = document.getElementById('ppvTop');
+  if (!host) return;
+  let now, before;
+  try {
+    now = ryaiRank(1, { ignoreTaken: true }).slice(0, 10);
+    ryaiFxOff = true;
+    before = ryaiRank(1, { ignoreTaken: true });
+  } finally { ryaiFxOff = false; }
+  const pos = {};
+  before.forEach(function (c, i) { pos[c.name] = i; });
+  host.innerHTML = '<ol class="ppv-top">' + now.map(function (c, i) {
+    const was = pos[c.name];
+    let mv = '';
+    if (was == null) mv = '<span class="ppv-up">NEW</span>';
+    else if (was > i) mv = '<span class="ppv-up">▲' + (was - i) + '</span>';
+    else if (was < i) mv = '<span class="ppv-dn">▼' + (i - was) + '</span>';
+    const f = ryaiPpvFx()[c.name];
+    return '<li><b>' + esc(c.name) + '</b>' + mv +
+      (f && f.notes.length ? '<small>' + esc(f.notes[0]) + '</small>' : '') + '</li>';
+  }).join('') + '</ol>';
+}
+
+function ppvSay(text, colour) {
+  const el = document.getElementById('ppvMsg');
+  if (!el) return;
+  el.textContent = text || '';
+  el.style.color = colour || 'var(--muted)';
+}
+
+// Every change is a transaction on /ryai, so two phones entering results at
+// once both land. The local copy updates first so the tap answers instantly.
+async function ppvMutate(fn) {
+  const apply = function (cfg) {
+    const live = ryaiPpvLive(cfg);
+    const p = live ? JSON.parse(JSON.stringify(live))
+      : { event: RYAI_PPV.id, rev: RYAI_BOARD_REV, results: {}, moments: [] };
+    p.results = p.results || {}; p.moments = p.moments || [];
+    fn(p);
+    cfg.ppv = p;
+    return cfg;
+  };
+  apply(ryaiConfig);
+  ppvPaint();
+  if (!fbDb) { ppvSay('⚠ Not connected — this phone only until it reconnects', 'var(--gold)'); return; }
+  try {
+    await withinMs(fbDb.ref(RYAI_PATH).transaction(function (cur) {
+      const v = parseRaw(cur);
+      const cfg = (v && typeof v === 'object') ? ryaiMergeSaved(v) : Object.assign({}, ryaiConfig);
+      return JSON.stringify(apply(cfg));
+    }), 10000);
+    ppvSay('');
+  } catch (e) {
+    ppvSay('⚠ Not saved: ' + e.message + ' — tap it again once connected', 'var(--red)');
+  }
+}
+
+function ppvPick(id, i) {
+  ppvMutate(function (p) {
+    if (p.results[id] === i) delete p.results[id];
+    else p.results[id] = i;
+  });
+}
+
+function ppvMoment(kind) {
+  const input = document.getElementById('ppvName');
+  const raw = input ? input.value.trim() : '';
+  if (!raw) { ppvSay('Type a wrestler first', 'var(--red)'); return; }
+  const r = ryaiResolve(raw);
+  let name = r.match;
+  if (!name) {
+    if (kind !== 'debut') {
+      ppvSay(r.via === 'ambiguous'
+        ? 'Not sure who that is — did you mean ' + r.guess + '? Type the full name.'
+        : '“' + raw + '” is not on RyAI’s board. New to AEW? Tap Debuted.', 'var(--red)');
+      return;
+    }
+    name = raw;
+  }
+  const mo = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: name, kind: kind };
+  if (input) input.value = '';
+  ppvSay(name + ' — ' + RYAI_MOMENTS[kind].label.toLowerCase() + '. RyAI updated.', 'var(--teal)');
+  ppvMutate(function (p) { p.moments.push(mo); });
+}
+
+function ppvUnmoment(id) {
+  ppvMutate(function (p) { p.moments = p.moments.filter(function (m) { return m.id !== id; }); });
+}
+
+function ppvReset() {
+  if (!confirm('Clear every ' + RYAI_PPV.name + ' result? RyAI goes back to the pre-show board.')) return;
+  ppvMutate(function (p) { p.results = {}; p.moments = []; });
+}
+
+// From Settings, before the season is rolled over.
+function ppvGoto() {
+  switchTab('draft');
+  setTimeout(function () {
+    const b = document.getElementById('ppvBlock');
+    if (b) b.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 80);
+}
+
 function renderDraftSetup(el) {
   ryaiDisarm();
   const totalPicks = draftState.order.length * draftState.rounds;
@@ -4270,6 +4492,7 @@ function renderDraftSetup(el) {
           <span id="ryaiUpdateResult" style="font-family:var(--font);font-size:12px;"></span>
         </div>
 </div>
+      ${ppvBlockHtml()}
       <div class="settings-block">
         <h3>Party Mode</h3>
         <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">
@@ -4304,6 +4527,7 @@ function renderDraftSetup(el) {
       <button class="btn-primary" style="width:100%;justify-content:center;padding:14px;" onclick="startDraft()">Start Draft</button>`}
     </div>`;
   renderDraftOrderList();
+  ppvPaint();
 }
 
 function renderDraftOrderNote() {
@@ -4695,7 +4919,7 @@ const RYAI_PATH = 'ryai';
 // Bump whenever RYAI_BOARD_DEFAULT is rewritten. Saving any RyAI setting writes
 // the whole config, board included, so without this a board saved before the
 // rewrite would keep masking it forever.
-const RYAI_BOARD_REV = '2026-09-30 draft night';
+const RYAI_BOARD_REV = '2026-11-13 Full Gear eve';
 
 // base   = expected points per show from ordinary TV presence (0-10)
 // change = likelihood of a scoring STATE CHANGE this season (0-10): title win
@@ -4703,104 +4927,112 @@ const RYAI_BOARD_REV = '2026-09-30 draft night';
 //          the axis Ryan appears to draft on. UNTESTED — if the score data
 //          disagrees, turn weights.change down rather than editing this list.
 const RYAI_BOARD_DEFAULT = [
-  { name:"Jon Moxley", base:8, change:8, avail:1, note:"Continental champ; lost to Ospreay at All Out, shook his hand after; Death Riders lost PAC \u2014 turn or split watch" },
-  { name:"Chris Jericho", base:8, change:5, avail:1, note:"active on Dynamite; the comeback itself is already spent" },
-  { name:"Will Ospreay", base:7, change:7, avail:1, note:"World champ, beat Moxley at All Out; Andrade holds a guaranteed shot" },
-  { name:"Darby Allin", base:6, change:5, avail:1, note:"TNT champ; lost the tag contender match at All Out when Borden was hurt" },
-  { name:"Kyle Fletcher", base:6, change:8, avail:1, note:"Callis Family, won a tag title shot vs the Young Bucks at All Out" },
-  { name:"Kevin Knight", base:6, change:8, avail:1, note:"Callis Family, won a tag title shot vs the Young Bucks at All Out" },
-  { name:"Andrade", base:5, change:8, avail:1, note:"National champ, 5th defence at All Out, United Empire, holds a guaranteed World title shot" },
-  { name:"Kenny Omega", base:5, change:8, avail:1, note:"off a title loss, repositioning" },
-  { name:"MJF", base:5, change:7, avail:1, note:"promo volume, turn candidate" },
-  { name:"Toni Storm", base:5, change:7, avail:0.25, note:"out since March; AEW expects her not cleared through 2026 at minimum \u2014 any value is a late-season return" },
-  { name:"Orange Cassidy", base:6, change:4, avail:1, note:"Conglomeration, weekly presence" },
-  { name:"Swerve Strickland", base:5, change:6, avail:1, note:"trios champ, retained at All Out; Hangman feud reignited" },
-  { name:"Mercedes Mone", base:5, change:7, avail:1, note:"women's world champ, defends vs Thekla at WrestleDream" },
-  { name:"Maya World", base:4, change:8, avail:0.8, note:"out after a non-wrestling procedure since mid-Sept, expected back in a couple of months; lost TBS, rematch arc" },
-  { name:"Persephone", base:4, change:6, avail:1, note:"TBS champ; teams with Britt Baker on Dynamite 30 Sept, Baker turn widely expected" },
-  { name:"Willow Nightingale", base:4, change:5, avail:0.9, note:"lost to Thekla at All Out, broken hand targeted" },
-  { name:"Austin Creed", base:4, change:6, avail:1, note:"trios champ, retained at All Out" },
-  { name:"Kofi Kingston", base:4, change:6, avail:1, note:"trios champ, retained at All Out" },
-  { name:"Christian Cage", base:4, change:6, avail:1, note:"lost the tag titles in the All Out ladder match, took the fall" },
-  { name:"Adam Copeland", base:4, change:6, avail:1, note:"lost the tag titles in the All Out ladder match" },
-  { name:"Kazuchika Okada", base:4, change:6, avail:1, note:"International champ, beat Ciampa at All Out" },
-  { name:"Tommaso Ciampa", base:3, change:5, avail:1, note:"lost to Okada at All Out" },
-  { name:"Konosuke Takeshita", base:3, change:7, avail:1, note:"in the International picture" },
-  { name:"Adam Page", base:3, change:6, avail:1, note:"lost the trios title match at All Out; Swerve feud reignited" },
-  { name:"Thekla", base:4, change:9, avail:1, note:"beat Willow at All Out, challenges Mone at WrestleDream (Oct 17)" },
-  { name:"Brody King", base:3, change:5, avail:1, note:"lost the trios title match at All Out" },
-  { name:"Matt Jackson", base:4, change:7, avail:1, note:"tag champ — Bucks won a record 4th reign at All Out; Fletcher & Knight next" },
-  { name:"Nick Jackson", base:4, change:7, avail:1, note:"tag champ — Bucks won a record 4th reign at All Out; Fletcher & Knight next" },
-  { name:"Cash Wheeler", base:3, change:5, avail:1, note:"FTR, lost the All Out ladder match" },
-  { name:"PAC", base:3, change:5, avail:0, note:"passed away on 27 Sept 2026 \u2014 Dynamite 30 Sept is his tribute show" },
-  { name:"Bandido", base:3, change:5, avail:1, note:"took the pin in the trios title loss at All Out" },
-  { name:"Mark Briscoe", base:4, change:4, avail:0.5, note:"injured in the MJF title match in late June, no return timeline announced" },
-  { name:"Roderick Strong", base:4, change:4, avail:1, note:"Conglomeration" },
-  { name:"Mike Bailey", base:4, change:4, avail:1, note:"workrate, five-star candidate" },
-  { name:"Kyle O'Reilly", base:4, change:4, avail:1, note:"Conglomeration" },
-  { name:"Alex Windsor", base:3, change:6, avail:1, note:"women's tag champ, retained in the All Out street fight, sided with Ospreay after" },
-  { name:"Harley Cameron", base:3, change:6, avail:0.6, note:"knee injury from All In, announced at All Out; no return date" },
-  { name:"Gabe Kidd", base:3, change:6, avail:1, note:"Death Riders, brawled United Empire in the All Out main event" },
-  { name:"Jack Perry", base:3, change:6, avail:1, note:"beat Shibata on the All Out pre-show, then Samoa Joe returned and headbutted him" },
+  { name:"Jon Moxley", base:8, change:7, avail:1, note:"Continental champ, beat Mark Davis at WrestleDream; Conglomeration now riding with the Death Riders — Anarchy in the Arena vs The Cut at Full Gear" },
+  { name:"Chris Jericho", base:6, change:4, avail:1, note:"lost to Nick Wayne at WrestleDream (Wayne's 2nd win over him) and apologised on Dynamite; mostly Collision and the Rager cruise now" },
+  { name:"Will Ospreay", base:8, change:6, avail:1, note:"World champ, survived Clockwork Carnage at WrestleDream; defends vs Fletcher at Full Gear; his team surrendered in Blood & Guts" },
+  { name:"Darby Allin", base:6, change:5, avail:1, note:"TNT champ, retained vs Josh Alexander on Fright Night; thrown off the Blood & Guts cage but reported fine; not on the Full Gear card" },
+  { name:"Kyle Fletcher", base:7, change:9, avail:1, note:"beat Jack Perry to earn a World title shot vs Ospreay at Full Gear; won Blood & Guts with the Callis Family" },
+  { name:"Kevin Knight", base:5, change:6, avail:1, note:"Callis Family, lost the tag title match at WrestleDream, won Blood & Guts" },
+  { name:"Andrade", base:5, change:8, avail:1, note:"lost the National title to Ciampa on Collision 7 Nov after a long reign; still holds a guaranteed World title shot and says he'll use it" },
+  { name:"Kenny Omega", base:5, change:7, avail:0.6, note:"off AEW TV since early October; NJPW return announced and an AEW return reportedly planned" },
+  { name:"MJF", base:5, change:7, avail:0.4, note:"off AEW TV since September, only active on social media; return timing unknown" },
+  { name:"Toni Storm", base:5, change:7, avail:0.2, note:"out since March; return teased with tapes but reported as not imminent (late Oct) — any value is a late-season return" },
+  { name:"Orange Cassidy", base:6, change:5, avail:1, note:"Conglomeration joined forces with Moxley (handshake 11 Nov); lost to Finlay; in Anarchy in the Arena at Full Gear" },
+  { name:"Swerve Strickland", base:5, change:7, avail:1, note:"lost the trios titles at WrestleDream; Texas Death trios rematch at Full Gear" },
+  { name:"Mercedes Mone", base:6, change:6, avail:1, note:"women's world champ, beat Thekla at WrestleDream; defends vs Marina Shafir at Full Gear after tapping to her in a mixed tag" },
+  { name:"Maya World", base:4, change:7, avail:1, note:"back from her procedure; lost a TBS #1 contender match to Aminata, made the save on 11 Nov; in the TBS 3-way on the Full Gear pre-show" },
+  { name:"Persephone", base:4, change:6, avail:1, note:"lost TBS to Queen Aminata on Fright Night despite Britt Baker's help; heel pair with Baker; in the TBS 3-way at Full Gear" },
+  { name:"Willow Nightingale", base:4, change:5, avail:1, note:"won Women's Blood & Guts" },
+  { name:"Austin Creed", base:4, change:7, avail:1, note:"New Level lost the trios titles at WrestleDream; Texas Death rematch at Full Gear" },
+  { name:"Kofi Kingston", base:4, change:7, avail:1, note:"New Level lost the trios titles at WrestleDream; Texas Death rematch at Full Gear" },
+  { name:"Christian Cage", base:3, change:5, avail:0.8, note:"Copeland says Cage broke his ribs; Cage himself barely on TV since All Out" },
+  { name:"Adam Copeland", base:4, change:8, avail:1, note:"International title shot vs Okada at Full Gear; announced he retires in 2027 and walked out on his Blood & Guts team — turn and farewell watch" },
+  { name:"Kazuchika Okada", base:4, change:6, avail:1, note:"International champ, sided with the Callis Family; defends vs Copeland at Full Gear" },
+  { name:"Tommaso Ciampa", base:4, change:7, avail:1, note:"won the National title from Andrade on Collision 7 Nov, beat Bailey; defends vs Dragunov at Full Gear" },
+  { name:"Konosuke Takeshita", base:3, change:6, avail:1, note:"in Clockwork Carnage; saved Copeland from the Callis Family" },
+  { name:"Adam Page", base:4, change:6, avail:1, note:"trios champ — won the titles at WrestleDream; defends in a Texas Death match at Full Gear" },
+  { name:"Thekla", base:4, change:6, avail:1, note:"lost to Mone at WrestleDream and lost Women's Blood & Guts; Triangle of Madness plotting revenge" },
+  { name:"Brody King", base:4, change:6, avail:1, note:"trios champ — won the titles at WrestleDream; Texas Death defence at Full Gear" },
+  { name:"Matt Jackson", base:4, change:7, avail:1, note:"tag champ, beat Fletcher & Knight at WrestleDream; lost an eliminator to Davis & Doyle, defends vs them at Full Gear; MCMG are next" },
+  { name:"Nick Jackson", base:4, change:7, avail:1, note:"tag champ, beat Fletcher & Knight at WrestleDream; lost an eliminator to Davis & Doyle, defends vs them at Full Gear; MCMG are next" },
+  { name:"Cash Wheeler", base:3, change:4, avail:1, note:"FTR lost the best-of-five to MCMG 3-2" },
+  { name:"PAC", base:3, change:5, avail:0, note:"passed away on 27 Sept 2026" },
+  { name:"Bandido", base:4, change:6, avail:1, note:"trios champ — won the titles at WrestleDream; brawling with New Level before the Texas Death match" },
+  { name:"Mark Briscoe", base:4, change:4, avail:0.4, note:"injured in late June, still no return timeline" },
+  { name:"Roderick Strong", base:4, change:5, avail:1, note:"Conglomeration, lost a Continental eliminator to Moxley, now allied with him for Anarchy in the Arena" },
+  { name:"Mike Bailey", base:4, change:4, avail:1, note:"lost to Dragunov in his debut and lost the National title match to Ciampa" },
+  { name:"Kyle O'Reilly", base:4, change:5, avail:1, note:"Conglomeration, allied with the Death Riders for Anarchy in the Arena" },
+  { name:"Alex Windsor", base:3, change:6, avail:1, note:"women's tag champ, won Women's Blood & Guts; defends vs Wrathlander at Full Gear" },
+  { name:"Harley Cameron", base:3, change:7, avail:1, note:"back from her knee injury, won Women's Blood & Guts; Wrathlander challenge for the women's tag titles at Full Gear" },
+  { name:"Gabe Kidd", base:3, change:5, avail:1, note:"Death Riders, Anarchy in the Arena at Full Gear" },
+  { name:"Jack Perry", base:3, change:5, avail:1, note:"lost the World title eliminator to Fletcher; teams with the Bucks; wants a Samoa Joe rematch" },
   { name:"Megasus", base:3, change:6, avail:1, note:"novelty act, high variance" },
-  { name:"Lena Kross", base:3, change:5, avail:1, note:"Divine Dominion, pinned in the All Out street fight" },
-  { name:"Megan Bayne", base:3, change:5, avail:1, note:"Divine Dominion, lost the All Out street fight" },
-  { name:"Steven Borden", base:3, change:6, avail:0.5, note:"hospitalised with a head injury at All Out (conscious, responsive), return unclear" },
-  { name:"Jay White", base:3, change:5, avail:1, note:"Bang Bang Gang, pinned Yuta to win the All Out pre-show brawl" },
+  { name:"Lena Kross", base:3, change:4, avail:1, note:"Divine Dominion, beat Sisters of Sin at WrestleDream, lost Women's Blood & Guts" },
+  { name:"Megan Bayne", base:3, change:4, avail:1, note:"Divine Dominion, beat Sisters of Sin at WrestleDream, lost Women's Blood & Guts" },
+  { name:"Steven Borden", base:3, change:5, avail:1, note:"back from his All Out head injury — clown-mask attack on Fright Night, wrestled Blood & Guts" },
+  { name:"Jay White", base:4, change:5, avail:1, note:"turned heel leading The Cut (Bang Bang Gang + The Dogs); Anarchy in the Arena vs the Death Riders at Full Gear" },
   { name:"Athena", base:3, change:5, avail:1, note:"ROH crossover" },
-  { name:"Kris Statlander", base:3, change:5, avail:1, note:"regular TV" },
-  { name:"Julia Hart", base:3, change:5, avail:1, note:"Sisters of Sin, kept the Artist of STARDOM titles, meddled in Thekla vs Willow" },
+  { name:"Kris Statlander", base:3, change:7, avail:1, note:"Wrathlander, made Julia Hart submit to win Women's Blood & Guts; women's tag title shot at Full Gear" },
+  { name:"Julia Hart", base:3, change:5, avail:1, note:"Triangle of Madness, submitted in Women's Blood & Guts" },
   { name:"HOOK", base:3, change:5, avail:1, note:"chaos categories" },
-  { name:"Clark Connors", base:3, change:5, avail:1, note:"The Dogs, lost the All Out pre-show brawl" },
-  { name:"David Finlay", base:3, change:5, avail:1, note:"The Dogs, lost the All Out pre-show brawl" },
-  { name:"Ricochet", base:3, change:5, avail:1, note:"The Demand; faces Ospreay in the PAC tribute main event on Dynamite 30 Sept" },
+  { name:"Clark Connors", base:3, change:5, avail:1, note:"The Cut (heel turn with Jay White), Anarchy in the Arena at Full Gear" },
+  { name:"David Finlay", base:3, change:5, avail:1, note:"The Cut, beat Orange Cassidy with the shillelagh; Anarchy in the Arena at Full Gear" },
+  { name:"Ricochet", base:3, change:4, avail:1, note:"The Demand, lost in Clockwork Carnage" },
   { name:"Hologram", base:3, change:5, avail:0.5, note:"knee surgery, return unclear" },
   { name:"Powerhouse Hobbs", base:3, change:5, avail:0, note:"left for WWE" },
-  { name:"Adam Cole", base:3, change:5, avail:0, note:"Undisputed Kingdom" },
+  { name:"Adam Cole", base:3, change:5, avail:0, note:"sidelined with a concussion-related issue" },
   { name:"Anthony Bowens", base:3, change:5, avail:1, note:"turn candidate" },
-  { name:"Francesco Akira", base:3, change:5, avail:1, note:"United Empire, main-event trios exposure" },
+  { name:"Francesco Akira", base:3, change:5, avail:1, note:"United Empire" },
   { name:"Callum Newman", base:3, change:5, avail:1, note:"United Empire" },
-  { name:"Alex Shelley", base:3, change:5, avail:1, note:"Motor City Machine Guns, signed this year" },
-  { name:"Chris Sabin", base:3, change:5, avail:1, note:"Motor City Machine Guns, signed this year" },
-  { name:"Dax Harwood", base:2, change:5, avail:1, note:"FTR, lost the All Out ladder match" },
-  { name:"Skye Blue", base:3, change:4, avail:1, note:"Sisters of Sin, hit Code Blue to keep the Artist of STARDOM titles" },
-  { name:"Claudio Castagnoli", base:3, change:4, avail:1, note:"steady" },
-  { name:"Samoa Joe", base:4, change:5, avail:1, note:"returned at All Out and headbutted Jack Perry — fresh feud" },
-  { name:"Wheeler Yuta", base:3, change:4, avail:1, note:"Death Riders, pinned in the All Out pre-show brawl" },
+  { name:"Alex Shelley", base:3, change:8, avail:1, note:"MCMG won the best-of-five over FTR 3-2 — next in line for the World tag titles" },
+  { name:"Chris Sabin", base:3, change:8, avail:1, note:"MCMG won the best-of-five over FTR 3-2 — next in line for the World tag titles" },
+  { name:"Dax Harwood", base:2, change:4, avail:1, note:"FTR lost the best-of-five to MCMG 3-2" },
+  { name:"Skye Blue", base:3, change:5, avail:1, note:"Triangle of Madness, lost the TBS 3-way on 11 Nov and says she's taking that title" },
+  { name:"Claudio Castagnoli", base:3, change:6, avail:0.6, note:"Blade Runner on the concrete from Jay White on Fright Night, not in the Anarchy team — a big-return candidate" },
+  { name:"Samoa Joe", base:4, change:5, avail:1, note:"lost in Clockwork Carnage; Jack Perry wants a rematch" },
+  { name:"Wheeler Yuta", base:3, change:4, avail:1, note:"Death Riders, Anarchy in the Arena at Full Gear" },
   { name:"The Beast Mortos", base:3, change:4, avail:1, note:"lucha chaos" },
-  { name:"Don Callis", base:3, change:4, avail:1, note:"promo volume, no matches" },
-  { name:"Josh Alexander", base:3, change:4, avail:0, note:"knee surgery, no return date" },
-  { name:"Nick Wayne", base:3, change:4, avail:1, note:"regular Dynamite presence" },
-  { name:"Jamie Hayter", base:2, change:6, avail:1, note:"women's tag champ, retained in the All Out street fight, sided with Ospreay after" },
-  { name:"Dani Luna", base:2, change:5, avail:1, note:"debuted in the TBS open challenge at All Out, lost to Persephone" },
-  { name:"Daniel Garcia", base:2, change:5, avail:1, note:"with the Death Riders, lost the All Out pre-show brawl" },
-  { name:"Bishop Kaun", base:2, change:5, avail:1, note:"The Demand, trios contender" },
-  { name:"Toa Liona", base:2, change:5, avail:1, note:"The Demand, trios contender" },
-  { name:"Volador", base:2, change:5, avail:1, note:"Callis Family, ROH title challenger" },
-  { name:"Mina Shirakawa", base:2, change:4, avail:1, note:"lost the Artist of STARDOM title match on the All Out pre-show" },
+  { name:"Don Callis", base:3, change:4, avail:1, note:"Callis Family won Blood & Guts; promo volume, no matches" },
+  { name:"Josh Alexander", base:3, change:4, avail:1, note:"back in the ring — lost to Copeland and to Darby for TNT; Callis Family" },
+  { name:"Nick Wayne", base:3, change:5, avail:1, note:"beat Jericho at WrestleDream and got an apology; boarding Jericho's cruise" },
+  { name:"Jamie Hayter", base:3, change:6, avail:1, note:"women's tag champ, back from her All Out injury and won Women's Blood & Guts; defends vs Wrathlander at Full Gear" },
+  { name:"Dani Luna", base:2, change:4, avail:1, note:"lost the TBS 4-way at WrestleDream; teams with Hyan" },
+  { name:"Daniel Garcia", base:3, change:4, avail:1, note:"Death Riders, Anarchy in the Arena at Full Gear" },
+  { name:"Bishop Kaun", base:2, change:4, avail:1, note:"The Demand" },
+  { name:"Toa Liona", base:2, change:4, avail:1, note:"The Demand" },
+  { name:"Volador", base:2, change:4, avail:1, note:"Callis Family" },
+  { name:"Mina Shirakawa", base:2, change:4, avail:1, note:"lost to Persephone on Collision" },
   { name:"Shelton Benjamin", base:2, change:4, avail:1, note:"Hurt Syndicate" },
   { name:"Big Bill", base:2, change:4, avail:0, note:"gave notice and left for WWE" },
   { name:"Lance Archer", base:2, change:4, avail:1, note:"brawls" },
   { name:"RUSH", base:2, change:4, avail:1, note:"brawls" },
-  { name:"Wardlow", base:2, change:4, avail:0.3, note:"torn pectoral, return unclear" },
+  { name:"Wardlow", base:3, change:4, avail:1, note:"back and wrestling weekly; Callis Family, threw Darby off the Blood & Guts cage" },
   { name:"Lio Rush", base:2, change:4, avail:1, note:"depth" },
   { name:"Isiah Kassidy", base:2, change:4, avail:0, note:"injured, no return date" },
-  { name:"Zachary Wentz", base:2, change:4, avail:1, note:"The Rascalz, signed this year" },
-  { name:"Dezmond Xavier", base:2, change:4, avail:1, note:"The Rascalz, signed this year" },
-  { name:"Myron Reed", base:2, change:4, avail:1, note:"The Rascalz, signed this year" },
+  { name:"Zachary Wentz", base:2, change:4, avail:1, note:"The Rascalz" },
+  { name:"Dezmond Xavier", base:2, change:4, avail:1, note:"The Rascalz" },
+  { name:"Myron Reed", base:2, change:4, avail:1, note:"The Rascalz, lost to Okada and Swerve" },
   { name:"Komander", base:2, change:3, avail:1, note:"undercard lucha" },
   { name:"Lee Moriarty", base:2, change:3, avail:1, note:"undercard" },
-  { name:"Brian Cage", base:2, change:3, avail:0.3, note:"cleared but barely used" },
+  { name:"Brian Cage", base:2, change:3, avail:1, note:"Callis Family, back on TV in trios" },
   { name:"Billy Gunn", base:2, change:3, avail:1, note:"depth" },
-  { name:"Austin Gunn", base:2, change:3, avail:1, note:"depth" },
-  { name:"Trent Beretta", base:2, change:3, avail:1, note:"depth" },
-  { name:"Juice Robinson", base:2, change:3, avail:1, note:"depth" },
+  { name:"Austin Gunn", base:2, change:5, avail:1, note:"The Cut, Anarchy in the Arena at Full Gear" },
+  { name:"Trent Beretta", base:2, change:3, avail:1, note:"Callis Family" },
+  { name:"Juice Robinson", base:2, change:5, avail:1, note:"The Cut, Anarchy in the Arena at Full Gear" },
   { name:"Thunder Rosa", base:2, change:3, avail:1, note:"depth" },
-  { name:"Stokely Hathaway", base:2, change:3, avail:1, note:"FTR's manager, went through a table at All Out; promo volume, no matches" },
+  { name:"Stokely Hathaway", base:2, change:3, avail:1, note:"FTR's manager; promo volume, no matches" },
   { name:"Marq Quen", base:2, change:3, avail:0, note:"Private Party, injured with no return date" },
   { name:"Bobby Lashley", base:1, change:5, avail:1, note:"Hurt Syndicate" },
-  { name:"Britt Baker", base:3, change:7, avail:1, note:"returned at All In to help Persephone win TBS; heel turn on her is heavily teased" },
-  { name:"Hikaru Shida", base:2, change:4, avail:1, note:"regular TV, faces Baker and Persephone on Dynamite 30 Sept" }
+  { name:"Britt Baker", base:3, change:5, avail:1, note:"turned on the babyfaces — Persephone's heel partner and manager" },
+  { name:"Hikaru Shida", base:2, change:4, avail:1, note:"regular TV" },
+  { name:"Mark Davis", base:4, change:8, avail:1, note:"Callis Family, pinned both Bucks in an eliminator; World tag title shot with Doyle at Full Gear" },
+  { name:"Jake Doyle", base:3, change:8, avail:1, note:"Callis Family, World tag title shot with Davis at Full Gear" },
+  { name:"Queen Aminata", base:4, change:5, avail:1, note:"TBS champ — beat Persephone on Fright Night, retained in a 3-way; defends vs World and Persephone on the Full Gear pre-show" },
+  { name:"Ilja Dragunov", base:4, change:7, avail:1, note:"debuted at WrestleDream, beat Bailey; National title shot vs Ciampa at Full Gear" },
+  { name:"Marina Shafir", base:4, change:8, avail:1, note:"Death Riders, made Mone tap in a mixed tag; Women's World title shot at Full Gear" },
+  { name:"Hyan", base:2, change:4, avail:1, note:"lost the TBS 3-way on 11 Nov" },
+  { name:"Ace Austin", base:2, change:5, avail:1, note:"The Cut, Anarchy in the Arena at Full Gear" },
+  { name:"Colten Gunn", base:2, change:5, avail:1, note:"The Cut, Anarchy in the Arena at Full Gear" }
 ];
 
 // Recency-weighted across six Ryan rosters, oldest to newest, geometric decay.
@@ -4833,8 +5065,150 @@ const RYAI_ALIASES_DEFAULT = {
   'Bandito': 'Bandido', 'Daddy Ass': 'Billy Gunn',
   'Jungle Boy': 'Jack Perry', 'Jungle Jack Perry': 'Jack Perry',
   'Mercedes Mon\u00e9': 'Mercedes Mone', 'Andrade El Idolo': 'Andrade',
-  'Dr. Britt Baker': 'Britt Baker', 'Dr. Britt Baker D.M.D.': 'Britt Baker'
+  'Dr. Britt Baker': 'Britt Baker', 'Dr. Britt Baker D.M.D.': 'Britt Baker',
+  'Kofi': 'Kofi Kingston', 'Hangman Page': 'Adam Page', 'Hangman Adam Page': 'Adam Page',
+  'Speedball Mike Bailey': 'Mike Bailey', 'Switchblade Jay White': 'Jay White',
+  'Andrade El \u00cddolo': 'Andrade', 'Big Stoke': 'Stokely Hathaway', 'Stokely': 'Stokely Hathaway'
 };
+
+// ── PPV results → RyAI ───────────────────────
+// The card for the show that closes the season. Entering a result here moves
+// RyAI's board on every phone and the TV straight away, so the draft that
+// follows is priced on what actually happened. Names must match the board
+// exactly; that is what the effects key on.
+const RYAI_PPV = {
+  id: 'full-gear-2026', name: 'Full Gear', when: 'Sat 14 Nov · Phoenix',
+  matches: [
+    { id: 'tbs', title: 'TBS Championship', stip: '3-way · Tailgate Brawl', sides: [
+      { names: ['Queen Aminata'], champ: true }, { names: ['Maya World'] }, { names: ['Persephone'] }] },
+    { id: 'intl', title: 'International Championship', sides: [
+      { names: ['Kazuchika Okada'], champ: true }, { names: ['Adam Copeland'] }] },
+    { id: 'natl', title: 'National Championship', sides: [
+      { names: ['Tommaso Ciampa'], champ: true }, { names: ['Ilja Dragunov'] }] },
+    { id: 'wtag', title: "Women's Tag Team Championship", sides: [
+      { label: 'Brawling Birds', names: ['Jamie Hayter', 'Alex Windsor'], champ: true },
+      { label: 'Wrathlander', names: ['Kris Statlander', 'Harley Cameron'] }] },
+    { id: 'tag', title: 'World Tag Team Championship', sides: [
+      { label: 'Young Bucks', names: ['Matt Jackson', 'Nick Jackson'], champ: true },
+      { label: 'Davis & Doyle', names: ['Mark Davis', 'Jake Doyle'] }] },
+    { id: 'trios', title: 'Trios Championship', stip: 'Texas Death', sides: [
+      { label: 'Hangman & Brodido', names: ['Adam Page', 'Bandido', 'Brody King'], champ: true },
+      { label: 'Swerve & New Level', names: ['Swerve Strickland', 'Kofi Kingston', 'Austin Creed'] }] },
+    { id: 'anarchy', title: null, stip: 'Anarchy in the Arena', sides: [
+      { label: 'Death Riders & Conglomeration', names: ['Jon Moxley', 'Gabe Kidd', 'Daniel Garcia',
+        'Wheeler Yuta', 'Orange Cassidy', "Kyle O'Reilly", 'Roderick Strong'] },
+      { label: 'The Cut', names: ['Jay White', 'Ace Austin', 'Austin Gunn', 'Colten Gunn',
+        'Clark Connors', 'David Finlay', 'Juice Robinson'] }] },
+    { id: 'women', title: "Women's World Championship", sides: [
+      { names: ['Mercedes Mone'], champ: true }, { names: ['Marina Shafir'] }] },
+    { id: 'world', title: 'AEW World Championship', sides: [
+      { names: ['Will Ospreay'], champ: true }, { names: ['Kyle Fletcher'] }] },
+  ],
+};
+
+// What one night is worth on the board. Kept small on purpose: a single result
+// should shuffle the middle of RyAI's list, not overturn six seasons of Ryan.
+//   new champion      base +1, change -1  (more TV, but that 20 is cashed)
+//   dethroned champ   base -0.5, change +1 (rematch clause)
+//   retained          base +0.5
+//   failed challenge  change -1           (the title shot is spent)
+//   non-title win     base +0.5, change +0.5 / loss base -0.5
+// Anything off the card goes in as a moment.
+const RYAI_MOMENTS = {
+  title: { label: 'Won a title', base: 1, change: -1, txt: 'won a title' },
+  win:   { label: 'Big win',     base: 0.5, change: 0.5, txt: 'big win' },
+  turn:  { label: 'Turned',      base: 1, txt: 'turned' },
+  ret:   { label: 'Returned',    base: 0.5, avail: 1, txt: 'returned' },
+  debut: { label: 'Debuted',     base: 1, avail: 1, txt: 'debuted' },
+  hurt:  { label: 'Injured',     avail: 0.3, txt: 'got hurt' },
+  gone:  { label: 'Written off', avail: 0, txt: 'written off' },
+};
+
+// Results only count against the board they were entered on. When the board is
+// next rewritten it will already include this show, and stacking the deltas on
+// top would count Full Gear twice.
+function ryaiPpvLive(cfg) {
+  const p = (cfg || ryaiConfig).ppv;
+  return (p && p.event === RYAI_PPV.id && p.rev === RYAI_BOARD_REV) ? p : null;
+}
+
+let ryaiFxCache = { key: null, fx: {} }, ryaiFxOff = false;
+function ryaiPpvFx() {
+  if (ryaiFxOff) return {};
+  const p = ryaiPpvLive();
+  const key = p ? JSON.stringify([p.results, p.moments]) : '';
+  if (ryaiFxCache.key === key) return ryaiFxCache.fx;
+  const fx = {};
+  const add = function (n, d, note) {
+    const f = fx[n] || (fx[n] = { base: 0, change: 0, avail: null, notes: [] });
+    f.base += d.base || 0; f.change += d.change || 0;
+    if (d.avail != null) f.avail = d.avail;
+    if (note) f.notes.push(note);
+  };
+  const at = ' at ' + RYAI_PPV.name;
+  if (p) {
+    RYAI_PPV.matches.forEach(function (m) {
+      const w = (p.results || {})[m.id];
+      if (w == null || w < 0 || !m.sides[w]) return;
+      const champ = m.sides.findIndex(function (x) { return x.champ; });
+      m.sides.forEach(function (side, i) {
+        side.names.forEach(function (n) {
+          if (!m.title) {
+            if (i === w) add(n, { base: 0.5, change: 0.5 }, 'won ' + m.stip + at);
+            else add(n, { base: -0.5 }, 'lost ' + m.stip + at);
+          } else if (i === w) {
+            if (i === champ) add(n, { base: 0.5 }, 'retained the ' + m.title + at);
+            else add(n, { base: 1, change: -1 }, 'won the ' + m.title + at);
+          } else if (i === champ) {
+            add(n, { base: -0.5, change: 1 }, 'lost the ' + m.title + at + ', rematch due');
+          } else {
+            add(n, { change: -1 }, 'fell short for the ' + m.title + at);
+          }
+        });
+      });
+    });
+    (p.moments || []).forEach(function (mo) {
+      const k = RYAI_MOMENTS[mo.kind];
+      if (k) add(mo.name, k, k.txt + at);
+    });
+  }
+  ryaiFxCache = { key: key, fx: fx };
+  return fx;
+}
+
+// The board plus anyone who debuted at the show and was not on it yet.
+function ryaiBoard() {
+  const b = ryaiConfig.board || [];
+  const p = ryaiPpvLive();
+  if (!p || !(p.moments || []).length) return b;
+  const have = new Set(b.map(function (e) { return ryaiNormalize(e.name); }));
+  const extra = [];
+  p.moments.forEach(function (mo) {
+    const k = ryaiNormalize(mo.name);
+    if (mo.kind !== 'debut' || have.has(k)) return;
+    have.add(k);
+    extra.push({ name: mo.name, base: 2, change: 5, avail: 1, note: 'new signing' });
+  });
+  return extra.length ? b.concat(extra) : b;
+}
+
+// One wrestler as RyAI sees them right now: board, then typed roster news,
+// then tonight's results on top.
+function ryaiEff(e) {
+  const st = (ryaiConfig.status || {})[e.name] || {};
+  let avail = st.avail == null ? (e.avail == null ? 1 : e.avail) : st.avail;
+  let change = st.change == null ? e.change : st.change;
+  let base = e.base;
+  let note = st.note || e.note || '';
+  const f = ryaiPpvFx()[e.name];
+  if (f) {
+    base += f.base; change += f.change;
+    if (f.avail != null) avail = f.avail;
+    if (f.notes.length) note = f.notes.join('; ') + (note ? '; ' + note : '');
+  }
+  const clamp = function (x) { return Math.max(0, Math.min(10, x)); };
+  return { base: clamp(base), change: clamp(change), avail: avail, note: note };
+}
 
 const RYAI_DEFAULTS = {
   enabled: false, team: 'ryan', countdownMs: 60000,
@@ -4906,7 +5280,7 @@ function ryaiTokenScore(q, c) {
 
 // { match, score, via }. match is null when it will not guess.
 function ryaiResolve(raw, pool) {
-  const names = pool || ryaiConfig.board.map(b => b.name);
+  const names = pool || ryaiBoard().map(b => b.name);
   const norm = ryaiNormalize(raw);
   if (!norm) return { match: null, score: 0, via: 'empty' };
   const aliases = ryaiConfig.aliases || {};
@@ -4958,31 +5332,30 @@ function ryaiTaken() {
   return taken;
 }
 
-function ryaiRank(round) {
+function ryaiRank(round, opts) {
   const w = Object.assign({}, RYAI_DEFAULTS.weights, ryaiConfig.weights);
-  const taken = ryaiTaken();
+  const taken = (opts && opts.ignoreTaken) ? new Set() : ryaiTaken();
   const favs = ryaiConfig.favourites || {};
   const stars = new Set((ryaiConfig.stars || []).map(ryaiNormalize));
   const out = [];
-  const status = ryaiConfig.status || {};
-  for (const e of ryaiConfig.board) {
+  for (const e of ryaiBoard()) {
     if (taken.has(ryaiNormalize(e.name))) continue;
     // Availability is the share of the season this wrestler is expected on TV.
     // 0 is injured, gone, or written off with no return in sight — a drafted
     // slot that scores nothing. It scales TV volume but NOT change: someone
     // out hurt with a return coming is what "Big Return" pays 10 for.
-    const st = status[e.name] || {};
-    const avail = st.avail == null ? (e.avail == null ? 1 : e.avail) : st.avail;
+    const x = ryaiEff(e);
+    const avail = x.avail;
     if (avail <= 0) continue;
-    const change = st.change == null ? e.change : st.change;
+    const change = x.change;
     const aff = favs[e.name] || 0;
     // The star premium is a slot-1-to-3 behaviour. Ryan has never taken Ospreay
     // or PAC later than slot 3; past that the premium is spent and he works the
     // favourites pool instead.
     const star = (stars.has(ryaiNormalize(e.name)) && round <= 3) ? w.star : 0;
-    const parts = { base: e.base * avail * w.base, change: change * w.change,
+    const parts = { base: x.base * avail * w.base, change: change * w.change,
       affinity: aff * w.affinity, star: star };
-    out.push({ name: e.name, note: e.note, aff: aff, parts: parts,
+    out.push({ name: e.name, note: x.note, aff: aff, parts: parts,
       total: parts.base + parts.change + parts.affinity + parts.star });
   }
   return out.sort((a, b) => b.total - a.total);
@@ -5208,17 +5581,43 @@ function ryaiMergeSaved(v) {
   cfg.status = kept;
   return cfg;
 }
-async function ryaiLoad() {
+// Live, not read once. Every device ranks independently, so a phone still
+// holding an older board would show and commit a different pick from the rest
+// of the room — and Full Gear results entered on one phone have to reach the
+// others (and the TV) before the draft, not after a reload.
+let ryaiRef = null, ryaiSeen = false;
+function ryaiFingerprint() {
+  const c = ryaiConfig;
+  return JSON.stringify([c.boardRev, c.status, c.ppv, c.weights, c.reach, c.favourites, c.stars, c.board && c.board.length]);
+}
+function ryaiLoad() {
   if (!fbDb) return;
-  try {
-    const snap = await onceWithin(fbDb.ref(RYAI_PATH), 8000);
-    const v = parseRaw(snap.val());
-    if (v && typeof v === 'object') ryaiConfig = ryaiMergeSaved(v);
-  } catch (e) { /* defaults are usable; the draft must never block on this */ }
-  if (TV_MODE) { tvRyai.n = -1; tvRender(); }
+  if (ryaiRef) ryaiRef.off('value', ryaiOnValue);
+  ryaiRef = fbDb.ref(RYAI_PATH);
+  ryaiRef.on('value', ryaiOnValue, function () { /* defaults are usable; the draft must never block on this */ });
+}
+function ryaiOnValue(snap) {
+  const v = parseRaw(snap.val());
+  const wasOn = !!ryaiConfig.enabled, before = ryaiFingerprint(), first = !ryaiSeen;
+  ryaiSeen = true;
+  if (v && typeof v === 'object') ryaiConfig = ryaiMergeSaved(v);
+  const moved = before !== ryaiFingerprint();
+  if (TV_MODE) { if (first || moved) { tvRyai.n = -1; tvRender(); } return; }
   // RyAI on/off decides the Log tabs and the toggle.
-  renderStandings();
-  if (currentTabName === 'score' && !logDirty()) loadShowScores();
+  if (first || wasOn !== !!ryaiConfig.enabled) {
+    renderStandings();
+    if (currentTabName === 'score' && !logDirty()) loadShowScores();
+  }
+  if (currentTabName !== 'draft' || !(first || moved || wasOn !== !!ryaiConfig.enabled)) return;
+  if (draftState.active) {
+    // Same update reaches every phone, so every phone re-chooses together.
+    if (moved) ryaiDisarm();
+    rerenderDraft();
+  } else if (wasOn !== !!ryaiConfig.enabled) {
+    rerenderDraft();
+  } else {
+    ppvPaint();
+  }
 }
 async function ryaiSave() {
   if (!fbDb) throw new Error('not connected');
@@ -5416,7 +5815,7 @@ async function settleUndo(last, expected, res, same) {
 function draftSuggestions() {
   try {
     const taken = ryaiTaken();
-    return (ryaiConfig.board || [])
+    return ryaiBoard()
       .filter(b => !taken.has(ryaiNormalize(b.name)))
       .map(b => `<option value="${escAttr(b.name)}"></option>`).join('');
   } catch (e) { return ''; }
@@ -5926,9 +6325,9 @@ function tvEntry(name) {
   if (!name) return null;
   const r = ryaiResolve(name);
   const key = r.match || name;
-  return (ryaiConfig.board || []).find(b => b.name === key) || null;
+  return ryaiBoard().find(b => b.name === key) || null;
 }
-function tvNote(name) { const e = tvEntry(name); return e && e.note ? e.note : ''; }
+function tvNote(name) { const e = tvEntry(name); return e ? ryaiEff(e).note : ''; }
 
 // "Best available" is the board's own value — TV volume scaled by how much of
 // the season they are expected to be around, plus the smaller change bump.
@@ -5937,12 +6336,9 @@ function tvNote(name) { const e = tvEntry(name); return e && e.note ? e.note : '
 function tvBestAvailable(n) {
   const w = Object.assign({}, RYAI_DEFAULTS.weights, ryaiConfig.weights);
   const taken = ryaiTaken();
-  const status = ryaiConfig.status || {};
-  return (ryaiConfig.board || []).map(e => {
-    const st = status[e.name] || {};
-    const avail = st.avail == null ? (e.avail == null ? 1 : e.avail) : st.avail;
-    const change = st.change == null ? e.change : st.change;
-    return { name: e.name, note: e.note, avail: avail, v: e.base * avail * w.base + change * w.change };
+  return ryaiBoard().map(e => {
+    const x = ryaiEff(e);
+    return { name: e.name, note: x.note, avail: x.avail, v: x.base * x.avail * w.base + x.change * w.change };
   }).filter(e => e.avail > 0 && !taken.has(ryaiNormalize(e.name)))
     .sort((a, b) => b.v - a.v).slice(0, n);
 }
