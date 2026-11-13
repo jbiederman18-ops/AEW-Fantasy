@@ -395,21 +395,45 @@
   .lg-col { display: flex; justify-content: space-between; gap: 6px; font-size: 13px; font-weight: 800; color: var(--tci);
     border-bottom: 3px solid var(--tc); padding-bottom: 4px; }
   .lg-col span:last-child { color: var(--ink); font-variant-numeric: tabular-nums; }
-  .lg-grid { padding: 12px 14px 14px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
-  .lg-tile { min-height: 50px; min-width: 0; display: flex; align-items: stretch; padding: 0; overflow: hidden; text-align: left; cursor: pointer;
-    background: var(--card); border: var(--bd-soft); border-radius: var(--r); color: var(--ink); font: inherit; }
-  .lg-tile .sl { width: 26px; flex: 0 0 auto; display: flex; align-items: center; justify-content: center; background: var(--tct);
-    border-right: 2px solid var(--line); font-size: 13px; font-weight: 800; text-transform: uppercase; color: var(--ink); }
-  .lg-tile .nm { flex: 1; min-width: 0; padding: 4px 8px; display: flex; flex-direction: column; justify-content: center; gap: 1px; }
-  .lg-tile .nm b { font-size: 14.5px; font-weight: 700; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .lg-tile .nm small { font-size: 11px; font-weight: 700; color: var(--tci); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .lg-tile .pt { display: flex; align-items: center; padding-right: 8px; font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; }
-  .lg-tile.on { border-color: var(--ink); box-shadow: 3px 3px 0 var(--tc); }
-  .lg-tile.on .sl { background: var(--tc); border-right-color: var(--ink); }
-  .lg-tile.on .pt { color: var(--ink); }
-  .lg-tile.ry { --tc: var(--team-ryan); --tci: var(--ink-ryan); --tct: var(--tint-ryan); }
-  .lg-tile.empty { opacity: 0.45; cursor: default; border-style: dashed; }
-  .lg-none { grid-column: 1 / -1; color: var(--muted); font-size: 14px; padding: 14px 2px; }
+  /* the roster as one column: tap a wrestler, their buttons open underneath */
+  .lg-list { padding: 12px 12px 18px; display: flex; flex-direction: column; gap: 7px; }
+  .lg-sec { display: flex; justify-content: space-between; gap: 6px; margin: 10px 2px 2px; padding-bottom: 4px; border-bottom: 3px solid var(--tc);
+    font-size: 13px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--tci); }
+  .lg-sec:first-child { margin-top: 0; }
+  .lg-sec span:last-child { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .lg-row { background: #FFFDF8; border: var(--bd-soft); border-radius: 8px; scroll-margin: 12px 0 96px; transition: box-shadow .12s; }
+  .lg-rowbtn { all: unset; box-sizing: border-box; width: 100%; min-height: 52px; display: flex; align-items: center; gap: 10px; padding: 0 12px;
+    cursor: pointer; color: var(--ink); border-radius: 6px; }
+  .lg-rowbtn:focus-visible { outline: 3px solid var(--ryback); outline-offset: -3px; }
+  .lg-row .sl { flex: none; width: 16px; text-align: center; font-size: 12px; font-weight: 800; text-transform: uppercase; color: var(--muted); }
+  .lg-row .nm { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+  .lg-row .nm b { font-size: 16px; font-weight: 700; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lg-row .nm small { font-size: 11.5px; font-weight: 800; color: var(--tci); }
+  .lg-row .pt { flex: none; font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .lg-row.on .pt { background: var(--tc); border: 1.5px solid var(--ink); border-radius: 4px; padding: 1px 8px; }
+  .lg-row.open { background: var(--card); border-color: var(--ink); border-radius: var(--r-card); box-shadow: 4px 4px 0 var(--tc); margin: 4px 0 6px; }
+  .lg-row.empty { opacity: 0.5; border-style: dashed; }
+  .lg-row.empty .lg-rowbtn { cursor: default; }
+  .lg-tags { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 12px 11px 38px; margin-top: -3px; }
+  .lg-tag { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 5px 0 9px; cursor: pointer;
+    background: var(--bg); color: var(--ink); border: 1.5px solid var(--ink); border-radius: var(--r-tag); font: 700 13px var(--font); }
+  .lg-tag b { font-weight: 800; }
+  .lg-tag .x { width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; border: 1.5px solid currentColor;
+    border-radius: 3px; font-size: 14px; font-weight: 800; line-height: 1; opacity: 0.55; }
+  .lg-tag:active .x { opacity: 1; }
+  .lg-groups { display: flex; flex-direction: column; gap: 13px; padding: 12px 12px 16px; border-top: 2px dashed var(--line); }
+  .lg-grp-h { margin-bottom: 7px; font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  .lg-grp.big .lg-grp-h { color: var(--ryback); }
+  .lg-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+  .lg-chip { position: relative; display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 0 11px; cursor: pointer; text-align: left;
+    background: var(--card); color: var(--ink); border: var(--bd); border-radius: 5px; box-shadow: 2px 2px 0 var(--tc);
+    font: 700 14px/1.15 var(--font); touch-action: manipulation; transition: transform .06s, box-shadow .06s; }
+  .lg-chip:active { transform: translate(2px, 2px); box-shadow: none; }
+  .lg-chip .p { font-size: 12.5px; font-weight: 800; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .lg-grp.big .lg-chip .p { color: var(--ryback); }
+  .lg-chip.on { background: var(--tct); }
+  .lg-chip i { position: absolute; top: -9px; right: -7px; min-width: 20px; height: 20px; padding: 0 4px; display: flex; align-items: center; justify-content: center;
+    background: var(--ink); color: var(--bg); border-radius: 4px; font-style: normal; font-size: 11px; font-weight: 800; }
   .lg-foot { position: sticky; bottom: 0; z-index: 3; margin-top: auto; display: flex; align-items: center; gap: 10px;
     padding: 10px 14px; background: var(--ink); color: var(--bg); border-top: 6px solid var(--tc); }
   .lg-dot { width: 10px; height: 10px; border-radius: 2px; background: var(--ok); flex: 0 0 auto; }
@@ -421,48 +445,6 @@
     font: 800 14px var(--font); cursor: pointer; white-space: nowrap; }
   .lg-undo:disabled { opacity: 0.35; cursor: default; }
 
-  /* the wrestler sheet */
-  #lsBackdrop { z-index: 158; }
-  .ls { position: absolute; left: 0; right: 0; bottom: 0; z-index: 160; max-height: calc(100% - var(--header-h) - var(--safe-top) - 40px);
-    display: flex; flex-direction: column; background: var(--card); border-top: var(--bd); border-radius: 14px 14px 0 0; overflow: hidden;
-    transform: translateY(100%); visibility: hidden; transition: transform .24s cubic-bezier(0.32, 0.72, 0, 1); }
-  .ls.open { transform: none; visibility: visible; }
-  .ls::before { content: ''; flex: 0 0 auto; height: 8px; background: var(--tc); border-bottom: var(--bd); }
-  .ls-head { padding: 12px 16px 10px; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; border-bottom: 2px dashed var(--line); }
-  .ls-kick { font-size: 12px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--tci); }
-  .ls-name { font-size: 26px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; overflow-wrap: anywhere; margin-top: 3px; }
-  .ls-pts { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
-  .ls-pts b { font-size: 26px; font-weight: 800; line-height: 1; background: var(--tc); border: var(--bd); border-radius: var(--r); padding: 4px 10px;
-    box-shadow: var(--sh-sm); font-variant-numeric: tabular-nums; }
-  .ls-pts span { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
-  .ls-body { overflow-y: auto; overscroll-behavior: contain; padding: 4px 16px 14px; }
-  .ls-grp { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin: 12px 0 6px; }
-  .ls-grp.big { color: var(--ryback); }
-  .ls-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; }
-  .ls-t { position: relative; min-width: 0; }
-  .ls-add { width: 100%; min-height: 64px; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-end; gap: 2px;
-    padding: 6px 7px; background: var(--card); color: var(--ink); border: var(--bd); border-radius: var(--r); box-shadow: 2px 2px 0 var(--tc);
-    cursor: pointer; text-align: left; touch-action: manipulation; transition: transform .06s, box-shadow .06s; }
-  .ls-add:active { transform: translate(2px, 2px); box-shadow: none; }
-  .ls-add .p { font-size: 17px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
-  .ls-add .p i { font-style: normal; font-size: 13px; }
-  .ls-add .l { font-size: 12px; font-weight: 700; line-height: 1.1; overflow-wrap: anywhere; }
-  .ls-t.big .ls-add .p { color: var(--ryback); }
-  .ls-t.on .ls-add { background: var(--tc); box-shadow: 2px 2px 0 var(--ink); }
-  .ls-t.on .ls-add .p { color: var(--ink); }
-  /* ghost corner minus: a faint outlined − ; the tap area stays 40px */
-  .ls-minus { position: absolute; top: 0; right: 0; width: 40px; height: 40px; border: 0; background: transparent; padding: 0; color: var(--ink);
-    display: flex; align-items: center; justify-content: center; cursor: pointer; touch-action: manipulation; }
-  .ls-minus span { width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; border: 2px solid currentColor;
-    border-radius: 4px; opacity: 0.55; font: 800 15px/1 var(--font); transition: opacity .12s, transform .12s; }
-  .ls-minus:active span { opacity: 0.95; transform: scale(0.9); }
-  .ls-minus:focus-visible { outline: 2px solid var(--ink); outline-offset: -4px; }
-  .ls-foot { display: flex; gap: 7px; padding: 10px 16px calc(12px + var(--safe-bottom)); border-top: var(--bd); background: var(--bg); }
-  .ls-foot button { height: 52px; max-width: 30%; padding: 0 12px; border: var(--bd); border-radius: var(--r); background: var(--card); color: var(--ink);
-    font: 700 14px var(--font); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .ls-foot button:disabled { opacity: 0.3; }
-  .ls-foot .ls-done { flex: 1; max-width: none; background: var(--ryback); color: #fff; font-size: 20px; font-weight: 800; box-shadow: var(--sh-sm); }
-  .ls-foot .ls-done:active { transform: translate(2px, 2px); box-shadow: none; }
   .lg-toast { position: absolute; left: 14px; right: 14px; z-index: 170; top: calc(var(--header-h) + var(--safe-top) + 10px);
     min-height: 48px; display: flex; align-items: center; gap: 10px; padding: 0 6px 0 12px;
     background: var(--ink); color: var(--bg); border: var(--bd); border-radius: var(--r); box-shadow: 4px 4px 0 var(--ryback);
@@ -935,10 +917,11 @@
   /* ══ HOVER (pointers only: on touch it sticks after a tap) ══ */
   @media (hover: hover) and (pointer: fine) {
     nav button:hover { color: var(--ink); }
-    .filter-tab:hover, .sh-filter button:hover, .lg-tab:hover, .rr-tabs button:hover, .lg-tile:hover:not(.empty) { border-color: var(--ink); }
+    .filter-tab:hover, .sh-filter button:hover, .lg-tab:hover, .rr-tabs button:hover, .lg-row:not(.empty):not(.open):hover { border-color: var(--ink); }
     .sh-row:hover, .hm-tonight:hover, .sh-next:hover { transform: translate(-1px, -1px); }
-    .ls-add:hover { background: var(--bg); }
-    .ls-t.on .ls-add:hover { background: var(--tc); filter: brightness(1.05); }
+    .lg-chip:hover { background: var(--bg); }
+    .lg-chip.on:hover { background: var(--tct); filter: brightness(0.97); }
+    .lg-tag:hover .x { opacity: 1; }
     .sheet-item:hover { background: var(--bg); }
     .btn-primary:hover, .draft-pick-btn:hover { filter: brightness(1.06); }
     .btn-secondary:hover { background: var(--bg); }
@@ -951,7 +934,6 @@
     .lb-name { font-size: 18px; } .lb-row.first .lb-name { font-size: 20px; }
     .lb-pts { font-size: 26px; } .lb-row.first .lb-pts { font-size: 30px; }
     .lg-show { font-size: 24px; }
-    .ls-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   }
   @media (min-width: 640px) {
     main { padding-left: 24px; padding-right: 24px; }
@@ -974,15 +956,11 @@
     .hd-bar { flex-direction: row; align-items: center; gap: 12px; }
     main { left: var(--rail-w); padding: 20px 28px 40px; }
     main > .tab-panel { max-width: 1180px; }
-    .more-sheet, .sheet-backdrop:not(#lsBackdrop) { display: none; }
+    .more-sheet, .sheet-backdrop { display: none; }
     #tab-score.active { margin: -20px -28px 0; }
     .lg-head { padding: 16px 28px; }
-    .lg-cols, .lg-grid { padding-left: 28px; padding-right: 28px; }
+    .lg-list { width: 100%; max-width: 780px; margin: 0 auto; padding-left: 28px; padding-right: 28px; }
     .lg-foot { padding-left: 28px; padding-right: 28px; }
-    .lg-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-    .lg-grid.paired { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .ls { left: 50%; right: auto; width: 560px; margin-left: calc(var(--rail-w) / 2 - 280px); bottom: 24px; border: var(--bd);
-      border-radius: 14px; box-shadow: 6px 6px 0 var(--ink); max-height: calc(100% - var(--header-h) - 60px); }
     .lg-toast { left: auto; right: 24px; width: 380px; }
 
     /* Home on a wide screen: the Race leads on the left, everything else stacks right */
@@ -1076,20 +1054,6 @@
   <button class="sheet-item" onclick="switchTab('settings'); closeMore();"><span class="sheet-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.5"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"></path></svg></span>Settings</button>
 </div>
 
-<!-- WRESTLER SHEET (logging) -->
-<div class="sheet-backdrop" id="lsBackdrop" onclick="closeLogSheet()"></div>
-<section class="ls" id="logSheet" role="dialog" aria-modal="true" aria-labelledby="lsName">
-  <div class="ls-head">
-    <div><div class="ls-kick" id="lsKick"></div><div class="ls-name" id="lsName"></div></div>
-    <div class="ls-pts"><b id="lsPts">0</b><span>Tonight</span></div>
-  </div>
-  <div class="ls-body" id="lsBody"></div>
-  <div class="ls-foot">
-    <button type="button" id="lsPrev" onclick="logSheetStep(-1)">‹</button>
-    <button type="button" class="ls-done" onclick="closeLogSheet()">Done</button>
-    <button type="button" id="lsNext" onclick="logSheetStep(1)">›</button>
-  </div>
-</section>
 <div class="lg-toast" id="logToast" role="status" aria-live="polite"></div>
 
 <main>
@@ -1166,8 +1130,8 @@
         </button>
       </div>
     </div>
-    <div class="lg-cols" id="lgCols"></div>
-    <div class="lg-grid" id="logGrid"></div>
+    <div class="lg-cols" id="lgCols" hidden></div>
+    <div class="lg-list" id="logGrid"></div>
     <div class="lg-foot">
       <span class="lg-dot" id="logDot"></span>
       <span class="lg-status" id="logStatus">Saved for everyone</span>
@@ -3694,17 +3658,55 @@ function renderLogTabs() {
     sw.querySelector('.lg-switch-txt span').textContent = on ? 'On · ' + (pts ? '+' + pts : '0') : 'Off';
   }
 }
-function logTileHTML(team, letter, opts) {
+// What's logged for one wrestler on the open show, whether or not the team
+// has a working set yet (a search hit may not).
+function rowCounts(team, letter) {
+  if (LOG[team]) return LOG[team].live[letter] || {};
+  const cell = currentShowId && state.scores[team] && state.scores[team][currentShowId] && state.scores[team][currentShowId][letter];
+  const out = {};
+  if (cell) for (const a of ACCOMPLISHMENTS) { const c = getCount(cell, a.key); if (c) out[a.key] = c; }
+  return out;
+}
+const LOG_KEY_ORDER = LOG_GROUPS.flatMap(g => g.keys);
+function logRowHTML(team, letter, opts) {
   const o = opts || {};
   const name = slotNameFor(team, letter);
-  const ry = !o.found && ryaiOn() && team === ryTeam() && team !== currentTeam;
-  if (!name) return `<div class="lg-tile empty${ry ? ' ry' : ''}"><span class="sl">${letter}</span><span class="nm"><b>—</b></span></div>`;
+  if (!name) return `<div class="lg-row empty" style="${tcv(team)}"><div class="lg-rowbtn"><span class="sl">${letter}</span>`
+    + `<span class="nm"><b>Empty slot</b></span></div></div>`;
   const pts = wrestlerPtsLive(team, letter);
-  return `<button type="button" class="lg-tile${pts ? ' on' : ''}${ry ? ' ry' : ''}${o.found ? ' found' : ''}" id="lt_${team}_${letter}"`
-    + (o.found ? ` style="${tcv(team)}"` : '')
-    + ` onclick="openLogSheet('${team}','${letter}')">`
+  const open = !!(logSheet && logSheet.team === team && logSheet.letter === letter);
+  const counts = rowCounts(team, letter);
+  const logged = LOG_KEY_ORDER.filter(k => counts[k]);
+  let html = `<div class="lg-row${pts ? ' on' : ''}${open ? ' open' : ''}${o.found ? ' found' : ''}" id="lt_${team}_${letter}" style="${tcv(team)}">`
+    + `<button type="button" class="lg-rowbtn" aria-expanded="${open}" onclick="openLogSheet('${team}','${letter}')">`
     + `<span class="sl">${letter}</span><span class="nm"><b>${esc(name)}</b>${o.found ? `<small>${esc(teamTag(team))}</small>` : ''}</span>`
     + `<span class="pt">${pts ? '+' + pts : ''}</span></button>`;
+  if (logged.length) html += '<div class="lg-tags">' + logged.map(k => {
+    const lbl = TILE_LABELS[k], c = counts[k];
+    return `<button type="button" class="lg-tag" data-t="${k}" aria-label="Take one ${escAttr(lbl)} off" onclick="stepAcc('${team}','${letter}','${k}',-1)">`
+      + `${esc(lbl)} <b>+${ACC_BY_KEY[k].pts}${c > 1 ? ' ×' + c : ''}</b><span class="x" aria-hidden="true">−</span></button>`;
+  }).join('') + '</div>';
+  if (open) html += '<div class="lg-groups">' + LOG_GROUPS.map(g =>
+    `<div class="lg-grp${g.big ? ' big' : ''}"><div class="lg-grp-h">${esc(g.label)}</div><div class="lg-chips">` + g.keys.map(k => {
+      const lbl = TILE_LABELS[k], c = counts[k] || 0, p = ACC_BY_KEY[k].pts;
+      return `<button type="button" class="lg-chip${c ? ' on' : ''}" data-k="${k}" aria-label="Add ${escAttr(lbl)}, ${p} points${c ? ', logged ' + c : ''}"`
+        + ` onclick="stepAcc('${team}','${letter}','${k}',1)">${esc(lbl)}<span class="p">+${p}</span>${c ? `<i>×${c}</i>` : ''}</button>`;
+    }).join('') + '</div></div>').join('') + '</div>';
+  return html + '</div>';
+}
+// Repaint one row in place, keeping focus on the same control.
+function paintLogRow(team, letter) {
+  const el = document.getElementById(`lt_${team}_${letter}`);
+  if (!el) return;
+  const a = document.activeElement;
+  let keep = '';
+  if (a && el.contains(a)) keep = a.dataset.k ? '[data-k="' + a.dataset.k + '"]' : a.dataset.t ? '[data-t="' + a.dataset.t + '"]' : '.lg-rowbtn';
+  el.outerHTML = logRowHTML(team, letter, { found: el.classList.contains('found') });
+  if (keep) {
+    const n = document.getElementById(`lt_${team}_${letter}`);
+    const f = n && (n.querySelector(keep) || n.querySelector('.lg-rowbtn'));
+    if (f) f.focus({ preventScroll: true });
+  }
 }
 function logSequence() {
   const teams = logGridTeams(), out = [];
@@ -3720,42 +3722,35 @@ function renderLog() {
   const teams = logGridTeams();
   if (!currentShowId) {
     cols.innerHTML = '';
-    grid.className = 'lg-grid';
     grid.innerHTML = '<div class="lg-none">Add the season\'s shows in Settings to start logging.</div>';
     return;
   }
   if (logQuery) {
     cols.innerHTML = '';
-    grid.className = 'lg-grid';
     const q = logQuery.toLowerCase();
     const hits = [];
     for (const t of TEAMS) for (const l of LETTERS) {
       const name = slotNameFor(t, l);
-      if (name && name.toLowerCase().indexOf(q) !== -1) hits.push(logTileHTML(t, l, { found: true }));
+      if (name && name.toLowerCase().indexOf(q) !== -1) hits.push(logRowHTML(t, l, { found: true }));
     }
     grid.innerHTML = hits.length ? hits.join('') : '<div class="lg-none">Nobody on a roster matches that.</div>';
     return;
   }
+  // RyAI's roster, when paired, follows the team being logged under its own heading.
   const paired = teams.length > 1;
-  cols.innerHTML = paired ? teams.map(t =>
-    `<div class="lg-col" style="${tcv(t)}"><span>${esc(t === ryTeam() && ryaiOn() ? 'RyAI · ' + TEAM_LABELS[t] : TEAM_LABELS[t])}</span><span id="lgcol_${t}">${teamShowLive(t) ? '+' + teamShowLive(t) : '0'}</span></div>`).join('') : '';
-  cols.style.display = paired ? '' : 'none';
-  grid.className = 'lg-grid' + (paired ? ' paired' : '');
   let html = '';
-  for (const l of LETTERS) for (const t of teams) html += logTileHTML(t, l);
+  for (const t of teams) {
+    if (paired) html += `<div class="lg-sec" style="${tcv(t)}"><span>${esc(t === ryTeam() && ryaiOn() ? 'RyAI · ' + TEAM_LABELS[t] : TEAM_LABELS[t])}</span>`
+      + `<span id="lgcol_${t}">${teamShowLive(t) ? '+' + teamShowLive(t) : '0'}</span></div>`;
+    for (const l of LETTERS) html += logRowHTML(t, l);
+  }
   grid.innerHTML = html;
 }
 function logPaintWrestler(team, letter) {
-  const tile = document.getElementById(`lt_${team}_${letter}`);
-  if (tile) {
-    const pts = wrestlerPtsLive(team, letter);
-    tile.classList.toggle('on', pts > 0);
-    tile.querySelector('.pt').textContent = pts ? '+' + pts : '';
-  }
+  paintLogRow(team, letter);
   const col = document.getElementById('lgcol_' + team);
   if (col) { const p = teamShowLive(team); col.textContent = p ? '+' + p : '0'; }
   renderLogTabs();
-  if (logSheet && logSheet.team === team && logSheet.letter === letter) renderLogSheet();
 }
 function logSearch(v) {
   logQuery = String(v || '').trim();
@@ -3769,67 +3764,37 @@ function logClearSearch() {
   logSearch('');
 }
 
-// ── the wrestler sheet ──
-let logSheetOpener = null;
+// ── the open wrestler: one row expanded in place ──
 function openLogSheet(team, letter) {
   if (!currentShowId || !slotNameFor(team, letter)) return;
+  const prev = logSheet;
+  if (prev && prev.team === team && prev.letter === letter) { closeLogSheet(); return; }
   ensureTeam(team);
-  logSheetOpener = document.activeElement;
   logSheet = { team, letter };
-  renderLogSheet();
-  document.getElementById('logSheet').classList.add('open');
-  document.getElementById('lsBackdrop').classList.add('open');
-  const done = document.querySelector('#logSheet .ls-done');
-  if (done) setTimeout(() => done.focus({ preventScroll: true }), 50);
+  if (prev) paintLogRow(prev.team, prev.letter);
+  paintLogRow(team, letter);
+  const el = document.getElementById(`lt_${team}_${letter}`);
+  if (el) {
+    const b = el.querySelector('.lg-rowbtn');
+    if (b) b.focus({ preventScroll: true });
+    el.scrollIntoView({ block: 'nearest', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+  }
 }
 function closeLogSheet() {
-  const s = document.getElementById('logSheet');
-  if (!s || !s.classList.contains('open')) { logSheet = null; return; }
-  s.classList.remove('open');
-  document.getElementById('lsBackdrop').classList.remove('open');
+  const prev = logSheet;
   logSheet = null;
-  if (logSheetOpener && logSheetOpener.focus) logSheetOpener.focus({ preventScroll: true });
+  if (prev) paintLogRow(prev.team, prev.letter);
 }
 function logSheetStep(dir) {
   if (!logSheet) return;
   const seq = logSequence();
   const i = seq.findIndex(x => x.team === logSheet.team && x.letter === logSheet.letter);
   const nx = seq[i + dir];
-  if (!nx) return;
-  ensureTeam(nx.team);
-  logSheet = nx;
-  renderLogSheet();
+  if (nx) openLogSheet(nx.team, nx.letter);
 }
 function shortName(n) { return String(n || '').split(',')[0].trim(); }
 function renderLogSheet() {
-  if (!logSheet) return;
-  const { team, letter } = logSheet;
-  const sheet = document.getElementById('logSheet');
-  setTeamVars(sheet, team);
-  document.getElementById('lsKick').textContent = teamTag(team) + ' · Slot ' + letter.toUpperCase();
-  document.getElementById('lsName').textContent = slotNameFor(team, letter);
-  const lsHead = document.querySelector('#logSheet .ls-head');
-  if (lsHead) { const sn = shortName(slotNameFor(team, letter)) || ''; lsHead.setAttribute('data-chant', (sn + ' ').repeat(3)); }
-  const pts = wrestlerPtsLive(team, letter);
-  document.getElementById('lsPts').textContent = pts ? '+' + pts : '0';
-  document.getElementById('lsBody').innerHTML = LOG_GROUPS.map(g =>
-    `<div class="ls-grp${g.big ? ' big' : ''}">${g.label}</div><div class="ls-tiles">` + g.keys.map(k => {
-      const a = ACC_BY_KEY[k];
-      const c = countOf(team, letter, k);
-      const lbl = TILE_LABELS[k];
-      return `<div class="ls-t${c ? ' on' : ''}${g.big ? ' big' : ''}">`
-        + `<button type="button" class="ls-add" aria-label="Add ${escAttr(lbl)}, ${a.pts} points" onclick="stepAcc('${team}','${letter}','${k}',1)">`
-        + `<span class="p">+${a.pts}${c ? ' <i>×' + c + '</i>' : ''}</span><span class="l">${esc(lbl)}</span></button>`
-        + (c ? `<button type="button" class="ls-minus" aria-label="Take one ${escAttr(lbl)} off" onclick="stepAcc('${team}','${letter}','${k}',-1)"><span aria-hidden="true">−</span></button>` : '')
-        + '</div>';
-    }).join('') + '</div>').join('');
-  const seq = logSequence();
-  const i = seq.findIndex(x => x.team === team && x.letter === letter);
-  const prev = document.getElementById('lsPrev'), next = document.getElementById('lsNext');
-  const pv = i > 0 ? seq[i - 1] : null, nv = i !== -1 && i < seq.length - 1 ? seq[i + 1] : null;
-  prev.disabled = !pv; next.disabled = !nv;
-  prev.textContent = pv ? '‹ ' + shortName(slotNameFor(pv.team, pv.letter)) : '‹';
-  next.textContent = nv ? shortName(slotNameFor(nv.team, nv.letter)) + ' ›' : '›';
+  if (logSheet) paintLogRow(logSheet.team, logSheet.letter);
 }
 
 
