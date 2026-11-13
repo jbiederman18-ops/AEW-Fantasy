@@ -7,8 +7,8 @@
   "id": "/aew-fantasy",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0B0B0C",
-  "theme_color": "#2A0F33",
+  "background_color": "#FFF4E4",
+  "theme_color": "#FFF4E4",
   "icons": [
     {
       "src": "icon-192.png",
