@@ -11,17 +11,17 @@
 <meta name="theme-color" content="#FFF4E4">
 <title>AEW Fantasy</title>
 <meta name="mobile-web-app-capable" content="yes">
-<link rel="manifest" href="manifest.json?v=5">
+<link rel="manifest" href="manifest.json?v=6">
 <!-- iOS caches the touch icon per URL and keeps a failed fetch for a long time.
      The ?v= is what lets a fixed icon actually reach a phone that already cached
      a miss — bump it whenever the artwork changes.
      The unsized link is the fallback older iOS versions look for first. -->
-<link rel="apple-touch-icon" href="apple-touch-icon.png?v=4">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=4">
-<link rel="apple-touch-icon-precomposed" sizes="180x180" href="apple-touch-icon-precomposed.png?v=4">
-<link rel="icon" type="image/svg+xml" href="icon.svg?v=4">
-<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=4">
-<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png?v=4">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=5">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=5">
+<link rel="apple-touch-icon-precomposed" sizes="180x180" href="apple-touch-icon-precomposed.png?v=5">
+<link rel="icon" type="image/svg+xml" href="icon.svg?v=5">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=5">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png?v=5">
 
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&display=swap" rel="stylesheet">
@@ -632,10 +632,10 @@
   .archive-season-label { font-size: 12px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
   .archive-champ-name { font-size: 36px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; margin-bottom: 4px; }
   .archive-champ-pts { font-size: 24px; font-weight: 800; color: var(--ink); line-height: 1; }
-  .archive-trophy-icon { position: absolute; right: 14px; top: 50%; transform: translateY(-50%) rotate(-6deg); opacity: 0.9; }
-  .archive-trophy-icon .plate { width: 72px; height: auto; display: block; border: var(--bd); border-radius: 12px; }
-  .award-item .plate { width: 30px; height: auto; flex: none; border-radius: 6px; }
-  .award-banner-msg .plate { width: 26px; height: auto; vertical-align: -7px; }
+  .archive-trophy-icon { position: absolute; right: 14px; top: 36px; transform: rotate(-5deg); }
+  .archive-trophy-icon .plate { width: 100px; height: auto; display: block; filter: drop-shadow(3px 3px 0 var(--ink)); }
+  .award-item .plate { width: 52px; height: auto; flex: none; }
+  .award-banner-msg .plate { width: 48px; height: auto; vertical-align: -9px; }
   .archive-runner-up { display: flex; align-items: center; gap: 10px; margin-top: 6px; padding: 8px 12px; background: var(--bg); border-radius: var(--r); }
   .archive-runner-rank { min-width: 22px; font-size: 16px; font-weight: 800; color: var(--muted); }
   .archive-runner-name { flex: 1; font-size: 15px; font-weight: 700; }
@@ -716,8 +716,8 @@
   .ryb-champ { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%) scale(2.4); padding: 0 4vw; }
   .ryb.s-crown .ryb-champ { opacity: 1; transform: translateY(-50%) scale(1); transition: opacity .25s, transform .6s cubic-bezier(.2,1.5,.35,1); }
   .ryb-belt { line-height: 1; font-size: calc(var(--u) * 9); }
-  .ryb-belt img { width: calc(var(--u) * 16); height: auto; display: inline-block; border: calc(var(--u) * .4) solid #FFF4E4;
-    border-radius: 14%; box-shadow: calc(var(--u) * .8) calc(var(--u) * .8) 0 var(--ryback), 0 0 4vh var(--tcA); }
+  .ryb-belt img { width: calc(var(--u) * 36); height: auto; display: inline-block;
+    filter: drop-shadow(calc(var(--u) * .7) calc(var(--u) * .7) 0 var(--ryback)) drop-shadow(0 0 4vh var(--tcA)); }
   .ryb-is { font-size: calc(var(--u) * 2.6); font-weight: 800; letter-spacing: calc(var(--u) * .5); text-transform: uppercase; color: var(--belt); margin-top: calc(var(--u) * 1); }
   .ryb-name { font-size: calc(var(--u) * 22); font-weight: 800; line-height: .9; letter-spacing: -0.04em; text-transform: uppercase; overflow-wrap: anywhere;
     color: #FFF4E4; text-shadow: calc(var(--u) * 1) calc(var(--u) * 1) 0 var(--tc); }
@@ -745,7 +745,7 @@
     .ryb-title { font-size: 15vw; } .ryb-name { font-size: 24vw; } .ryb-name.co { font-size: 14vw; }
     .ryb-ladder span { font-size: 6.5vw; } .ryb-ladder b { font-size: 4.4vw; } .ryb-ladder em { font-size: 4.4vw; }
     .ryb-kicker, .ryb-is { font-size: 3.4vw; letter-spacing: .6vw; } .ryb-drum { font-size: 4.4vw; }
-    .ryb-pts { font-size: 4.6vw; } .ryb-line { font-size: 7vw; } .ryb-belt img { width: 36vw; }
+    .ryb-pts { font-size: 4.6vw; } .ryb-line { font-size: 7vw; } .ryb-belt img { width: 78vw; }
     .ryb-go { font-size: 4.2vw; padding: 3.6vw 9vw; bottom: calc(env(safe-area-inset-bottom, 0px) + 7vw); }
     .ryb-next { font-size: 3.4vw; bottom: calc(env(safe-area-inset-bottom, 0px) + 25vw); }
     .ryb-skip { font-size: 3.4vw; padding: 2vw 3.6vw; }
@@ -5405,7 +5405,7 @@ function rybackPlay(r) {
     +   '<div class="ryb-drum">' + (co ? 'And your Ryback Bearers are…' : 'And your Ryback Bearer is…') + '</div>'
     + '</div>'
     + '<div class="ryb-champ">'
-    +   '<div class="ryb-belt"><img src="icon.svg?v=4" alt=""></div>'
+    +   '<div class="ryb-belt"><img src="belt.png?v=1" alt=""></div>'
     +   '<div class="ryb-is">' + (co ? 'Co-Ryback Bearers' : 'Ryback Bearer') + ' · ' + esc(r.from) + '</div>'
     +   '<div class="ryb-name' + (co ? ' co' : '') + '">' + champs.map(t => esc(TEAM_LABELS[t])).join(' &amp; ') + '</div>'
     +   '<div class="ryb-pts">' + Number(champPts).toLocaleString() + ' points</div>'
@@ -6288,7 +6288,7 @@ function renderSwaps() {
       <div class="award-list">
         ${[...awards].reverse().map(a => `
           <div class="award-item">
-            <img class="plate" src="icon.svg?v=4" alt="">
+            <img class="plate" src="belt.png?v=1" alt="">
             <span><b style="color:${TEAM_INK[a.team] || 'var(--text)'}">${esc(TEAM_LABELS[a.team] || a.team)}</b> topped <b>${esc(a.event || 'a show')}</b>${a.score ? ' (' + esc(a.score) + ')' : ''} · +1 token</span>
             <span class="award-date">${esc(a.date || '')}</span>
           </div>`).join('')}
@@ -6344,7 +6344,7 @@ function announceAwards() {
   el.id = 'awardBanner';
   el.className = 'award-banner';
   el.setAttribute('role', 'status');
-  el.innerHTML = `<div class="award-banner-msg"><span class="trophy"><img class="plate" src="icon.svg?v=4" alt=""></span>${msg}</div>
+  el.innerHTML = `<div class="award-banner-msg"><span class="trophy"><img class="plate" src="belt.png?v=1" alt=""></span>${msg}</div>
     <div class="award-banner-btns">
       <button type="button" data-act="close">Nice</button>
       <button type="button" class="primary" data-act="go">Go to Swaps</button>
@@ -6728,7 +6728,7 @@ function renderArchiveTrophy() {
       const top3 = (data.wrestlers || []).slice(0, 3);
       const champ = top3[0];
       return `<div class="archive-card">
-        <div class="archive-trophy-icon"><img class="plate" src="icon.svg?v=4" alt=""></div>
+        <div class="archive-trophy-icon"><img class="plate" src="belt.png?v=1" alt=""></div>
         <div class="archive-season-label">${esc(data.seasonName||name)} · Top Scorer</div>
         <div class="archive-champ-name" style="color:var(--gold-light)">${esc(champ?.name||'Unknown')}</div>
         <div class="archive-champ-pts">${champ?.pts||0} <span style="font-family:var(--font);font-size:14px;color:var(--muted);letter-spacing:2px;">PTS</span></div>
@@ -6742,7 +6742,7 @@ function renderArchiveTrophy() {
     const totals = TEAMS.map(t=>({team:t,pts:archiveGetTeamTotal(data,t)})).sort((a,b)=>b.pts-a.pts);
     const champ = totals[0];
     return `<div class="archive-card">
-      <div class="archive-trophy-icon"><img class="plate" src="icon.svg?v=4" alt=""></div>
+      <div class="archive-trophy-icon"><img class="plate" src="belt.png?v=1" alt=""></div>
       <div class="archive-season-label">${esc(data.seasonName||name)} · Season Champion</div>
       <div class="archive-champ-name" style="color:${TEAM_INK[champ.team]}">${TEAM_LABELS[champ.team]}</div>
       <div class="archive-champ-pts">${champ.pts} <span style="font-family:var(--font);font-size:14px;color:var(--muted);letter-spacing:2px;">PTS</span></div>
