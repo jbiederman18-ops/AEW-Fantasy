@@ -3681,7 +3681,7 @@ function logRowHTML(team, letter, opts) {
     + `<button type="button" class="lg-rowbtn" aria-expanded="${open}" onclick="openLogSheet('${team}','${letter}')">`
     + `<span class="sl">${letter}</span><span class="nm"><b>${esc(name)}</b>${o.found ? `<small>${esc(teamTag(team))}</small>` : ''}</span>`
     + `<span class="pt">${pts ? '+' + pts : ''}</span></button>`;
-  if (logged.length) html += '<div class="lg-tags">' + logged.map(k => {
+  if (open && logged.length) html += '<div class="lg-tags">' + logged.map(k => {
     const lbl = TILE_LABELS[k], c = counts[k];
     return `<button type="button" class="lg-tag" data-t="${k}" aria-label="Take one ${escAttr(lbl)} off" onclick="stepAcc('${team}','${letter}','${k}',-1)">`
       + `${esc(lbl)} <b>+${ACC_BY_KEY[k].pts}${c > 1 ? ' ×' + c : ''}</b><span class="x" aria-hidden="true">−</span></button>`;
