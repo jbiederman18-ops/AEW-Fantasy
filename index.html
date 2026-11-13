@@ -713,13 +713,17 @@
     opacity: 0; transition: opacity .5s ease; background: radial-gradient(70vmax 55vmax at 50% 42%, #3A1D1D 0%, #140F0F 72%); }
   .ryb.on { opacity: 1; }
   .ryb.out { opacity: 0; transition-duration: .7s; }
-  .ryb-rays { position: absolute; left: 50%; top: 42%; width: 220vmax; height: 220vmax; margin: -110vmax 0 0 -110vmax;
+  .ryb-rays { position: absolute; left: 50%; top: 42%; width: 132vmax; height: 132vmax; margin: -66vmax 0 0 -66vmax; will-change: transform;
     background: repeating-conic-gradient(from 0deg, rgba(242,183,5,.08) 0 6deg, transparent 6deg 18deg);
     opacity: 0; transition: opacity 1.2s; animation: rybSpin 40s linear infinite; }
   .ryb.s-crown .ryb-rays { opacity: .55; background: repeating-conic-gradient(from 0deg, var(--tcA) 0 5deg, transparent 5deg 15deg); }
+  /* the beam's shape lives on an inner element so the sweep is a pure
+     compositor rotation: clip-path on the rotating box repainted every
+     frame and dropped a 4K TV to ~15fps */
   .ryb-spot { position: absolute; top: -20vh; width: 40vmax; height: 140vh; left: 50%; margin-left: -20vmax;
-    background: linear-gradient(180deg, rgba(255,240,200,.16), transparent 80%); clip-path: polygon(42% 0, 58% 0, 100% 100%, 0 100%);
-    transform-origin: 50% 0; animation: rybSweep 3.2s ease-in-out infinite alternate; mix-blend-mode: screen; }
+    transform-origin: 50% 0; animation: rybSweep 3.2s ease-in-out infinite alternate; will-change: transform; }
+  .ryb-spot i { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(255,240,200,.16), transparent 80%);
+    clip-path: polygon(42% 0, 58% 0, 100% 100%, 0 100%); }
   .ryb-spot.b { animation-delay: -1.6s; animation-duration: 2.7s; }
   .ryb.s-crown .ryb-spot { animation: none; transform: rotate(0); opacity: .9; }
   @keyframes rybSpin { to { transform: rotate(360deg); } }
@@ -791,8 +795,13 @@
   .ryb-belt img { width: calc(var(--u) * 46); height: auto; display: inline-block; opacity: 0; transform: translateY(-110vh) rotate(-14deg);
     filter: drop-shadow(calc(var(--u) * .7) calc(var(--u) * .7) 0 var(--ryback)) drop-shadow(0 0 4vh var(--tcA)); }
   .ryb.s-belt .ryb-belt img { opacity: 1; transform: none; transition: transform .75s cubic-bezier(.35,1.5,.5,1), opacity .1s; }
-  .ryb.s-belt.s-glow .ryb-belt img { animation: rybGlow 2.4s ease-in-out infinite; }
-  @keyframes rybGlow { 50% { filter: drop-shadow(calc(var(--u) * .7) calc(var(--u) * .7) 0 var(--ryback)) drop-shadow(0 0 9vh var(--belt)); } }
+  /* the glow pulses on its own layer (opacity only) so a 4K TV never repaints the belt */
+  .ryb-belt { position: relative; }
+  .ryb-belt::before { content: ''; position: absolute; left: 50%; top: 50%; width: 140%; height: 190%; transform: translate(-50%, -50%);
+    background: radial-gradient(closest-side, rgba(242,183,5,.55), rgba(242,183,5,0)); opacity: 0; pointer-events: none; will-change: opacity; }
+  .ryb.s-belt.s-glow .ryb-belt::before { animation: rybGlow 2.4s ease-in-out infinite; }
+  @keyframes rybGlow { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
+  .ryb-belt img { position: relative; }
   .ryb-name { font-size: calc(var(--u) * 20); font-weight: 800; line-height: .9; letter-spacing: -0.04em; text-transform: uppercase; overflow-wrap: anywhere;
     color: #FFF4E4; text-shadow: calc(var(--u) * 1) calc(var(--u) * 1) 0 var(--tc); }
   .ryb-name.co { font-size: calc(var(--u) * 12); }
@@ -813,7 +822,7 @@
   .ryb-pyro { position: absolute; left: 0; right: 0; bottom: 0; height: 70vh; pointer-events: none; }
   .ryb-pyro i { position: absolute; bottom: -2vh; width: calc(var(--u) * 4.6); height: 100%; margin-left: calc(var(--u) * -2.3); border-radius: 50% 50% 20% 20%;
     background: linear-gradient(to top, #FFFFFF 0%, #FFF1A8 9%, #F2B705 26%, #FF6A00 52%, rgba(215,34,42,.6) 74%, rgba(215,34,42,0) 100%);
-    filter: blur(calc(var(--u) * .35)); transform-origin: 50% 100%; transform: scaleY(0); opacity: 0; mix-blend-mode: screen; }
+    transform-origin: 50% 100%; transform: scaleY(0); opacity: 0; will-change: transform, opacity; }
   .ryb-pyro.go i { animation: rybPyro 1s cubic-bezier(.2,.7,.3,1) var(--d, 0s) both; }
   @keyframes rybPyro { 0% { transform: scaleY(0) scaleX(.6); opacity: 1; } 22% { transform: scaleY(1) scaleX(1.15); opacity: 1; }
     60% { transform: scaleY(.85) scaleX(.9); opacity: .9; } 100% { transform: scaleY(.15) scaleX(.5); opacity: 0; } }
@@ -847,7 +856,7 @@
     .ryb-skip { font-size: 3.4vw; padding: 2vw 3.6vw; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .ryb-rays, .ryb-spot, .ryb-scene.show .ryb-drum, .ryb.shake .ryb-quake, .ryb-pyro.go i, .ryb.s-belt.s-glow .ryb-belt img, .live-tag::before { animation: none !important; }
+    .ryb-rays, .ryb-spot, .ryb-scene.show .ryb-drum, .ryb.shake .ryb-quake, .ryb-pyro.go i, .ryb.s-belt.s-glow .ryb-belt::before, .live-tag::before { animation: none !important; }
   }
 
   /* ══ TV PARTY MODE (?tv) ══
@@ -5508,7 +5517,7 @@ function rybackPlay(r) {
   el.className = 'ryb';
   el.setAttribute('style', '--tc:' + color + ';--tcA:' + tvHex(color, .4));
   el.innerHTML =
-    '<div class="ryb-rays"></div><div class="ryb-spot"></div><div class="ryb-spot b"></div><div class="ryb-gloom"></div>'
+    '<div class="ryb-rays"></div><div class="ryb-spot"><i></i></div><div class="ryb-spot b"><i></i></div><div class="ryb-gloom"></div>'
     + '<div class="ryb-pyro">' + [8, 22, 36, 64, 78, 92].map((x, i) => '<i style="left:' + x + '%;--d:' + [0, .12, .24, .24, .12, 0][i] + 's"></i>').join('') + '</div>'
     + '<canvas id="rybConfetti"></canvas><div class="ryb-flash"></div>'
     + '<button class="ryb-skip" onclick="rybackSkip()">Skip ›</button>'
@@ -5753,7 +5762,7 @@ function rybackFanfare() {
 
 // ── one canvas for everything that flies: confetti, sparks, fireworks, blasts ──
 const rybFx = {
-  el: null, g: null, W: 0, H: 0, parts: [], blasts: [], emitters: [], rainOn: null, raf: 0, size: 8,
+  el: null, g: null, W: 0, H: 0, parts: [], blasts: [], emitters: [], rainOn: null, raf: 0, scale: 1, size: 8,
   reduced() { return window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches; },
   kick() { if (!this.raf && this.g) this.raf = requestAnimationFrame(t => this.frame(t)); },
   confetti(color, n) {
@@ -5842,9 +5851,10 @@ const rybFx = {
       if (p.k === 'c') {
         p.vy += grav * (p.vy > 3 ? .3 : 1); p.vx *= .99; p.x += p.vx; p.y += p.vy; p.r += p.vr;
         g.globalCompositeOperation = 'source-over';
-        g.save(); g.translate(p.x, p.y); g.rotate(p.r); g.globalAlpha = Math.max(0, 1 - p.age / p.life);
-        g.fillStyle = p.c; g.fillRect(-p.w / 2, -p.h / 2, p.w, p.h * Math.abs(Math.cos(p.r * 2)) + 1); g.restore();
-        g.globalAlpha = 1; g.globalCompositeOperation = 'lighter';
+        const k = this.scale, cs = Math.cos(p.r) * k, sn = Math.sin(p.r) * k;
+        g.setTransform(cs, sn, -sn, cs, p.x * k, p.y * k); g.globalAlpha = Math.max(0, 1 - p.age / p.life);
+        g.fillStyle = p.c; g.fillRect(-p.w / 2, -p.h / 2, p.w, p.h * Math.abs(Math.cos(p.r * 2)) + 1);
+        g.setTransform(k, 0, 0, k, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'lighter';
         next.push(p); return;
       }
       // sparks and firework stars
@@ -5870,8 +5880,11 @@ function rybFxStart(el) {
   const cv = el.querySelector('#rybConfetti');
   if (!cv) return;
   requestAnimationFrame(() => {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
     rybFx.W = cv.clientWidth; rybFx.H = cv.clientHeight;
+    // Cap the backing store near 1080p: a 4K TV would otherwise push 8M pixels
+    // of additive blending every frame. Particles stay crisp enough at this size.
+    const dpr = Math.min(window.devicePixelRatio || 1, 2, Math.sqrt(2.2e6 / Math.max(1, rybFx.W * rybFx.H)));
+    rybFx.scale = dpr;
     cv.width = rybFx.W * dpr; cv.height = rybFx.H * dpr;
     rybFx.g = cv.getContext('2d'); rybFx.g.scale(dpr, dpr);
     rybFx.size = Math.max(6, Math.min(rybFx.W, rybFx.H) / 70);
