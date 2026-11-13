@@ -1871,6 +1871,25 @@
   .lb-row.first .lb-rank { background: var(--ryback); color: #fff; font-size: 22px; }
   .lb-name { display: flex; flex-direction: column; justify-content: center; line-height: 1; }
   .lb-pace { font: italic 800 11px 'Barlow Condensed', sans-serif; letter-spacing: 2px; color: var(--ryback); margin-top: 2px; }
+  /* The Race is the headline: bigger slabs, bigger names, bigger totals */
+  .lb-row { height: 62px; gap: 12px; margin-bottom: 5px; padding-right: 14px; border-left-width: 5px; }
+  .lb-rank { width: 44px; font-size: 26px; }
+  .lb-name { font-size: 32px; }
+  .lb-tonight { font-size: 20px; }
+  .lb-gap { font-size: 13px; }
+  .lb-pts { font-size: 32px; min-width: 64px; }
+  .lb-row.first { height: 78px; }
+  .lb-row.first .lb-rank { font-size: 34px; }
+  .lb-row.first .lb-name { font-size: 40px; }
+  .lb-row.first .lb-pts { font-size: 40px; }
+  .lb-pace { font-size: 13px; margin-top: 3px; }
+  @media (max-width: 370px) {
+    .lb-row { gap: 8px; padding-right: 10px; }
+    .lb-name, .lb-pts { font-size: 28px; }
+    .lb-row.first .lb-name, .lb-row.first .lb-pts { font-size: 34px; }
+    .lb-pts { min-width: 56px; }
+    .lb-row.first .lb-gap { display: none; }
+  }
   .sc-card { border-left: 0; border-top: 3px solid var(--tc); }
   .sc-card::after { content: attr(data-rank); right: -2px; top: 16px; width: auto; height: auto; background: none; transform: none;
     font: italic 900 56px/1 'Barlow Condensed', sans-serif; color: rgba(229,36,43,0.13); }
