@@ -2073,6 +2073,15 @@
   .ls-minus { border-color: var(--tc); }
   .ls-foot { border-top-color: var(--tc); }
   .ls-foot .ls-done { background: var(--tc); color: #0b0b0c; }
+
+  /* ── GHOST MINUS: a faint outlined − in the corner of a logged tile; the tap area stays 40px ── */
+  .ls-minus { width: 40px; height: 40px; border: 0; background: transparent; padding: 0; color: #0b0b0c;
+    display: flex; align-items: center; justify-content: center; -webkit-tap-highlight-color: transparent; }
+  .ls-minus span { width: 20px; height: 20px; box-sizing: border-box; border-radius: 50%; border: 2px solid currentColor;
+    display: flex; align-items: center; justify-content: center; opacity: 0.55;
+    font: 900 15px/1 'Barlow', sans-serif; transition: opacity .12s, transform .12s; }
+  .ls-minus:active span { opacity: 0.9; transform: scale(0.9); }
+  .ls-minus:focus-visible { outline: 2px solid #0b0b0c; outline-offset: -4px; }
 </style>
 </head>
 <body>
@@ -4881,7 +4890,7 @@ function renderLogSheet() {
       return `<div class="ls-t${c ? ' on' : ''}${g.big ? ' big' : ''}">`
         + `<button type="button" class="ls-add" aria-label="Add ${escAttr(lbl)}, ${a.pts} points" onclick="stepAcc('${team}','${letter}','${k}',1)">`
         + `<span class="p">+${a.pts}${c ? ' <i>×' + c + '</i>' : ''}</span><span class="l">${esc(lbl)}</span></button>`
-        + (c ? `<button type="button" class="ls-minus" aria-label="Take one ${escAttr(lbl)} off" onclick="stepAcc('${team}','${letter}','${k}',-1)">—</button>` : '')
+        + (c ? `<button type="button" class="ls-minus" aria-label="Take one ${escAttr(lbl)} off" onclick="stepAcc('${team}','${letter}','${k}',-1)"><span aria-hidden="true">−</span></button>` : '')
         + '</div>';
     }).join('') + '</div>').join('');
   const seq = logSequence();
