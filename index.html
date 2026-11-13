@@ -2082,6 +2082,11 @@
     font: 900 15px/1 'Barlow', sans-serif; transition: opacity .12s, transform .12s; }
   .ls-minus:active span { opacity: 0.9; transform: scale(0.9); }
   .ls-minus:focus-visible { outline: 2px solid #0b0b0c; outline-offset: -4px; }
+
+  /* ── NO RACING STRIPES in the app's menus and sheets (TV party mode keeps its own) ── */
+  #homeTonight::after, .lg-head::after, .ls::before, .sh-stripe, .hd-stripes { display: none; }
+  .ls { border-top: 2px solid var(--tc, var(--ryback)); }
+  .roster-body { border-top: 2px solid var(--tc); border-image: none; }
 </style>
 </head>
 <body>
