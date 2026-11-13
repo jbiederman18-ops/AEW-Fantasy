@@ -2083,10 +2083,14 @@
   .ls-minus:active span { opacity: 0.9; transform: scale(0.9); }
   .ls-minus:focus-visible { outline: 2px solid #0b0b0c; outline-offset: -4px; }
 
-  /* ── NO RACING STRIPES in the app's menus and sheets (TV party mode keeps its own) ── */
+  /* ── NO RACING STRIPES anywhere ── */
   #homeTonight::after, .lg-head::after, .ls::before, .sh-stripe, .hd-stripes { display: none; }
   .ls { border-top: 2px solid var(--tc, var(--ryback)); }
   .roster-body { border-top: 2px solid var(--tc); border-image: none; }
+  /* …and everywhere else: the stripe fillers keep their space but paint nothing */
+  .section-title::after, .hm-h::after, .draft-board-header::after, .tv-stripes,
+  .tv-col-head::after, .tv-panel h3::after { background: none; }
+  .tv-col-head::after { background: var(--tc); height: 0.3vh; bottom: -0.3vh; }
 </style>
 </head>
 <body>
