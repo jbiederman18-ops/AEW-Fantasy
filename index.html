@@ -443,6 +443,41 @@
   .lg-status { flex: 1; min-width: 0; font-size: 13px; font-weight: 700; color: #F1E6D6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .lg-undo { height: 44px; padding: 0 14px; border: 2px solid var(--bg); border-radius: var(--r); background: transparent; color: var(--bg);
     font: 800 14px var(--font); cursor: pointer; white-space: nowrap; }
+  /* the open wrestler's head: name + save dot + undo, sticks while you log them */
+  .lg-rowhead { display: flex; align-items: center; gap: 6px; padding-right: 8px; background: var(--card); border-radius: var(--r-card) var(--r-card) 0 0; }
+  .lg-rowhead .lg-rowbtn { flex: 1; min-width: 0; }
+  .lg-rowhead .lg-dot { border: 1.5px solid var(--ink); }
+  .lg-undo-mini { flex: none; width: 44px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer;
+    background: var(--bg); color: var(--ink); border: var(--bd); border-radius: var(--r); font: 800 20px/1 var(--font); }
+  .lg-undo-mini:disabled { opacity: 0.3; cursor: default; }
+  .lg-substatus { display: none; }
+  /* ── LOG MODE on phones: header and tab bar slide away while you scroll down,
+     come back when you scroll up. main runs edge to edge underneath them, so
+     hiding them never shifts the content. ── */
+  @media (max-width: 899px) {
+    header, nav { transition: transform .22s ease; }
+    body.log-mode main { top: var(--safe-top); bottom: 0; padding-top: 0 !important; }
+    body.log-mode #tab-score.active { margin-top: 0; padding-top: var(--header-h); }
+    body.log-mode .lg-list { padding-bottom: calc(var(--nav-h) + var(--safe-bottom) + 24px); }
+    body.log-mode .lg-foot { display: none; }
+    body.log-mode .lg-substatus { display: flex; align-items: center; gap: 6px; margin-top: 3px; min-width: 0;
+      font-size: 11.5px; font-weight: 700; color: var(--muted); }
+    body.log-mode .lg-substatus .lg-dot { width: 8px; height: 8px; border: 1.5px solid var(--ink); }
+    body.log-mode .lg-substatus .lg-status { color: var(--muted); font-size: 11.5px; }
+    body.log-mode .lg-row { scroll-margin: calc(var(--header-h) + 8px) 0 calc(var(--nav-h) + var(--safe-bottom) + 12px); }
+    body.log-mode .lg-row.open > .lg-rowhead { position: sticky; z-index: 4; top: var(--header-h); transition: top .22s ease; }
+    body.log-mode.chrome-hide header { transform: translateY(-100%); }
+    body.log-mode.chrome-hide nav { transform: translateY(calc(100% + 28px)); }
+    body.log-mode.chrome-hide .lg-row.open > .lg-rowhead { top: 0; box-shadow: 0 2px 0 var(--ink); border-radius: 0; }
+    /* taps confirm at the bottom, out of the way of the chips you're hitting */
+    body.log-mode .lg-toast { top: auto; bottom: calc(var(--nav-h) + var(--safe-bottom) + 30px); transition: opacity .18s, transform .18s, bottom .22s ease; }
+    body.log-mode.chrome-hide .lg-toast { bottom: calc(var(--safe-bottom) + 12px); }
+    /* chips: two even columns instead of ragged rows */
+    .lg-groups { gap: 10px; padding: 10px 10px 12px; }
+    .lg-grp-h { margin-bottom: 5px; }
+    .lg-chips { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+    .lg-chip { justify-content: space-between; min-height: 44px; padding: 5px 9px; font-size: 13.5px; }
+  }
   .lg-undo:disabled { opacity: 0.35; cursor: default; }
 
   .lg-toast { position: absolute; left: 14px; right: 14px; z-index: 170; top: calc(var(--header-h) + var(--safe-top) + 10px);
@@ -1171,7 +1206,7 @@
   <div id="tab-score" class="tab-panel">
     <div class="lg-head">
       <div class="lg-title">
-        <div class="lg-title-main"><div class="lg-kick" id="lgKick">Now logging</div><div class="lg-show" id="lgShow"></div></div>
+        <div class="lg-title-main"><div class="lg-kick" id="lgKick">Now logging</div><div class="lg-show" id="lgShow"></div><div class="lg-substatus"><span class="lg-dot"></span><span class="lg-status">Saved for everyone</span></div></div>
         <div class="lg-shownav">
           <button type="button" id="showPrev" aria-label="Previous show" onclick="stepShow(-1)">‹</button>
           <select id="showSelect" aria-label="Show to log" onchange="changeShow()"></select>
@@ -3493,8 +3528,7 @@ function stepAcc(team, letter, key, delta, fromUndo) {
   scheduleAutosave();
 }
 function updateUndoBtn() {
-  const b = document.getElementById('undoTapBtn');
-  if (b) b.disabled = !tapLog.length;
+  document.querySelectorAll('#undoTapBtn, .lg-undo-mini').forEach(b => { b.disabled = !tapLog.length; });
 }
 function undoTap() {
   const last = tapLog.pop();
@@ -3515,10 +3549,11 @@ function logToast(big, text, withUndo) {
 function toastShowNav(msg) { if (currentTabName === 'score') logToast('•', msg, false); }
 
 // ── saving ──
+let logStatusCls = '';
 function setLogStatus(text, cls) {
-  const s = document.getElementById('logStatus'), d = document.getElementById('logDot');
-  if (s) s.textContent = text;
-  if (d) d.className = 'lg-dot ' + (cls || '');
+  logStatusCls = cls || '';
+  document.querySelectorAll('#tab-score .lg-status').forEach(s => { s.textContent = text; });
+  document.querySelectorAll('#tab-score .lg-dot').forEach(d => { d.className = 'lg-dot ' + logStatusCls; });
 }
 function setDirty(v) {
   isDirty = v;
@@ -3739,9 +3774,12 @@ function logRowHTML(team, letter, opts) {
   const counts = rowCounts(team, letter);
   const logged = LOG_KEY_ORDER.filter(k => counts[k]);
   let html = `<div class="lg-row${pts ? ' on' : ''}${open ? ' open' : ''}${o.found ? ' found' : ''}" id="lt_${team}_${letter}" style="${tcv(team)}">`
+    + (open ? '<div class="lg-rowhead">' : '')
     + `<button type="button" class="lg-rowbtn" aria-expanded="${open}" onclick="openLogSheet('${team}','${letter}')">`
     + `<span class="sl">${letter}</span><span class="nm"><b>${esc(name)}</b>${o.found ? `<small>${esc(teamTag(team))}</small>` : ''}</span>`
-    + `<span class="pt">${pts ? '+' + pts : ''}</span></button>`;
+    + `<span class="pt">${pts ? '+' + pts : ''}</span></button>`
+    + (open ? `<span class="lg-dot ${logStatusCls}" aria-hidden="true"></span>`
+      + `<button type="button" class="lg-undo-mini" aria-label="Undo last" onclick="undoTap()"${tapLog.length ? '' : ' disabled'}>↶</button></div>` : '');
   if (open && logged.length) html += '<div class="lg-tags">' + logged.map(k => {
     const lbl = TILE_LABELS[k], c = counts[k];
     return `<button type="button" class="lg-tag" data-t="${k}" aria-label="Take one ${escAttr(lbl)} off" onclick="stepAcc('${team}','${letter}','${k}',-1)">`
@@ -7553,6 +7591,29 @@ async function startNewSeason() {
 
 let currentTabName = 'leaderboard';
 
+// Log mode (phones): the header and tab bar get out of the way while you
+// scroll down through a roster and come back the moment you scroll up.
+let logScrollY = 0;
+function setChromeHidden(v) { document.body.classList.toggle('chrome-hide', !!v); }
+function setLogMode(on) {
+  document.body.classList.toggle('log-mode', !!on);
+  setChromeHidden(false);
+  const m = document.querySelector('main');
+  logScrollY = m ? m.scrollTop : 0;
+}
+(function wireLogScroll() {
+  const m = document.querySelector('main');
+  if (!m) return;
+  m.addEventListener('scroll', () => {
+    if (!document.body.classList.contains('log-mode')) return;
+    const y = m.scrollTop, dy = y - logScrollY;
+    if (y < 40) { setChromeHidden(false); logScrollY = y; return; }
+    if (Math.abs(dy) < 8) return;
+    setChromeHidden(dy > 0);
+    logScrollY = y;
+  }, { passive: true });
+})();
+
 async function switchTab(name) {
   currentTabName = name;
   // Paint the new tab first so the tap feels instant, then do the slow work.
@@ -7572,6 +7633,7 @@ async function switchTab(name) {
       if (moreBtn) moreBtn.classList.add('active');
     }
   }
+  setLogMode(name === 'score');
   if (name === 'score') {
     if (!currentShowId) populateShowSelect();
     if (!Object.keys(LOG).length) loadShowScores(); else logRefresh();
